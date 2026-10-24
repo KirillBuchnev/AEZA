@@ -168,7 +168,7 @@ export function CustomerPage({ id, version, onToast }) {
             }
             description={
               customer.risk_score == null
-                ? "Оценку не ставим, когда данных не хватает — это честнее, чем угадывать"
+                ? "Мало данных: нет активных услуг или даты окончания. Когда появятся, оценка посчитается сама."
                 : "Сумма баллов сработавших признаков, максимум 100. Баллы меняются в «Модели риска»."
             }
           />
@@ -211,7 +211,7 @@ export function CustomerPage({ id, version, onToast }) {
               </div>
             </div>
           ) : (
-            <p className="muted">Признаков риска нет — клиент в порядке.</p>
+            <p className="muted">Признаков риска нет, клиент в порядке.</p>
           )}
         </section>
 
@@ -258,13 +258,13 @@ export function CustomerPage({ id, version, onToast }) {
             </b>
             {customer.risk_score == null && (
               <span className="small muted">
-                Не считаем: без оценки риска сумма была бы выдумкой
+                Без оценки риска сумму не считаем
               </span>
             )}
           </div>
           <p className="small muted">
-            Доступный баланс — основной плюс бонусный, если bonusState разрешает
-            его тратить. Реферальный баланс не учитываем.
+            Доступный баланс: основной плюс бонусный, если bonusState разрешает
+            его тратить. Реферальный не учитываем.
           </p>
         </section>
       </div>

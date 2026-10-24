@@ -1825,8 +1825,10 @@ button.kv-row:hover > span:nth-child(2) {
    а девушка стоит на линии в 132px от низа — так они не пересекаются. */
 .login-mascot {
   position: absolute;
-  right: 214px;
-  bottom: 132px;
+  /* Сидит на прямом участке линии: справа от изгиба (190px до линии + 70px радиус),
+     низ картинки ровно на верхней кромке линии (120px + 14px толщина). */
+  right: 284px;
+  bottom: 134px;
   width: auto;
   height: clamp(180px, calc(100vh - 530px), 400px);
   max-width: 36%;

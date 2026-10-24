@@ -83,7 +83,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
     <>
       <PageHead
         title="Источник данных"
-        description="Аккаунты, услуги и транзакции. Новые данные пересчитывают риск сами — страницу обновлять не нужно"
+        description="Аккаунты, услуги и транзакции. После загрузки риск пересчитается сам, обновлять страницу не нужно."
       >
         <button
           className="button button-primary"
@@ -155,7 +155,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
           <p>
             {uploadError
               ? `${uploadError} Текущий снимок на месте, расчёты не менялись.`
-              : "Или нажмите, чтобы выбрать файл. Полная замена: customers с услугами и транзакциями, суммы — в евроцентах."}
+              : "Или нажмите, чтобы выбрать файл. Полная замена: customers с услугами и транзакциями, суммы в евроцентах."}
           </p>
         </label>
       </div>
@@ -182,15 +182,17 @@ export function SourcePage({ summary, updates, onToast, version }) {
             </div>
           ) : (
             <p className="muted">
-              Пока изменений не было. Поменяйте коэффициент или загрузите снимок
-              — событие появится здесь сразу.
+              Пока изменений не было. Поменяйте коэффициент или загрузите
+              снимок, и событие сразу появится здесь.
             </p>
           )}
         </section>
 
         <section className="dev">
           <h2 className="h2">Для интеграции</h2>
-          <p>GET /metrics — те же числа, что на панели, в формате Prometheus</p>
+          <p>
+            GET /metrics отдаёт те же числа, что на панели, в формате Prometheus
+          </p>
           <pre>{metrics || "Метрики недоступны"}</pre>
           <a href="/api/v1/docs" target="_blank" rel="noreferrer">
             Swagger: /api/v1/docs →

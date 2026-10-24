@@ -255,8 +255,8 @@ export function Overview({
           </div>
           <p className="note small muted">
             <AezaIcon name="info" variant="flat" size={22} />
-            «Нет оценки» — у клиента нет активных услуг или дат окончания. Риск
-            не считаем, чтобы не выдумывать.
+            «Нет оценки»: у клиента нет активных услуг или дат окончания,
+            поэтому риск не считаем.
           </p>
         </section>
       </div>
@@ -269,7 +269,7 @@ export function Overview({
                 ? `Причина: ${activeReasonTitle}`
                 : "Топ клиентов под риском"
             }
-            description="Сортировка по любой колонке в обе стороны — нажмите на заголовок"
+            description="Нажмите на заголовок колонки, чтобы отсортировать"
           >
             {activeReason && (
               <button className="link" onClick={() => setActiveReason("")}>

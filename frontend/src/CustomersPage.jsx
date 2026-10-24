@@ -103,7 +103,7 @@ export function CustomersPage({
               </button>
             }
           >
-            Измените запрос или уровень риска — список обновится сразу.
+            Попробуйте другой запрос или уровень риска.
           </Empty>
         )}
         <div className="table-foot">

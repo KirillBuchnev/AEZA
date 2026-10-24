@@ -18,12 +18,12 @@ const extraSettings = {
   urgency_days: { label: "Срочное продление, дней", min: 1, max: 30 },
   grace_days: { label: "Ожидание оплаты, дней", min: 1, max: 14 },
   customer_medium_risk_min: {
-    label: "Средний риск клиента — от",
+    label: "Средний риск клиента от",
     min: 0,
     max: 19999,
   },
   customer_high_risk_min: {
-    label: "Высокий риск клиента — от",
+    label: "Высокий риск клиента от",
     min: 1,
     max: 20000,
   },
@@ -192,8 +192,8 @@ export function ModelPage({ settings, summary, onSave, saving }) {
           ))}
           <div className="save-bar">
             <span>
-              Новый признак добавляется в бэкенде одной записью — здесь он
-              появится сам.
+              Новый признак добавляется в бэкенде одной записью и сразу
+              появляется здесь.
             </span>
             {saveError && (
               <span className="inline-error" role="alert">
@@ -294,7 +294,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             </div>
             <div className="fields">
               <label className="field">
-                <span>Средний — от</span>
+                <span>Средний от</span>
                 <input
                   type="number"
                   min="0"
@@ -306,7 +306,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
                 />
               </label>
               <label className={`field${thresholdError ? " field-error" : ""}`}>
-                <span>Высокий — от</span>
+                <span>Высокий от</span>
                 <input
                   type="number"
                   min="1"
