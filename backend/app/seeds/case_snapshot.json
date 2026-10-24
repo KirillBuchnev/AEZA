@@ -1,0 +1,1205 @@
+{
+  "source": "db/002_seed.sql (case dataset)",
+  "customers": [
+    {
+      "id": "1",
+      "email": "user-0001@example.test",
+      "balance": 83810,
+      "withdrawBalance": 14592,
+      "bonusBalance": 4506,
+      "bonusState": "locked",
+      "totalReplenished": 96922,
+      "services": [
+        {
+          "id": "1",
+          "name": "service-0001",
+          "price": 95,
+          "autoprolong": false,
+          "paymentTerm": "hour",
+          "status": "active",
+          "expiresAt": "2026-10-19T15:30:00.000Z"
+        },
+        {
+          "id": "11",
+          "name": "service-0011",
+          "price": 883,
+          "autoprolong": true,
+          "paymentTerm": "half_year",
+          "status": "active",
+          "expiresAt": "2027-04-19T14:30:00.000Z"
+        },
+        {
+          "id": "21",
+          "name": "service-0021",
+          "price": 364,
+          "autoprolong": false,
+          "paymentTerm": "month",
+          "status": "active",
+          "expiresAt": "2026-11-19T14:30:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "1",
+          "serviceId": "1",
+          "status": "performed",
+          "type": "order",
+          "amount": 0,
+          "createdAt": "2026-10-19T14:32:00.000Z"
+        },
+        {
+          "id": "11",
+          "serviceId": "11",
+          "status": "performed",
+          "type": "order",
+          "amount": 762,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        },
+        {
+          "id": "21",
+          "serviceId": "21",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 390,
+          "createdAt": "2026-10-19T14:33:00.000Z"
+        },
+        {
+          "id": "31",
+          "serviceId": "1",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 269,
+          "createdAt": "2026-10-19T14:35:00.000Z"
+        },
+        {
+          "id": "41",
+          "serviceId": "11",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 19,
+          "createdAt": "2026-10-19T14:33:00.000Z"
+        },
+        {
+          "id": "51",
+          "serviceId": "21",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 433,
+          "createdAt": "2026-10-19T14:34:00.000Z"
+        },
+        {
+          "id": "61",
+          "serviceId": "1",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 602,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        },
+        {
+          "id": "71",
+          "serviceId": "11",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 803,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        },
+        {
+          "id": "81",
+          "serviceId": "21",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 549,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        },
+        {
+          "id": "91",
+          "serviceId": "1",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 885,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "email": "user-0002@example.test",
+      "balance": 32098,
+      "withdrawBalance": 7314,
+      "bonusBalance": 1679,
+      "bonusState": "unlocked",
+      "totalReplenished": 105256,
+      "services": [
+        {
+          "id": "2",
+          "name": "service-0002",
+          "price": 368,
+          "autoprolong": false,
+          "paymentTerm": "week",
+          "status": "blocked",
+          "expiresAt": "2026-09-07T15:00:00.000Z"
+        },
+        {
+          "id": "12",
+          "name": "service-0012",
+          "price": 197,
+          "autoprolong": true,
+          "paymentTerm": "year",
+          "status": "blocked",
+          "expiresAt": "2027-09-02T15:00:00.000Z"
+        },
+        {
+          "id": "22",
+          "name": "service-0022",
+          "price": 274,
+          "autoprolong": true,
+          "paymentTerm": "quarter_year",
+          "status": "blocked",
+          "expiresAt": "2026-12-22T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "2",
+          "serviceId": "2",
+          "status": "performed",
+          "type": "order",
+          "amount": 1000,
+          "createdAt": "2026-08-31T15:00:00.000Z"
+        },
+        {
+          "id": "12",
+          "serviceId": "12",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 269,
+          "createdAt": "2026-09-02T15:04:00.000Z"
+        },
+        {
+          "id": "22",
+          "serviceId": "22",
+          "status": "performed",
+          "type": "order",
+          "amount": 479,
+          "createdAt": "2026-09-22T15:04:00.000Z"
+        },
+        {
+          "id": "32",
+          "serviceId": "2",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 519,
+          "createdAt": "2026-08-31T15:01:00.000Z"
+        },
+        {
+          "id": "42",
+          "serviceId": "12",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 899,
+          "createdAt": "2026-09-02T15:02:00.000Z"
+        },
+        {
+          "id": "52",
+          "serviceId": "22",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 951,
+          "createdAt": "2026-09-22T15:01:00.000Z"
+        },
+        {
+          "id": "62",
+          "serviceId": "2",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 72,
+          "createdAt": "2026-08-31T15:00:00.000Z"
+        },
+        {
+          "id": "72",
+          "serviceId": "12",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 194,
+          "createdAt": "2026-09-02T15:03:00.000Z"
+        },
+        {
+          "id": "82",
+          "serviceId": "22",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 143,
+          "createdAt": "2026-09-22T15:03:00.000Z"
+        },
+        {
+          "id": "92",
+          "serviceId": "2",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 168,
+          "createdAt": "2026-08-31T15:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "email": "user-0003@example.test",
+      "balance": 88696,
+      "withdrawBalance": 71482,
+      "bonusBalance": 9674,
+      "bonusState": "locked",
+      "totalReplenished": 134276,
+      "services": [
+        {
+          "id": "3",
+          "name": "service-0003",
+          "price": 353,
+          "autoprolong": true,
+          "paymentTerm": "month",
+          "status": "deleted",
+          "expiresAt": "2025-10-14T15:00:00.000Z"
+        },
+        {
+          "id": "13",
+          "name": "service-0013",
+          "price": 72,
+          "autoprolong": true,
+          "paymentTerm": "hour",
+          "status": "deleted",
+          "expiresAt": "2025-09-14T16:00:00.000Z"
+        },
+        {
+          "id": "23",
+          "name": "service-0023",
+          "price": 960,
+          "autoprolong": true,
+          "paymentTerm": "half_year",
+          "status": "deleted",
+          "expiresAt": "2026-03-14T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "3",
+          "serviceId": "3",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 824,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "13",
+          "serviceId": "13",
+          "status": "performed",
+          "type": "order",
+          "amount": 598,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "23",
+          "serviceId": "23",
+          "status": "performed",
+          "type": "order",
+          "amount": 994,
+          "createdAt": "2025-09-14T15:02:00.000Z"
+        },
+        {
+          "id": "33",
+          "serviceId": "3",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 891,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "43",
+          "serviceId": "13",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 245,
+          "createdAt": "2025-09-14T15:02:00.000Z"
+        },
+        {
+          "id": "53",
+          "serviceId": "23",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 706,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "63",
+          "serviceId": "3",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 60,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "73",
+          "serviceId": "13",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 99,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "83",
+          "serviceId": "23",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 285,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "93",
+          "serviceId": "3",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 399,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "email": "user-0004@example.test",
+      "balance": 55302,
+      "withdrawBalance": 2082,
+      "bonusBalance": 1535,
+      "bonusState": "unlocked",
+      "totalReplenished": 70924,
+      "services": [
+        {
+          "id": "4",
+          "name": "service-0004",
+          "price": 827,
+          "autoprolong": false,
+          "paymentTerm": "quarter_year",
+          "status": "suspended",
+          "expiresAt": "2026-11-02T15:00:00.000Z"
+        },
+        {
+          "id": "14",
+          "name": "service-0014",
+          "price": 234,
+          "autoprolong": true,
+          "paymentTerm": "week",
+          "status": "suspended",
+          "expiresAt": "2026-10-20T15:00:00.000Z"
+        },
+        {
+          "id": "24",
+          "name": "service-0024",
+          "price": 74,
+          "autoprolong": true,
+          "paymentTerm": "year",
+          "status": "suspended",
+          "expiresAt": "2027-07-23T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "4",
+          "serviceId": "4",
+          "status": "performed",
+          "type": "order",
+          "amount": 410,
+          "createdAt": "2026-08-02T15:02:00.000Z"
+        },
+        {
+          "id": "14",
+          "serviceId": "14",
+          "status": "performed",
+          "type": "order",
+          "amount": 408,
+          "createdAt": "2026-10-13T15:04:00.000Z"
+        },
+        {
+          "id": "24",
+          "serviceId": "24",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 696,
+          "createdAt": "2026-07-23T15:00:00.000Z"
+        },
+        {
+          "id": "34",
+          "serviceId": "4",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 305,
+          "createdAt": "2026-08-02T15:05:00.000Z"
+        },
+        {
+          "id": "44",
+          "serviceId": "14",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 899,
+          "createdAt": "2026-10-13T15:01:00.000Z"
+        },
+        {
+          "id": "54",
+          "serviceId": "24",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 319,
+          "createdAt": "2026-07-23T15:05:00.000Z"
+        },
+        {
+          "id": "64",
+          "serviceId": "4",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 69,
+          "createdAt": "2026-08-02T15:01:00.000Z"
+        },
+        {
+          "id": "74",
+          "serviceId": "14",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 362,
+          "createdAt": "2026-10-13T15:03:00.000Z"
+        },
+        {
+          "id": "84",
+          "serviceId": "24",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 895,
+          "createdAt": "2026-07-23T15:01:00.000Z"
+        },
+        {
+          "id": "94",
+          "serviceId": "4",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 948,
+          "createdAt": "2026-08-02T15:02:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "email": "user-0005@example.test",
+      "balance": 28657,
+      "withdrawBalance": 7623,
+      "bonusBalance": 9863,
+      "bonusState": "locked",
+      "totalReplenished": 293608,
+      "services": [
+        {
+          "id": "5",
+          "name": "service-0005",
+          "price": 748,
+          "autoprolong": false,
+          "paymentTerm": "half_year",
+          "status": "prolong_wait",
+          "expiresAt": "2026-03-14T15:00:00.000Z"
+        },
+        {
+          "id": "15",
+          "name": "service-0015",
+          "price": 297,
+          "autoprolong": true,
+          "paymentTerm": "month",
+          "status": "prolong_wait",
+          "expiresAt": "2025-10-14T15:00:00.000Z"
+        },
+        {
+          "id": "25",
+          "name": "service-0025",
+          "price": 651,
+          "autoprolong": true,
+          "paymentTerm": "hour",
+          "status": "prolong_wait",
+          "expiresAt": "2025-09-14T16:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "5",
+          "serviceId": "5",
+          "status": "performed",
+          "type": "order",
+          "amount": 216,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "15",
+          "serviceId": "15",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 141,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "25",
+          "serviceId": "25",
+          "status": "performed",
+          "type": "order",
+          "amount": 117,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "35",
+          "serviceId": "5",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 519,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "45",
+          "serviceId": "15",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 87,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "55",
+          "serviceId": "25",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 687,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        },
+        {
+          "id": "65",
+          "serviceId": "5",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 880,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "75",
+          "serviceId": "15",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 478,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        },
+        {
+          "id": "85",
+          "serviceId": "25",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 453,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "95",
+          "serviceId": "5",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 292,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "email": "user-0006@example.test",
+      "balance": 3478,
+      "withdrawBalance": 2298,
+      "bonusBalance": 8928,
+      "bonusState": "unlocked",
+      "totalReplenished": 107726,
+      "services": [
+        {
+          "id": "6",
+          "name": "service-0006",
+          "price": 550,
+          "autoprolong": false,
+          "paymentTerm": "year",
+          "status": "active",
+          "expiresAt": "2027-10-19T14:30:00.000Z"
+        },
+        {
+          "id": "16",
+          "name": "service-0016",
+          "price": 82,
+          "autoprolong": true,
+          "paymentTerm": "quarter_year",
+          "status": "active",
+          "expiresAt": "2027-01-19T14:30:00.000Z"
+        },
+        {
+          "id": "26",
+          "name": "service-0026",
+          "price": 547,
+          "autoprolong": false,
+          "paymentTerm": "week",
+          "status": "active",
+          "expiresAt": "2026-10-26T14:30:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "6",
+          "serviceId": "6",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 897,
+          "createdAt": "2026-10-19T14:34:00.000Z"
+        },
+        {
+          "id": "16",
+          "serviceId": "16",
+          "status": "performed",
+          "type": "order",
+          "amount": 505,
+          "createdAt": "2026-10-19T14:34:00.000Z"
+        },
+        {
+          "id": "26",
+          "serviceId": "26",
+          "status": "performed",
+          "type": "order",
+          "amount": 768,
+          "createdAt": "2026-10-19T14:34:00.000Z"
+        },
+        {
+          "id": "36",
+          "serviceId": "6",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 156,
+          "createdAt": "2026-10-19T14:31:00.000Z"
+        },
+        {
+          "id": "46",
+          "serviceId": "16",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 497,
+          "createdAt": "2026-10-19T14:35:00.000Z"
+        },
+        {
+          "id": "56",
+          "serviceId": "26",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 448,
+          "createdAt": "2026-10-19T14:32:00.000Z"
+        },
+        {
+          "id": "66",
+          "serviceId": "6",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 526,
+          "createdAt": "2026-10-19T14:30:00.000Z"
+        },
+        {
+          "id": "76",
+          "serviceId": "16",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 55,
+          "createdAt": "2026-10-19T14:35:00.000Z"
+        },
+        {
+          "id": "86",
+          "serviceId": "26",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 100,
+          "createdAt": "2026-10-19T14:34:00.000Z"
+        },
+        {
+          "id": "96",
+          "serviceId": "6",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 980,
+          "createdAt": "2026-10-19T14:35:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "email": "user-0007@example.test",
+      "balance": 54987,
+      "withdrawBalance": 14446,
+      "bonusBalance": 9654,
+      "bonusState": "locked",
+      "totalReplenished": 290501,
+      "services": [
+        {
+          "id": "7",
+          "name": "service-0007",
+          "price": 945,
+          "autoprolong": true,
+          "paymentTerm": "hour",
+          "status": "blocked",
+          "expiresAt": "2026-10-03T16:00:00.000Z"
+        },
+        {
+          "id": "17",
+          "name": "service-0017",
+          "price": 104,
+          "autoprolong": true,
+          "paymentTerm": "half_year",
+          "status": "blocked",
+          "expiresAt": "2027-03-19T15:00:00.000Z"
+        },
+        {
+          "id": "27",
+          "name": "service-0027",
+          "price": 474,
+          "autoprolong": false,
+          "paymentTerm": "month",
+          "status": "blocked",
+          "expiresAt": "2026-10-17T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "7",
+          "serviceId": "7",
+          "status": "performed",
+          "type": "order",
+          "amount": 322,
+          "createdAt": "2026-10-03T15:05:00.000Z"
+        },
+        {
+          "id": "17",
+          "serviceId": "17",
+          "status": "performed",
+          "type": "order",
+          "amount": 881,
+          "createdAt": "2026-09-19T15:00:00.000Z"
+        },
+        {
+          "id": "27",
+          "serviceId": "27",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 348,
+          "createdAt": "2026-09-17T15:05:00.000Z"
+        },
+        {
+          "id": "37",
+          "serviceId": "7",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 780,
+          "createdAt": "2026-10-03T15:02:00.000Z"
+        },
+        {
+          "id": "47",
+          "serviceId": "17",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 778,
+          "createdAt": "2026-09-19T15:00:00.000Z"
+        },
+        {
+          "id": "57",
+          "serviceId": "27",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 462,
+          "createdAt": "2026-09-17T15:04:00.000Z"
+        },
+        {
+          "id": "67",
+          "serviceId": "7",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 285,
+          "createdAt": "2026-10-03T15:01:00.000Z"
+        },
+        {
+          "id": "77",
+          "serviceId": "17",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 661,
+          "createdAt": "2026-09-19T15:05:00.000Z"
+        },
+        {
+          "id": "87",
+          "serviceId": "27",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 553,
+          "createdAt": "2026-09-17T15:05:00.000Z"
+        },
+        {
+          "id": "97",
+          "serviceId": "7",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 802,
+          "createdAt": "2026-10-03T15:05:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "email": "user-0008@example.test",
+      "balance": 36463,
+      "withdrawBalance": 425,
+      "bonusBalance": 2615,
+      "bonusState": "unlocked",
+      "totalReplenished": 434296,
+      "services": [
+        {
+          "id": "8",
+          "name": "service-0008",
+          "price": 81,
+          "autoprolong": false,
+          "paymentTerm": "week",
+          "status": "deleted",
+          "expiresAt": "2025-09-21T15:00:00.000Z"
+        },
+        {
+          "id": "18",
+          "name": "service-0018",
+          "price": 285,
+          "autoprolong": false,
+          "paymentTerm": "year",
+          "status": "deleted",
+          "expiresAt": "2026-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "28",
+          "name": "service-0028",
+          "price": 277,
+          "autoprolong": false,
+          "paymentTerm": "quarter_year",
+          "status": "deleted",
+          "expiresAt": "2025-12-14T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "8",
+          "serviceId": "8",
+          "status": "performed",
+          "type": "order",
+          "amount": 511,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "18",
+          "serviceId": "18",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 642,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "28",
+          "serviceId": "28",
+          "status": "performed",
+          "type": "order",
+          "amount": 300,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "38",
+          "serviceId": "8",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 976,
+          "createdAt": "2025-09-14T15:04:00.000Z"
+        },
+        {
+          "id": "48",
+          "serviceId": "18",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 131,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "58",
+          "serviceId": "28",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 253,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "68",
+          "serviceId": "8",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 219,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        },
+        {
+          "id": "78",
+          "serviceId": "18",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 412,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "88",
+          "serviceId": "28",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 992,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "98",
+          "serviceId": "8",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 735,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "email": "user-0009@example.test",
+      "balance": 91506,
+      "withdrawBalance": 55392,
+      "bonusBalance": 4552,
+      "bonusState": "locked",
+      "totalReplenished": 269895,
+      "services": [
+        {
+          "id": "9",
+          "name": "service-0009",
+          "price": 850,
+          "autoprolong": false,
+          "paymentTerm": "month",
+          "status": "suspended",
+          "expiresAt": "2026-09-09T15:00:00.000Z"
+        },
+        {
+          "id": "19",
+          "name": "service-0019",
+          "price": 855,
+          "autoprolong": true,
+          "paymentTerm": "hour",
+          "status": "suspended",
+          "expiresAt": "2026-08-21T16:00:00.000Z"
+        },
+        {
+          "id": "29",
+          "name": "service-0029",
+          "price": 571,
+          "autoprolong": true,
+          "paymentTerm": "half_year",
+          "status": "suspended",
+          "expiresAt": "2027-01-29T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "9",
+          "serviceId": "9",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 469,
+          "createdAt": "2026-08-09T15:05:00.000Z"
+        },
+        {
+          "id": "19",
+          "serviceId": "19",
+          "status": "performed",
+          "type": "order",
+          "amount": 811,
+          "createdAt": "2026-08-21T15:01:00.000Z"
+        },
+        {
+          "id": "29",
+          "serviceId": "29",
+          "status": "performed",
+          "type": "order",
+          "amount": 464,
+          "createdAt": "2026-07-29T15:01:00.000Z"
+        },
+        {
+          "id": "39",
+          "serviceId": "9",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 940,
+          "createdAt": "2026-08-09T15:04:00.000Z"
+        },
+        {
+          "id": "49",
+          "serviceId": "19",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 486,
+          "createdAt": "2026-08-21T15:05:00.000Z"
+        },
+        {
+          "id": "59",
+          "serviceId": "29",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 346,
+          "createdAt": "2026-07-29T15:00:00.000Z"
+        },
+        {
+          "id": "69",
+          "serviceId": "9",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 740,
+          "createdAt": "2026-08-09T15:01:00.000Z"
+        },
+        {
+          "id": "79",
+          "serviceId": "19",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 347,
+          "createdAt": "2026-08-21T15:05:00.000Z"
+        },
+        {
+          "id": "89",
+          "serviceId": "29",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 170,
+          "createdAt": "2026-07-29T15:01:00.000Z"
+        },
+        {
+          "id": "99",
+          "serviceId": "9",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 194,
+          "createdAt": "2026-08-09T15:01:00.000Z"
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "email": "user-0010@example.test",
+      "balance": 20379,
+      "withdrawBalance": 7055,
+      "bonusBalance": 5514,
+      "bonusState": "unlocked",
+      "totalReplenished": 420669,
+      "services": [
+        {
+          "id": "10",
+          "name": "service-0010",
+          "price": 634,
+          "autoprolong": true,
+          "paymentTerm": "quarter_year",
+          "status": "prolong_wait",
+          "expiresAt": "2025-12-14T15:00:00.000Z"
+        },
+        {
+          "id": "20",
+          "name": "service-0020",
+          "price": 167,
+          "autoprolong": false,
+          "paymentTerm": "week",
+          "status": "prolong_wait",
+          "expiresAt": "2025-09-21T15:00:00.000Z"
+        },
+        {
+          "id": "30",
+          "name": "service-0030",
+          "price": 702,
+          "autoprolong": false,
+          "paymentTerm": "year",
+          "status": "prolong_wait",
+          "expiresAt": "2026-09-14T15:00:00.000Z"
+        }
+      ],
+      "transactions": [
+        {
+          "id": "10",
+          "serviceId": "10",
+          "status": "performed",
+          "type": "order",
+          "amount": 271,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "20",
+          "serviceId": "20",
+          "status": "performed",
+          "type": "order",
+          "amount": 610,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        },
+        {
+          "id": "30",
+          "serviceId": "30",
+          "status": "not_performed",
+          "type": "order",
+          "amount": 896,
+          "createdAt": "2025-09-14T15:05:00.000Z"
+        },
+        {
+          "id": "40",
+          "serviceId": "10",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 613,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "50",
+          "serviceId": "20",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 271,
+          "createdAt": "2025-09-14T15:01:00.000Z"
+        },
+        {
+          "id": "60",
+          "serviceId": "30",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 567,
+          "createdAt": "2025-09-14T15:04:00.000Z"
+        },
+        {
+          "id": "70",
+          "serviceId": "10",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 590,
+          "createdAt": "2025-09-14T15:04:00.000Z"
+        },
+        {
+          "id": "80",
+          "serviceId": "20",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 254,
+          "createdAt": "2025-09-14T15:00:00.000Z"
+        },
+        {
+          "id": "90",
+          "serviceId": "30",
+          "status": "not_performed",
+          "type": "prolong",
+          "amount": 492,
+          "createdAt": "2025-09-14T15:03:00.000Z"
+        },
+        {
+          "id": "100",
+          "serviceId": "10",
+          "status": "performed",
+          "type": "prolong",
+          "amount": 222,
+          "createdAt": "2025-09-14T15:02:00.000Z"
+        }
+      ]
+    }
+  ]
+}

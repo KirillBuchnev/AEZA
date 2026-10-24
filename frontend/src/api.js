@@ -11,10 +11,18 @@ async function request(path, options = {}) {
   if (response.status === 204) return null;
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    const detail = payload?.detail;
+    const firstIssue = Array.isArray(detail) ? detail[0] : null;
+    const issueText = firstIssue?.msg?.replace(/^Value error, /, "");
+    const issuePath = (firstIssue?.loc || []).slice(1).join(".");
     const message =
-      typeof payload?.detail === "string"
-        ? payload.detail
-        : `Не удалось выполнить запрос (${response.status}).`;
+      typeof detail === "string"
+        ? detail
+        : issueText
+          ? issuePath
+            ? `${issuePath}: ${issueText}.`
+            : `${issueText}.`
+          : `Не удалось выполнить запрос (${response.status}).`;
     const error = new Error(message);
     error.status = response.status;
     throw error;
@@ -30,6 +38,28 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request("/api/v1/auth/logout", { method: "POST" }),
+  register: (form) =>
+    request("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
+  verifyCodeword: (username, codeword) =>
+    request("/api/v1/auth/password/verify-codeword", {
+      method: "POST",
+      body: JSON.stringify({ username, codeword }),
+    }),
+  resetPassword: (form) =>
+    request("/api/v1/auth/password/reset", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
+  changePassword: (form) =>
+    request("/api/v1/auth/password/change", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
+  authMethods: () => request("/api/v1/auth/methods"),
+  outflow: (days = 30) => request(`/api/v1/analytics/outflow?days=${days}`),
   summary: () => request("/api/v1/analytics/summary"),
   customers: (params = {}) => {
     const search = new URLSearchParams();
@@ -46,4 +76,15 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(settings),
     }),
+  uploadSnapshot: (snapshot) =>
+    request("/api/v1/source/snapshot", {
+      method: "PUT",
+      body: JSON.stringify(snapshot),
+    }),
+  metrics: async () => {
+    const response = await fetch("/metrics", { credentials: "include" });
+    if (!response.ok)
+      throw new Error(`Метрики недоступны (${response.status}).`);
+    return response.text();
+  },
 };

@@ -1,112 +1,46 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { AezaIcon } from "./AezaIcon.jsx";
 import { Icon } from "./Icons.jsx";
-import { CustomerTable, MetricCard, PageHeader } from "./Shared.jsx";
-import { featureOrder, money } from "./format.js";
+import {
+  CardHead,
+  CustomerTable,
+  Empty,
+  PageHead,
+  Segments,
+} from "./Shared.jsx";
+import { money, moneyShort, plural, riskText } from "./format.js";
+import { OutflowChart } from "./OutflowChart.jsx";
+import mascotHappy from "./assets/mascot-happy.webp";
 
-export function ReasonList({ customers, activeReason, onSelect }) {
-  const reasons = useMemo(() => {
-    const counts = new Map();
-    customers.forEach((customer) =>
-      customer.reasons?.forEach((reason) => {
-        if (reason.code === "no_active_signals") return;
-        const item = counts.get(reason.code) || { ...reason, count: 0 };
-        item.count += 1;
-        counts.set(reason.code, item);
-      }),
-    );
-    return featureOrder.map((code) => counts.get(code)).filter(Boolean);
-  }, [customers]);
+const levels = ["high", "medium", "low", "unscored"];
+const levelColor = {
+  high: "var(--risk-high)",
+  medium: "var(--risk-medium)",
+  low: "var(--risk-low)",
+  unscored: "var(--border-default)",
+};
 
-  return (
-    <div className="reason-list">
-      <button
-        className={`reason-row${activeReason === "" ? " reason-row-active" : ""}`}
-        aria-pressed={activeReason === ""}
-        onClick={() => onSelect("")}
-      >
-        <span className="reason-marker reason-marker-all">
-          <Icon name="grid" size={16} />
-        </span>
-        <span className="reason-copy">
-          <b>Все причины</b>
-          <small>Полная картина клиентов</small>
-        </span>
-        <span className="reason-count">{customers.length}</span>
-      </button>
-      {reasons.map((reason) => (
-        <button
-          key={reason.code}
-          className={`reason-row${activeReason === reason.code ? " reason-row-active" : ""}`}
-          aria-pressed={activeReason === reason.code}
-          onClick={() => onSelect(reason.code)}
-        >
-          <span className={`reason-marker reason-marker-${reason.code}`}>
-            <Icon
-              name={
-                reason.code === "insufficient_balance"
-                  ? "wallet"
-                  : reason.code === "prolong_wait"
-                    ? "clock"
-                    : "pulse"
-              }
-              size={16}
-            />
-          </span>
-          <span className="reason-copy">
-            <b>{reason.title}</b>
-            <small>{reason.explanation}</small>
-          </span>
-          <span className="reason-count">{reason.count}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
+const reasonTitles = {
+  autoprolong_disabled: "Ручное продление",
+  insufficient_balance: "Не хватает средств",
+  renewal_urgency: "Срочность продления",
+  prolong_wait: "Ожидание оплаты",
+};
 
-export function ExposureBars({ customers }) {
-  const data = useMemo(
-    () =>
-      [...customers]
-        .filter((customer) => customer.potential_loss_minor > 0)
-        .sort((a, b) => b.potential_loss_minor - a.potential_loss_minor)
-        .slice(0, 5),
-    [customers],
-  );
-  const max = Math.max(
-    1,
-    ...data.map((customer) => customer.potential_loss_minor),
-  );
-  return (
-    <div className="exposure-bars">
-      {data.length ? (
-        data.map((customer) => (
-          <div
-            key={customer.id}
-            className="exposure-row"
-            title={`${customer.email}: ${money(customer.potential_loss_minor)}`}
-          >
-            <span className="exposure-email">{customer.email}</span>
-            <span className="exposure-track">
-              <i
-                style={{
-                  width: `${Math.max(5, (customer.potential_loss_minor / max) * 100)}%`,
-                }}
-              />
-            </span>
-            <b>{money(customer.potential_loss_minor)}</b>
-          </div>
-        ))
-      ) : (
-        <div className="chart-empty">
-          Пока нет клиентов с рассчитанной суммой риска.
-        </div>
-      )}
-    </div>
-  );
+// Counts come from the summary, which covers every customer, not from the loaded page.
+function topReasons(summary) {
+  return Object.entries(summary?.reason_counts || {})
+    .filter(([, count]) => count > 0)
+    .map(([code, count]) => ({ code, title: reasonTitles[code] || code, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 }
 
 export function Overview({
   summary,
+  outflow,
+  outflowDays = 30,
+  setOutflowDays,
   customers,
   activeReason,
   setActiveReason,
@@ -117,162 +51,298 @@ export function Overview({
   onSort,
   onExport,
 }) {
-  const filtered = activeReason
-    ? customers.filter((customer) =>
-        customer.reasons?.some((reason) => reason.code === activeReason),
-      )
-    : customers;
-  const displayed = filtered.slice(0, 6);
-  const scored = summary?.assessed_total || 0;
-  const total = summary?.customers_total || 0;
-  const reasonLabel = activeReason
-    ? filtered[0]?.reasons.find((reason) => reason.code === activeReason)?.title
-    : "Приоритетные клиенты";
+  const [level, setLevel] = useState("");
+  const counts = summary?.risk_counts || {};
+  const horizon = summary?.prediction_horizon_days || 30;
+  const high = counts.high ?? 0;
+  const reasons = useMemo(() => topReasons(summary), [summary]);
+  const maxReason = Math.max(1, ...reasons.map((reason) => reason.count));
+
+  const lossByLevel = summary?.potential_loss_by_level_minor || {};
+
+  const exposure = useMemo(
+    () => (summary?.top_exposure || []).slice(0, 6),
+    [summary],
+  );
+  const maxExposure = Math.max(
+    1,
+    ...exposure.map((customer) => customer.potential_loss_minor),
+  );
+
+  const filtered = customers.filter(
+    (customer) =>
+      (!level || (customer.risk_level || "unscored") === level) &&
+      (!activeReason ||
+        customer.reasons?.some((reason) => reason.code === activeReason)),
+  );
+  const activeReasonTitle = reasons.find(
+    (reason) => reason.code === activeReason,
+  )?.title;
+
   return (
     <>
-      <PageHeader
-        eyebrow="ЦЕНТР УДЕРЖАНИЯ"
-        title="Риск непродления"
-        description="Поймите, кому помочь в первую очередь и какая выручка под угрозой."
-        onMenu={onNavigate.menu}
-        action={
-          <>
-            <span className="horizon-chip">
-              <Icon name="clock" size={16} />
-              Следующие {summary?.prediction_horizon_days || 30} дней
-            </span>
-            <button
-              className="button button-secondary export-button"
-              onClick={onExport}
-            >
-              <Icon name="download" size={16} />
-              Скачать CSV
-            </button>
-          </>
-        }
-      />
-      <section className="metric-grid" aria-label="Сводка по клиентам">
-        <MetricCard
-          label="Клиентов оценено"
-          value={
-            <>
-              {scored}
-              <span className="metric-total"> / {total}</span>
-            </>
-          }
-          note="По текущим данным"
-          icon="users"
-          onClick={() => onNavigate.page("customers")}
+      <PageHead
+        title="Риск оттока"
+        description="Кому нужно внимание, почему и сколько можем потерять"
+      >
+        <button
+          className="chip chip-link"
+          onClick={() => onNavigate.page("model")}
+          title="Горизонт меняется в «Модели риска»"
+        >
+          Горизонт: {horizon} дней
+        </button>
+        <button className="button button-secondary" onClick={onExport}>
+          <Icon name="download" size={16} />
+          Экспорт CSV
+        </button>
+      </PageHead>
+      <section className="outflow-section">
+        <CardHead
+          title="Отток: факты и прогноз"
+          description="Слева — что уже ушло по снимкам, справа — услуги под риском по дням решения и ожидаемые непродления. Линия «сегодня» разделяет их."
         />
-        <MetricCard
-          label="Высокий риск"
-          value={summary?.risk_counts?.high ?? "—"}
-          note={`${summary?.risk_counts?.medium ?? 0} со средним риском`}
-          icon="pulse"
-          tone="metric-high"
-          onClick={() => onNavigate.filter("high")}
-        />
-        <MetricCard
-          label="Выручка под риском"
-          value={money(summary?.potential_loss_minor)}
-          note={`За ${summary?.prediction_horizon_days || 30} дней · оценка`}
-          icon="wallet"
-          tone="metric-highlight"
-        />
-        <MetricCard
-          label="Недостаточно данных"
-          value={summary?.risk_counts?.unscored ?? "—"}
-          note="Нужна проверка источника"
-          icon="info"
-          tone="metric-muted"
-          onClick={() => onNavigate.filter("unscored")}
-        />
+        <OutflowChart outflow={outflow} days={outflowDays} onDays={setOutflowDays} />
       </section>
-      <section className="overview-grid">
-        <article className="panel reason-panel">
-          <div className="panel-heading">
-            <div>
-              <span className="section-index">01 / СИГНАЛЫ</span>
-              <h2>Почему клиенты в риске</h2>
-              <p>Выберите причину, чтобы сузить список.</p>
-            </div>
-            <span className="heading-icon">
-              <Icon name="pulse" />
+
+      <section className="hero" aria-label="Главное">
+        <div className="hero-col">
+          <span className="hero-q">
+            <AezaIcon name="error" variant="keyBlue" size={34} />
+            Кому нужно внимание
+          </span>
+          <div className="hero-value">
+            <span className="display">{high}</span>
+            <span className="h2">
+              {plural(high, ["клиент", "клиента", "клиентов"])}
             </span>
           </div>
-          <ReasonList
-            customers={customers}
-            activeReason={activeReason}
-            onSelect={setActiveReason}
+          <span className="hero-note">
+            в высоком риске из {summary?.customers_total ?? 0} · ещё{" "}
+            {counts.medium ?? 0} в среднем
+          </span>
+          <button className="link" onClick={() => onNavigate.filter("high")}>
+            Показать список →
+          </button>
+        </div>
+        <div className="hero-col">
+          <span className="hero-q">
+            <AezaIcon name="info" variant="keyBlue" size={34} />
+            Почему растёт риск
+          </span>
+          {reasons.length ? (
+            reasons.map((reason) => (
+              <button
+                key={reason.code}
+                className="hero-reason"
+                onClick={() =>
+                  setActiveReason(
+                    activeReason === reason.code ? "" : reason.code,
+                  )
+                }
+                aria-pressed={activeReason === reason.code}
+              >
+                <span className="hero-reason-row">
+                  <span>{reason.title}</span>
+                  <b>{reason.count}</b>
+                </span>
+                <span className="hero-bar">
+                  <i
+                    style={{ width: `${(reason.count / maxReason) * 100}%` }}
+                  />
+                </span>
+              </button>
+            ))
+          ) : (
+            <span className="hero-note">
+              Среди клиентов под риском признаков нет.
+            </span>
+          )}
+        </div>
+        <div className="hero-col">
+          <span className="hero-q">
+            <AezaIcon name="euro" variant="keyBlue" size={34} />
+            Сколько можем потерять
+          </span>
+          <div className="hero-value">
+            <span className="display">
+              {moneyShort(summary?.potential_loss_minor)}
+            </span>
+            <span className="h1">€</span>
+          </div>
+          <span className="hero-note">
+            на ближайшие 7 дней · с учётом цены услуг, балансов и риска
+          </span>
+          <dl className="hero-money">
+            <div>
+              <dt>Продления под риском</dt>
+              <dd>{money(summary?.revenue_at_risk_minor)}</dd>
+            </div>
+            <div>
+              <dt>Возможные ближайшие потери</dt>
+              <dd>{money(summary?.near_term_loss_minor)}</dd>
+            </div>
+          </dl>
+          <button className="link" onClick={() => onNavigate.page("model")}>
+            Как считается →
+          </button>
+        </div>
+        <div className="stripes" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+      </section>
+
+      <div className="row-split">
+        <section className="card">
+          <CardHead
+            icon="wallet"
+            title="Где сосредоточены потери"
+            description="Клиенты с наибольшей ожидаемой потерей: нехватка денег на продления × risk-score"
           />
-          <div className="reason-footnote">
-            <span className="mini-check">
-              <Icon name="check" size={13} />
-            </span>
-            Оценка объясняется конкретными сигналами
-          </div>
-        </article>
-        <article className="panel priority-panel">
-          <div className="panel-heading priority-heading">
-            <div>
-              <span className="section-index">02 / ВЫБОРКА</span>
-              <h2>{reasonLabel || "Приоритетные клиенты"}</h2>
-              <p>
-                {activeReason
-                  ? `${filtered.length} клиентов с этой причиной`
-                  : "Клиенты, которым стоит уделить внимание в первую очередь"}
-              </p>
+          {exposure.length ? (
+            <div className="exposure">
+              {exposure.map((customer) => (
+                <button
+                  key={customer.id}
+                  className="exposure-row"
+                  onClick={() => onSelectCustomer(customer.id)}
+                >
+                  <span>{customer.email}</span>
+                  <span className="exposure-track">
+                    <i
+                      style={{
+                        width: `${Math.max(3, (customer.potential_loss_minor / maxExposure) * 100)}%`,
+                      }}
+                    />
+                  </span>
+                  <b>{money(customer.potential_loss_minor)}</b>
+                </button>
+              ))}
             </div>
-            <button
-              className="text-link"
-              onClick={() => onNavigate.page("customers")}
-            >
-              Все клиенты <Icon name="arrow" size={15} />
-            </button>
+          ) : (
+            <Empty title="Потерь не ожидается">
+              Балансов хватает на все продления в горизонте.
+            </Empty>
+          )}
+        </section>
+        <section className="card">
+          <CardHead
+            icon="error"
+            title="Уровни риска"
+            description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · потери по уровню`}
+          />
+          <div className="levels-bar" aria-hidden="true">
+            {levels.map((key) =>
+              counts[key] ? (
+                <i
+                  key={key}
+                  style={{ flex: counts[key], background: levelColor[key] }}
+                />
+              ) : null,
+            )}
           </div>
+          <div className="kv-list">
+            {levels.map((key) => (
+              <button
+                key={key}
+                className="kv-row"
+                onClick={() => onNavigate.filter(key)}
+              >
+                <span
+                  className={`swatch${key === "unscored" ? " swatch-unscored" : ""}`}
+                  style={
+                    key === "unscored"
+                      ? undefined
+                      : { background: levelColor[key] }
+                  }
+                />
+                <span>{riskText[key]}</span>
+                <b>{counts[key] ?? 0}</b>
+                <em>{key === "unscored" ? "—" : money(lossByLevel[key])}</em>
+              </button>
+            ))}
+          </div>
+          <p className="note small muted">
+            <AezaIcon name="info" variant="flat" size={22} />
+            «Нет оценки»: у клиента нет активных услуг или дат окончания,
+            поэтому риск не считаем.
+          </p>
+        </section>
+      </div>
+
+      <section className="table-card">
+        <div className="table-card-head">
+          <CardHead
+            title={
+              activeReasonTitle
+                ? `Причина: ${activeReasonTitle}`
+                : "Топ клиентов под риском"
+            }
+            description="Нажмите на заголовок колонки, чтобы отсортировать"
+          >
+            {activeReason && (
+              <button className="link" onClick={() => setActiveReason("")}>
+                Сбросить причину
+              </button>
+            )}
+          </CardHead>
+          <Segments
+            label="Фильтр по уровню риска"
+            value={level}
+            onChange={setLevel}
+            items={[
+              { value: "", label: "Все", count: summary?.customers_total },
+              ...levels.map((key) => ({
+                value: key,
+                label: riskText[key],
+                count: counts[key] ?? 0,
+              })),
+            ]}
+          />
+        </div>
+        {filtered.length ? (
           <CustomerTable
-            customers={displayed}
-            onSelect={onSelectCustomer}
+            customers={filtered.slice(0, 6)}
             sortBy={sortBy}
             order={order}
             onSort={onSort}
-            compact
+            onSelect={onSelectCustomer}
           />
-          {filtered.length > 6 && (
-            <button
-              className="table-more"
-              onClick={() => onNavigate.page("customers")}
-            >
-              Показать всех {filtered.length} клиентов{" "}
-              <Icon name="arrow" size={15} />
-            </button>
-          )}
-        </article>
-      </section>
-      <section className="panel exposure-panel">
-        <div className="panel-heading exposure-heading">
-          <div>
-            <span className="section-index">03 / ДЕНЕЖНЫЙ ЭФФЕКТ</span>
-            <h2>Где сосредоточена сумма риска</h2>
-            <p>
-              Потенциальная потеря учитывает недостаток средств и оценку
-              клиента.
-            </p>
-          </div>
-          <div className="exposure-total">
-            <small>Общая оценка</small>
-            <b>{money(summary?.potential_loss_minor)}</b>
-          </div>
-        </div>
-        <ExposureBars customers={customers} />
-        <div className="calculation-note">
-          <Icon name="info" size={15} />
+        ) : (
+          <Empty
+            image={
+              level === "high"
+                ? { src: mascotHappy, width: 260, height: 390 }
+                : undefined
+            }
+            title={
+              level === "high" ? "В высоком риске никого" : "Никого не нашли"
+            }
+            action={
+              <button
+                className="button button-secondary"
+                onClick={() => {
+                  setLevel("");
+                  setActiveReason("");
+                }}
+              >
+                Сбросить фильтр
+              </button>
+            }
+          >
+            {level === "high"
+              ? "Редкий день: никто не собирается уходить."
+              : "Попробуйте другой уровень риска."}
+          </Empty>
+        )}
+        <div className="table-foot">
           <span>
-            Это ориентир для работы команды, а не гарантированный финансовый
-            прогноз.
+            Показано {Math.min(6, filtered.length)} из {filtered.length}
           </span>
-          <button onClick={() => onNavigate.page("model")}>
-            Как считается <Icon name="arrow" size={14} />
+          <button className="link" onClick={() => onNavigate.page("customers")}>
+            Все клиенты →
           </button>
         </div>
       </section>

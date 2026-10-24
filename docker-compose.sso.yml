@@ -1,0 +1,30 @@
+# Optional SSO: adds a local OpenID Connect provider and turns the login button on.
+#   docker compose -f docker-compose.yml -f docker-compose.sso.yml up --build
+services:
+  dex:
+    image: ghcr.io/dexidp/dex:v2.41.1
+    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    volumes:
+      - ./sso/dex/config.yaml:/etc/dex/config.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - aeza
+
+  api:
+    environment:
+      AEZA_OIDC_ISSUER: http://localhost:5173/dex
+      AEZA_OIDC_CLIENT_ID: aeza-panel
+      AEZA_OIDC_CLIENT_SECRET: aeza-panel-local-secret
+      AEZA_OIDC_REDIRECT_URI: http://localhost:5173/api/v1/auth/oidc/callback
+      AEZA_OIDC_INTERNAL_ISSUER: http://dex:5556/dex
+      AEZA_OIDC_AUTO_PROVISION: "true"
+    depends_on:
+      dex:
+        condition: service_started

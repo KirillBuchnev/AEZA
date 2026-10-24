@@ -1,0 +1,3065 @@
+{
+  "components": {
+    "schemas": {
+      "AnalyticsSummary": {
+        "properties": {
+          "assessed_total": {
+            "title": "Assessed Total",
+            "type": "integer"
+          },
+          "calculated_at": {
+            "format": "date-time",
+            "title": "Calculated At",
+            "type": "string"
+          },
+          "calculation_version": {
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "customers_total": {
+            "title": "Customers Total",
+            "type": "integer"
+          },
+          "monthly_cost_minor": {
+            "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
+          "potential_loss_by_level_minor": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Potential Loss By Level Minor",
+            "type": "object"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "prediction_horizon_days": {
+            "title": "Prediction Horizon Days",
+            "type": "integer"
+          },
+          "reason_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Reason Counts",
+            "type": "object"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "risk_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Risk Counts",
+            "type": "object"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Updated At"
+          },
+          "top_exposure": {
+            "items": {
+              "$ref": "#/components/schemas/ExposureItem"
+            },
+            "title": "Top Exposure",
+            "type": "array"
+          }
+        },
+        "required": [
+          "customers_total",
+          "assessed_total",
+          "risk_counts",
+          "reason_counts",
+          "potential_loss_by_level_minor",
+          "top_exposure",
+          "potential_loss_minor",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
+          "monthly_cost_minor",
+          "currency",
+          "prediction_horizon_days",
+          "source_kind",
+          "source_updated_at",
+          "snapshot_id",
+          "calculation_version",
+          "calculated_at"
+        ],
+        "title": "AnalyticsSummary",
+        "type": "object"
+      },
+      "AuthMethodsResponse": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "boolean"
+          },
+          "registration": {
+            "title": "Registration",
+            "type": "boolean"
+          },
+          "sso": {
+            "$ref": "#/components/schemas/SsoMethod"
+          }
+        },
+        "required": [
+          "password",
+          "registration",
+          "sso"
+        ],
+        "title": "AuthMethodsResponse",
+        "type": "object"
+      },
+      "ControlCase": {
+        "properties": {
+          "expected_level": {
+            "title": "Expected Level",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "matches": {
+            "title": "Matches",
+            "type": "boolean"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "risk_score",
+          "risk_level",
+          "expected_level",
+          "matches"
+        ],
+        "title": "ControlCase",
+        "type": "object"
+      },
+      "CustomerCalculation": {
+        "properties": {
+          "account_risk_sum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Risk Sum"
+          },
+          "available_balance_minor": {
+            "title": "Available Balance Minor",
+            "type": "integer"
+          },
+          "due_revenue_minor": {
+            "title": "Due Revenue Minor",
+            "type": "integer"
+          },
+          "high_count": {
+            "title": "High Count",
+            "type": "integer"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "max_service_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Service Score"
+          },
+          "monthly_cost_minor": {
+            "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
+          "normalizer": {
+            "title": "Normalizer",
+            "type": "integer"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "risk_score_index": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score Index"
+          },
+          "uncovered_revenue_minor": {
+            "title": "Uncovered Revenue Minor",
+            "type": "integer"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "horizon_days",
+          "normalizer",
+          "weights",
+          "due_revenue_minor",
+          "available_balance_minor",
+          "uncovered_revenue_minor",
+          "risk_score_index",
+          "account_risk_sum",
+          "max_service_score",
+          "high_count",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
+          "potential_loss_minor",
+          "monthly_cost_minor"
+        ],
+        "title": "CustomerCalculation",
+        "type": "object"
+      },
+      "CustomerDetail": {
+        "properties": {
+          "account_risk_sum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Risk Sum"
+          },
+          "assessed_at": {
+            "format": "date-time",
+            "title": "Assessed At",
+            "type": "string"
+          },
+          "available_balance_minor": {
+            "title": "Available Balance Minor",
+            "type": "integer"
+          },
+          "balance_minor": {
+            "title": "Balance Minor",
+            "type": "integer"
+          },
+          "bonus_balance_minor": {
+            "title": "Bonus Balance Minor",
+            "type": "integer"
+          },
+          "bonus_spend_enabled": {
+            "title": "Bonus Spend Enabled",
+            "type": "boolean"
+          },
+          "calculation": {
+            "$ref": "#/components/schemas/CustomerCalculation"
+          },
+          "calculation_version": {
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "data_issues_count": {
+            "title": "Data Issues Count",
+            "type": "integer"
+          },
+          "data_quality": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityIssue"
+            },
+            "title": "Data Quality",
+            "type": "array"
+          },
+          "due_revenue_minor": {
+            "title": "Due Revenue Minor",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "high_count": {
+            "title": "High Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "max_service_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Service Score"
+          },
+          "monthly_cost_minor": {
+            "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RiskReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "recommended_action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "risk_label": {
+            "title": "Risk Label",
+            "type": "string"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "service_count": {
+            "title": "Service Count",
+            "type": "integer"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceDetail"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "total_replenished_minor": {
+            "title": "Total Replenished Minor",
+            "type": "integer"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionDetail"
+            },
+            "title": "Transactions",
+            "type": "array"
+          },
+          "uncovered_revenue_minor": {
+            "title": "Uncovered Revenue Minor",
+            "type": "integer"
+          },
+          "unscored_services_count": {
+            "title": "Unscored Services Count",
+            "type": "integer"
+          },
+          "withdraw_balance_minor": {
+            "title": "Withdraw Balance Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "balance_minor",
+          "withdraw_balance_minor",
+          "bonus_balance_minor",
+          "bonus_spend_enabled",
+          "total_replenished_minor",
+          "service_count",
+          "risk_score",
+          "risk_level",
+          "risk_label",
+          "reasons",
+          "recommended_action",
+          "due_revenue_minor",
+          "monthly_cost_minor",
+          "potential_loss_minor",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
+          "account_risk_sum",
+          "max_service_score",
+          "high_count",
+          "unscored_services_count",
+          "data_issues_count",
+          "services",
+          "transactions",
+          "data_quality",
+          "available_balance_minor",
+          "uncovered_revenue_minor",
+          "assessed_at",
+          "snapshot_id",
+          "calculation_version",
+          "calculation"
+        ],
+        "title": "CustomerDetail",
+        "type": "object"
+      },
+      "CustomerListItem": {
+        "properties": {
+          "account_risk_sum": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Risk Sum"
+          },
+          "balance_minor": {
+            "title": "Balance Minor",
+            "type": "integer"
+          },
+          "bonus_balance_minor": {
+            "title": "Bonus Balance Minor",
+            "type": "integer"
+          },
+          "bonus_spend_enabled": {
+            "title": "Bonus Spend Enabled",
+            "type": "boolean"
+          },
+          "data_issues_count": {
+            "title": "Data Issues Count",
+            "type": "integer"
+          },
+          "due_revenue_minor": {
+            "title": "Due Revenue Minor",
+            "type": "integer"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "high_count": {
+            "title": "High Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "max_service_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Service Score"
+          },
+          "monthly_cost_minor": {
+            "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RiskReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "recommended_action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "risk_label": {
+            "title": "Risk Label",
+            "type": "string"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "service_count": {
+            "title": "Service Count",
+            "type": "integer"
+          },
+          "total_replenished_minor": {
+            "title": "Total Replenished Minor",
+            "type": "integer"
+          },
+          "unscored_services_count": {
+            "title": "Unscored Services Count",
+            "type": "integer"
+          },
+          "withdraw_balance_minor": {
+            "title": "Withdraw Balance Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "balance_minor",
+          "withdraw_balance_minor",
+          "bonus_balance_minor",
+          "bonus_spend_enabled",
+          "total_replenished_minor",
+          "service_count",
+          "risk_score",
+          "risk_level",
+          "risk_label",
+          "reasons",
+          "recommended_action",
+          "due_revenue_minor",
+          "monthly_cost_minor",
+          "potential_loss_minor",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
+          "account_risk_sum",
+          "max_service_score",
+          "high_count",
+          "unscored_services_count",
+          "data_issues_count"
+        ],
+        "title": "CustomerListItem",
+        "type": "object"
+      },
+      "CustomerListResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "calculation_version": {
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "order": {
+            "title": "Order",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "sort_by": {
+            "title": "Sort By",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "sort_by",
+          "order",
+          "snapshot_id",
+          "calculation_version",
+          "as_of"
+        ],
+        "title": "CustomerListResponse",
+        "type": "object"
+      },
+      "CustomerSnapshot": {
+        "properties": {
+          "balance_minor": {
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Balance Minor",
+            "type": "integer"
+          },
+          "bonus_balance_minor": {
+            "default": 0,
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Bonus Balance Minor",
+            "type": "integer"
+          },
+          "bonus_spend_enabled": {
+            "default": false,
+            "title": "Bonus Spend Enabled",
+            "type": "boolean"
+          },
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceSnapshot"
+            },
+            "maxItems": 5000,
+            "title": "Services",
+            "type": "array"
+          },
+          "total_replenished_minor": {
+            "default": 0,
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Total Replenished Minor",
+            "type": "integer"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionSnapshot"
+            },
+            "maxItems": 10000,
+            "title": "Transactions",
+            "type": "array"
+          },
+          "withdraw_balance_minor": {
+            "default": 0,
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Withdraw Balance Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "balance_minor"
+        ],
+        "title": "CustomerSnapshot",
+        "type": "object"
+      },
+      "DataQualityIssue": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "service_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Id"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "DataQualityIssue",
+        "type": "object"
+      },
+      "DataQualityReport": {
+        "properties": {
+          "customers_total": {
+            "title": "Customers Total",
+            "type": "integer"
+          },
+          "customers_unscored": {
+            "title": "Customers Unscored",
+            "type": "integer"
+          },
+          "issues": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Issues",
+            "type": "object"
+          }
+        },
+        "required": [
+          "customers_total",
+          "customers_unscored",
+          "issues"
+        ],
+        "title": "DataQualityReport",
+        "type": "object"
+      },
+      "ExposureItem": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "potential_loss_minor"
+        ],
+        "title": "ExposureItem",
+        "type": "object"
+      },
+      "FeatureDescription": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "description",
+          "weight"
+        ],
+        "title": "FeatureDescription",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "LoginResponse": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "required": [
+          "user",
+          "expires_at"
+        ],
+        "title": "LoginResponse",
+        "type": "object"
+      },
+      "ModelSettingsPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "account_high_risk_min": {
+            "anyOf": [
+              {
+                "maximum": 1000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account High Risk Min"
+          },
+          "account_medium_risk_min": {
+            "anyOf": [
+              {
+                "maximum": 999.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Medium Risk Min"
+          },
+          "high_risk_min": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Risk Min"
+          },
+          "medium_risk_min": {
+            "anyOf": [
+              {
+                "maximum": 99.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medium Risk Min"
+          },
+          "prediction_horizon_days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prediction Horizon Days"
+          },
+          "weights": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "maxProperties": 4,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weights"
+          }
+        },
+        "title": "ModelSettingsPatch",
+        "type": "object"
+      },
+      "ModelSettingsResponse": {
+        "properties": {
+          "account_high_risk_min": {
+            "title": "Account High Risk Min",
+            "type": "integer"
+          },
+          "account_medium_risk_min": {
+            "title": "Account Medium Risk Min",
+            "type": "integer"
+          },
+          "calculation_version": {
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          },
+          "control_cases": {
+            "items": {
+              "$ref": "#/components/schemas/ControlCase"
+            },
+            "title": "Control Cases",
+            "type": "array"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureDescription"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "high_risk_min": {
+            "title": "High Risk Min",
+            "type": "integer"
+          },
+          "medium_risk_min": {
+            "title": "Medium Risk Min",
+            "type": "integer"
+          },
+          "normalizer": {
+            "title": "Normalizer",
+            "type": "integer"
+          },
+          "prediction_horizon_days": {
+            "title": "Prediction Horizon Days",
+            "type": "integer"
+          },
+          "recalculated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recalculated"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "weights": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Weights",
+            "type": "object"
+          }
+        },
+        "required": [
+          "version",
+          "revision",
+          "calculation_version",
+          "prediction_horizon_days",
+          "high_risk_min",
+          "medium_risk_min",
+          "account_high_risk_min",
+          "account_medium_risk_min",
+          "weights",
+          "normalizer",
+          "features",
+          "control_cases"
+        ],
+        "title": "ModelSettingsResponse",
+        "type": "object"
+      },
+      "OutflowFactDay": {
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "deleted_amount_minor": {
+            "title": "Deleted Amount Minor",
+            "type": "integer"
+          },
+          "entered_wait": {
+            "title": "Entered Wait",
+            "type": "integer"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "integer"
+          },
+          "renewed": {
+            "title": "Renewed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "removed",
+          "deleted",
+          "blocked",
+          "renewed",
+          "entered_wait",
+          "deleted_amount_minor"
+        ],
+        "title": "OutflowFactDay",
+        "type": "object"
+      },
+      "OutflowFacts": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/OutflowFactDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "estimated": {
+            "default": false,
+            "title": "Estimated",
+            "type": "boolean"
+          },
+          "from_date": {
+            "title": "From Date",
+            "type": "string"
+          },
+          "snapshots_observed": {
+            "title": "Snapshots Observed",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "to_date": {
+            "title": "To Date",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "source",
+          "from_date",
+          "to_date",
+          "snapshots_observed",
+          "days",
+          "totals"
+        ],
+        "title": "OutflowFacts",
+        "type": "object"
+      },
+      "OutflowForecast": {
+        "properties": {
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/OutflowForecastDay"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "from_date": {
+            "title": "From Date",
+            "type": "string"
+          },
+          "horizon_days": {
+            "title": "Horizon Days",
+            "type": "integer"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Totals",
+            "type": "object"
+          },
+          "waiting_now": {
+            "$ref": "#/components/schemas/WaitingNow"
+          }
+        },
+        "required": [
+          "method",
+          "horizon_days",
+          "from_date",
+          "buckets",
+          "waiting_now",
+          "totals"
+        ],
+        "title": "OutflowForecast",
+        "type": "object"
+      },
+      "OutflowForecastDay": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "expected_loss_minor": {
+            "title": "Expected Loss Minor",
+            "type": "integer"
+          },
+          "expected_non_renewals": {
+            "title": "Expected Non Renewals",
+            "type": "number"
+          },
+          "services_at_risk": {
+            "title": "Services At Risk",
+            "type": "integer"
+          },
+          "services_due": {
+            "title": "Services Due",
+            "type": "integer"
+          },
+          "services_waiting": {
+            "default": 0,
+            "title": "Services Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "services_due",
+          "services_at_risk",
+          "expected_non_renewals",
+          "expected_loss_minor"
+        ],
+        "title": "OutflowForecastDay",
+        "type": "object"
+      },
+      "OutflowResponse": {
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "calculation_version": {
+            "title": "Calculation Version",
+            "type": "string"
+          },
+          "facts": {
+            "$ref": "#/components/schemas/OutflowFacts"
+          },
+          "forecast": {
+            "$ref": "#/components/schemas/OutflowForecast"
+          },
+          "services_at_risk": {
+            "$ref": "#/components/schemas/ServicesAtRisk"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          }
+        },
+        "required": [
+          "as_of",
+          "snapshot_id",
+          "calculation_version",
+          "facts",
+          "forecast",
+          "services_at_risk"
+        ],
+        "title": "OutflowResponse",
+        "type": "object"
+      },
+      "PasswordChangeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "current_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          },
+          "new_password_confirm": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password Confirm",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password",
+          "new_password_confirm"
+        ],
+        "title": "PasswordChangeRequest",
+        "type": "object"
+      },
+      "PasswordResetRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "new_password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          },
+          "new_password_confirm": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "New Password Confirm",
+            "type": "string"
+          },
+          "reset_token": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Reset Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reset_token",
+          "new_password",
+          "new_password_confirm"
+        ],
+        "title": "PasswordResetRequest",
+        "type": "object"
+      },
+      "PasswordResetTokenResponse": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "reset_token": {
+            "title": "Reset Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reset_token",
+          "expires_at"
+        ],
+        "title": "PasswordResetTokenResponse",
+        "type": "object"
+      },
+      "RecommendedAction": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "RecommendedAction",
+        "type": "object"
+      },
+      "RegisterRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "codeword": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Codeword",
+            "type": "string"
+          },
+          "first_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Last Name",
+            "type": "string"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "password": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          },
+          "password_confirm": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password Confirm",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "first_name",
+          "last_name",
+          "password",
+          "password_confirm",
+          "codeword"
+        ],
+        "title": "RegisterRequest",
+        "type": "object"
+      },
+      "RiskReason": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "points",
+          "explanation"
+        ],
+        "title": "RiskReason",
+        "type": "object"
+      },
+      "ServiceDetail": {
+        "properties": {
+          "auto_prolong": {
+            "title": "Auto Prolong",
+            "type": "boolean"
+          },
+          "available_balance_minor": {
+            "title": "Available Balance Minor",
+            "type": "integer"
+          },
+          "data_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Issue"
+          },
+          "due": {
+            "title": "Due",
+            "type": "boolean"
+          },
+          "due_revenue_minor": {
+            "title": "Due Revenue Minor",
+            "type": "integer"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "grace_remaining_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Remaining Days"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "monthly_cost_minor": {
+            "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
+          "payment_term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Term"
+          },
+          "potential_loss_minor": {
+            "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RiskReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "recent_failed_payment": {
+            "title": "Recent Failed Payment",
+            "type": "boolean"
+          },
+          "recommended_action": {
+            "$ref": "#/components/schemas/RecommendedAction"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "risk_label": {
+            "title": "Risk Label",
+            "type": "string"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "risk_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Score"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "uncovered_revenue_minor": {
+            "title": "Uncovered Revenue Minor",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "price_minor",
+          "auto_prolong",
+          "payment_term",
+          "status",
+          "expires_at",
+          "risk_score",
+          "risk_level",
+          "risk_label",
+          "reasons",
+          "recommended_action",
+          "data_issue",
+          "due",
+          "recent_failed_payment",
+          "due_revenue_minor",
+          "available_balance_minor",
+          "uncovered_revenue_minor",
+          "potential_loss_minor",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
+          "monthly_cost_minor",
+          "grace_remaining_days"
+        ],
+        "title": "ServiceDetail",
+        "type": "object"
+      },
+      "ServiceSnapshot": {
+        "properties": {
+          "auto_prolong": {
+            "title": "Auto Prolong",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "payment_term": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Term"
+          },
+          "price_minor": {
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "status": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "price_minor",
+          "auto_prolong",
+          "status"
+        ],
+        "title": "ServiceSnapshot",
+        "type": "object"
+      },
+      "ServicesAtRisk": {
+        "properties": {
+          "high": {
+            "title": "High",
+            "type": "integer"
+          },
+          "medium": {
+            "title": "Medium",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "high",
+          "medium"
+        ],
+        "title": "ServicesAtRisk",
+        "type": "object"
+      },
+      "SnapshotImportResponse": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "customers_received": {
+            "title": "Customers Received",
+            "type": "integer"
+          },
+          "data_quality": {
+            "$ref": "#/components/schemas/DataQualityReport"
+          },
+          "events_recorded": {
+            "title": "Events Recorded",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AnalyticsSummary"
+          }
+        },
+        "required": [
+          "accepted",
+          "customers_received",
+          "snapshot_id",
+          "events_recorded",
+          "data_quality",
+          "summary"
+        ],
+        "title": "SnapshotImportResponse",
+        "type": "object"
+      },
+      "SnapshotUpload": {
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerSnapshot"
+            },
+            "maxItems": 5000,
+            "title": "Customers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "customers"
+        ],
+        "title": "SnapshotUpload",
+        "type": "object"
+      },
+      "SsoMethod": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "label"
+        ],
+        "title": "SsoMethod",
+        "type": "object"
+      },
+      "TransactionDetail": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "service_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "service_id",
+          "status",
+          "type",
+          "amount_minor",
+          "created_at"
+        ],
+        "title": "TransactionDetail",
+        "type": "object"
+      },
+      "TransactionSnapshot": {
+        "properties": {
+          "amount_minor": {
+            "maximum": 9000000000000.0,
+            "minimum": 0.0,
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "service_id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Id"
+          },
+          "status": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "type",
+          "amount_minor"
+        ],
+        "title": "TransactionSnapshot",
+        "type": "object"
+      },
+      "UserResponse": {
+        "properties": {
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "first_name",
+          "last_name",
+          "full_name",
+          "role"
+        ],
+        "title": "UserResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VerifyCodewordRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "codeword": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Codeword",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "codeword"
+        ],
+        "title": "VerifyCodewordRequest",
+        "type": "object"
+      },
+      "WaitingNow": {
+        "properties": {
+          "beyond_grace_services": {
+            "default": 0,
+            "title": "Beyond Grace Services",
+            "type": "integer"
+          },
+          "expected_loss_minor": {
+            "title": "Expected Loss Minor",
+            "type": "integer"
+          },
+          "expected_non_renewals": {
+            "title": "Expected Non Renewals",
+            "type": "number"
+          },
+          "services": {
+            "title": "Services",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "services",
+          "expected_non_renewals",
+          "expected_loss_minor"
+        ],
+        "title": "WaitingNow",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "sessionCookie": {
+        "in": "cookie",
+        "name": "aeza_session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "API аналитики риска непродления услуг, оттока и денежной экспозиции.",
+    "title": "AEZA Retention Risk API",
+    "version": "1.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/analytics/outflow": {
+      "get": {
+        "operationId": "analytics_outflow_api_v1_analytics_outflow_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutflowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Отток: факты журнала и прогноз непродлений",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/summary": {
+      "get": {
+        "operationId": "analytics_summary_api_v1_analytics_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Сводка риска и денежной оценки",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Войти по логину и паролю",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Завершить сессию",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "current_user_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Получить текущего пользователя",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/methods": {
+      "get": {
+        "operationId": "auth_methods_api_v1_auth_methods_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMethodsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Доступные способы входа",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oidc/callback": {
+      "get": {
+        "operationId": "oidc_callback_api_v1_auth_oidc_callback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Завершить вход через OIDC",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/oidc/login": {
+      "get": {
+        "operationId": "oidc_login_api_v1_auth_oidc_login_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Начать вход через OIDC",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/change": {
+      "post": {
+        "operationId": "change_password_api_v1_auth_password_change_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Сменить пароль текущего пользователя",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "reset_password_api_v1_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Задать новый пароль после проверки кодового слова",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/verify-codeword": {
+      "post": {
+        "operationId": "verify_codeword_api_v1_auth_password_verify_codeword_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodewordRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordResetTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Проверить кодовое слово для сброса",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Зарегистрироваться",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/customers": {
+      "get": {
+        "operationId": "list_customers_api_v1_customers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "risk_level",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low",
+                    "unscored"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Risk Level"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "autoprolong_disabled",
+                    "insufficient_balance",
+                    "renewal_urgency",
+                    "prolong_wait"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
+            "in": "query",
+            "name": "data_status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "clean",
+                "issues"
+              ],
+              "title": "Data Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort_by",
+            "required": false,
+            "schema": {
+              "default": "risk_score",
+              "enum": [
+                "id",
+                "email",
+                "balance",
+                "total_replenished",
+                "monthly_cost",
+                "due_revenue",
+                "risk_score",
+                "max_service_score",
+                "high_count",
+                "potential_loss",
+                "revenue_at_risk",
+                "near_term_loss",
+                "service_count"
+              ],
+              "title": "Sort By",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Список клиентов с оценкой риска",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/customers/{customer_id}": {
+      "get": {
+        "operationId": "get_customer_api_v1_customers__customer_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Подробности риска клиента",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "operationId": "event_stream_api_v1_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "События обновления данных",
+        "tags": [
+          "updates"
+        ]
+      }
+    },
+    "/api/v1/export/{entity}": {
+      "get": {
+        "operationId": "export_data_api_v1_export__entity__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity",
+            "required": true,
+            "schema": {
+              "title": "Entity",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "csv",
+              "enum": [
+                "csv",
+                "xlsx",
+                "xml"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Выгрузка данных в CSV, XLSX или XML",
+        "tags": [
+          "export"
+        ]
+      }
+    },
+    "/api/v1/model/settings": {
+      "get": {
+        "operationId": "get_model_settings_api_v1_model_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Действующие коэффициенты модели",
+        "tags": [
+          "model"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_model_settings_api_v1_model_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelSettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Изменить настройки и пересчитать оценки",
+        "tags": [
+          "model"
+        ]
+      }
+    },
+    "/api/v1/source/snapshot": {
+      "put": {
+        "operationId": "replace_source_snapshot_api_v1_source_snapshot_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotUpload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Заменить снимок исходных данных",
+        "tags": [
+          "source"
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Health Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Проверка доступности API",
+        "tags": [
+          "system"
+        ]
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "prometheus_metrics_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prometheus-метрики",
+        "tags": [
+          "metrics"
+        ]
+      }
+    }
+  }
+}
