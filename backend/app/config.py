@@ -92,8 +92,8 @@ def load_config() -> AppConfig:
             raise ValueError("AEZA_TRUSTED_PROXY_IPS must contain valid IP addresses.") from error
     docs_enabled = _boolean("AEZA_DOCS_ENABLED", default=environment != "production")
     seed = os.getenv("AEZA_SEED", "case").strip().lower() or "case"
-    if seed not in {"case", "demo", "empty"}:
-        raise ValueError("AEZA_SEED must be case, demo or empty.")
+    if seed not in {"case", "showcase", "demo", "empty"}:
+        raise ValueError("AEZA_SEED must be case, showcase, demo or empty.")
     session_days = int(os.getenv("AEZA_SESSION_DAYS", "7"))
     if not 1 <= session_days <= 30:
         raise ValueError("AEZA_SESSION_DAYS must be between 1 and 30.")

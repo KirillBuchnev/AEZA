@@ -11,6 +11,14 @@ const eventText = {
   source_snapshot_changed: "Загружен новый снимок данных",
 };
 
+const sourceText = {
+  case: "Данные кейса",
+  showcase: "Данные кейса и сценарные аккаунты S01–S14",
+  demo: "Демо-данные",
+  empty: "Данных нет",
+  uploaded: "Загружен через PUT /api/v1/source/snapshot",
+};
+
 function readJson(file) {
   return new Promise((resolve, reject) => {
     if (file.size > MAX_FILE_BYTES) {
@@ -100,7 +108,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
           <CardHead
             icon="info"
             title="Текущий снимок"
-            description={`${summary?.source_kind === "demo" ? "Демо-данные" : "Загружен через PUT /api/v1/source/snapshot"} · обновлён ${updatedAt ? new Date(updatedAt).toLocaleString("ru-RU") : "—"}`}
+            description={`${sourceText[summary?.source_kind] || sourceText.uploaded} · обновлён ${updatedAt ? new Date(updatedAt).toLocaleString("ru-RU") : "—"}`}
           />
           <div className="stats">
             <div>

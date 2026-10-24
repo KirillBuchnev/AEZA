@@ -254,6 +254,10 @@ class Database:
                 # synthetic source; an uploaded snapshot remains untouched.
                 self._replace_snapshot(connection, demo_snapshot())
                 connection.execute(SET_STATE, {"key": "source_updated_at", "value": _now()})
+            elif source_kind == "showcase" and seed_name == "showcase" and seed_customers is not None:
+                # Scenario dates are relative to the current time: rebuild them on every start.
+                self._replace_snapshot(connection, seed_customers)
+                connection.execute(SET_STATE, {"key": "source_updated_at", "value": _now()})
             if admin_profile is not None:
                 exists = _scalar(
                     connection,
