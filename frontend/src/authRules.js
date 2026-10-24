@@ -1,6 +1,6 @@
 // Mirrors backend/app/security.py so the form explains problems before sending.
 
-export const USERNAME_PATTERN = /^[A-Za-z0-9._@-]{3,40}$/;
+export const USERNAME_PATTERN = /^[A-Za-z0-9._@-]{3,64}$/;
 const WEAK_CODEWORDS = new Set(["password", "qwerty", "codeword", "letmein", "aeza"]);
 
 // Python's len() and casefold() are closest to these: code points, and upper-then-lower folding.
@@ -13,7 +13,7 @@ export function normalizeCodeword(value) {
 
 export function usernameError(username) {
   if (!USERNAME_PATTERN.test(username))
-    return "Логин должен быть от 3 до 40 символов: латинские буквы, цифры, точка, дефис, подчёркивание или @.";
+    return "Логин должен быть от 3 до 64 символов: латинские буквы, цифры, точка, дефис, подчёркивание или @.";
   return "";
 }
 

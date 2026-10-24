@@ -5,6 +5,7 @@ import { Brand } from "./Icons.jsx";
 import { CustomerPage } from "./CustomerPage.jsx";
 import { CustomersPage } from "./CustomersPage.jsx";
 import { Login } from "./Login.jsx";
+import { PasswordDialog } from "./PasswordDialog.jsx";
 import { ModelPage } from "./ModelPage.jsx";
 import { Overview } from "./Overview.jsx";
 import { Sidebar } from "./Sidebar.jsx";
@@ -30,6 +31,10 @@ function initialTheme() {
     : "light";
 }
 
+const CUSTOMER_PAGE_SIZE = 10;
+const OVERVIEW_ROWS = 200;
+const EXPORT_PAGE_SIZE = 200;
+
 const pageTitles = {
   overview: [{ label: "Обзор" }],
   customers: [{ label: "Клиенты" }],
@@ -44,6 +49,8 @@ export default function App() {
   const [page, setPage] = useState(() => readHash().page);
   const [customerId, setCustomerId] = useState(() => readHash().customerId);
   const [summary, setSummary] = useState(null);
+  const [outflow, setOutflow] = useState(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [total, setTotal] = useState(0);
   const [settings, setSettings] = useState(null);
@@ -120,19 +127,23 @@ export default function App() {
     if (!authenticated) return;
     setLoading(true);
     try {
-      const [nextSummary, nextCustomers, nextSettings] = await Promise.all([
+      const onCustomers = page === "customers";
+      const [nextSummary, nextOutflow, nextCustomers, nextSettings] = await Promise.all([
         api.summary(),
+        api.outflow(30),
         api.customers({
           q: debouncedQuery,
           risk_level: filters.risk_level,
+          reason: activeReason,
           sort_by: filters.sort_by,
           order: filters.order,
-          limit: 200,
-          offset: 0,
+          limit: onCustomers ? CUSTOMER_PAGE_SIZE : OVERVIEW_ROWS,
+          offset: onCustomers ? (pageNumber - 1) * CUSTOMER_PAGE_SIZE : 0,
         }),
         api.settings(),
       ]);
       setSummary(nextSummary);
+      setOutflow(nextOutflow);
       setCustomers(nextCustomers.items);
       setTotal(nextCustomers.total);
       setSettings(nextSettings);
@@ -150,10 +161,13 @@ export default function App() {
     }
   }, [
     authenticated,
+    activeReason,
     debouncedQuery,
     filters.risk_level,
     filters.sort_by,
     filters.order,
+    page,
+    pageNumber,
   ]);
 
   useEffect(() => {
@@ -253,10 +267,12 @@ export default function App() {
     }
     setAuthenticated(false);
     setSummary(null);
+    setOutflow(null);
     setCustomers([]);
     setSettings(null);
     setUser(null);
     setUpdates([]);
+    setPasswordOpen(false);
     setPage("overview");
   }
 
@@ -291,42 +307,65 @@ export default function App() {
     setPageNumber(1);
   }
 
-  function exportCsv() {
-    const header = [
-      "ID",
-      "Email",
-      "Баланс EUR",
-      "Пополнено EUR",
-      "Оценка риска",
-      "Уровень риска",
-      "Потери EUR",
-      "Причина",
-    ];
-    const rows = customers.map((customer) => [
-      customer.id,
-      customer.email,
-      (customer.balance_minor / 100).toFixed(2),
-      (customer.total_replenished_minor / 100).toFixed(2),
-      customer.risk_score ?? "",
-      customer.risk_label,
-      (customer.potential_loss_minor / 100).toFixed(2),
-      customer.reasons?.[0]?.title || "",
-    ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map(toCsvCell).join(";"))
-      .join("\r\n");
-    const link = document.createElement("a");
-    const downloadUrl = URL.createObjectURL(
-      new Blob(["﻿", csv], { type: "text/csv;charset=utf-8" }),
-    );
-    link.href = downloadUrl;
-    link.download = "aeza-risk-clients.csv";
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
-    setToast({
-      kind: "success",
-      message: `CSV готов: ${rows.length} клиентов.`,
-    });
+  async function exportCsv() {
+    setToast({ kind: "success", message: "Готовим CSV по всем клиентам…" });
+    try {
+      const all = [];
+      let offset = 0;
+      let totalCount = Infinity;
+      while (offset < totalCount && offset < 5000) {
+        const chunk = await api.customers({
+          q: debouncedQuery,
+          risk_level: filters.risk_level,
+          reason: activeReason,
+          sort_by: filters.sort_by,
+          order: filters.order,
+          limit: EXPORT_PAGE_SIZE,
+          offset,
+        });
+        all.push(...chunk.items);
+        totalCount = chunk.total;
+        offset += EXPORT_PAGE_SIZE;
+        if (!chunk.items.length) break;
+      }
+      const header = [
+        "ID",
+        "Email",
+        "Баланс EUR",
+        "Пополнено EUR",
+        "Индекс аккаунта",
+        "Уровень риска",
+        "Потери EUR",
+        "Причина",
+        "Действие",
+      ];
+      const rows = all.map((customer) => [
+        customer.id,
+        customer.email,
+        (customer.balance_minor / 100).toFixed(2),
+        (customer.total_replenished_minor / 100).toFixed(2),
+        customer.risk_score ?? "",
+        customer.risk_label,
+        customer.risk_level ? (customer.potential_loss_minor / 100).toFixed(2) : "",
+        customer.reasons?.[0]?.title || "",
+        customer.recommended_action?.text || "",
+      ]);
+      const csv = [header, ...rows]
+        .map((row) => row.map(toCsvCell).join(";"))
+        .join("\r\n");
+      const link = document.createElement("a");
+      const downloadUrl = URL.createObjectURL(
+        new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }),
+      );
+      link.href = downloadUrl;
+      link.download = "aeza-risk-clients.csv";
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+      setToast({ kind: "success", message: `CSV готов: ${rows.length} клиентов.` });
+    } catch (error) {
+      if (error.status === 401) setAuthenticated(false);
+      else setToast({ kind: "error", message: error.message });
+    }
   }
 
   if (checkingSession)
@@ -420,6 +459,7 @@ export default function App() {
         user={user}
         summary={summary}
         onLogout={handleLogout}
+        onChangePassword={() => setPasswordOpen(true)}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
@@ -441,6 +481,7 @@ export default function App() {
               {page === "overview" && (
                 <Overview
                   summary={summary}
+                  outflow={outflow}
                   customers={customers}
                   activeReason={activeReason}
                   setActiveReason={setActiveReason}
@@ -494,6 +535,24 @@ export default function App() {
           )}
         </div>
       </main>
+      {passwordOpen && (
+        <PasswordDialog
+          username={user?.username}
+          onExpired={() => {
+            setPasswordOpen(false);
+            setAuthenticated(false);
+            setUser(null);
+          }}
+          onClose={() => setPasswordOpen(false)}
+          onDone={() => {
+            setPasswordOpen(false);
+            setToast({
+              kind: "success",
+              message: "Пароль изменён. Другие сессии завершены.",
+            });
+          }}
+        />
+      )}
       <Toast
         message={toast?.message}
         kind={toast?.kind}

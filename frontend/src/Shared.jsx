@@ -137,6 +137,7 @@ const columns = [
   { key: "email", label: "Email" },
   { key: "reason", label: "Главная причина" },
   { key: "balance", label: "Баланс", num: true },
+  { key: "monthly_cost", label: "В месяц", num: true },
   { key: "total_replenished", label: "Пополнено", num: true },
   { key: "potential_loss", label: "Потери", num: true },
 ];
@@ -224,6 +225,9 @@ export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
                   </div>
                 </td>
                 <td className="num money">{money(customer.balance_minor)}</td>
+                <td className="num money">
+                  {money(customer.monthly_cost_minor)}
+                </td>
                 <td className="num money">
                   {money(customer.total_replenished_minor)}
                 </td>

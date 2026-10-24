@@ -25,6 +25,7 @@ export function Sidebar({
   user,
   summary,
   onLogout,
+  onChangePassword,
   mobileOpen,
   setMobileOpen,
 }) {
@@ -84,6 +85,14 @@ export function Sidebar({
             <b>{user?.full_name || user?.username || "Аналитик"}</b>
             <small>Маркетинг</small>
           </span>
+          <button
+            className="icon-button"
+            aria-label="Сменить пароль"
+            title="Сменить пароль"
+            onClick={onChangePassword}
+          >
+            <Icon name="info" size={18} />
+          </button>
           <button
             className="icon-button"
             aria-label="Выйти"

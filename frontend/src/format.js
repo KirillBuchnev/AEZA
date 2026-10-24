@@ -43,10 +43,10 @@ export const riskText = {
 };
 export const riskClass = (level) => level || "unscored";
 export const featureOrder = [
-  "prolong_wait",
   "autoprolong_disabled",
   "insufficient_balance",
-  "failed_prolong_payment",
+  "renewal_urgency",
+  "prolong_wait",
 ];
 
 // Порядок признаков берём из настроек модели, чтобы новые признаки бэкенда

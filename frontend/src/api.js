@@ -43,11 +43,23 @@ export const api = {
       method: "POST",
       body: JSON.stringify(form),
     }),
+  verifyCodeword: (username, codeword) =>
+    request("/api/v1/auth/password/verify-codeword", {
+      method: "POST",
+      body: JSON.stringify({ username, codeword }),
+    }),
   resetPassword: (form) =>
-    request("/api/v1/auth/password-reset", {
+    request("/api/v1/auth/password/reset", {
       method: "POST",
       body: JSON.stringify(form),
     }),
+  changePassword: (form) =>
+    request("/api/v1/auth/password/change", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
+  authMethods: () => request("/api/v1/auth/methods"),
+  outflow: (days = 30) => request(`/api/v1/analytics/outflow?days=${days}`),
   summary: () => request("/api/v1/analytics/summary"),
   customers: (params = {}) => {
     const search = new URLSearchParams();

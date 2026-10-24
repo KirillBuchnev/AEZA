@@ -2461,3 +2461,39 @@ a.button {
 .login-form .fields .field {
   flex: 1 1 0;
 }
+
+/* Outflow chart: facts are solid, the forecast is hatched, a dashed line marks "today". */
+.outflow-section { margin: 24px 0 8px; }
+.outflow { display: grid; gap: 14px; }
+.outflow-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.outflow-chip {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-m);
+  background: var(--bg-surface);
+}
+.outflow-chip span { color: var(--text-secondary); font-size: 13px; }
+.outflow-chip b { font-size: 24px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.outflow-chip small { color: var(--text-secondary); font-size: 12px; }
+.outflow-chip-fact { border-left: 4px solid var(--text-primary); }
+.outflow-chip-forecast { border-left: 4px dashed var(--text-primary); }
+.outflow-svg { display: block; width: 100%; height: auto; }
+.outflow-grid { stroke: var(--border-default); stroke-width: 1; }
+.outflow-tick { fill: var(--text-secondary); font-size: 11px; }
+.outflow-today { stroke: var(--text-primary); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.outflow-bar-fact { fill: var(--text-primary); }
+.outflow-bar-forecast { stroke: var(--text-primary); stroke-width: 1; }
+.outflow-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--text-secondary); font-size: 13px; }
+.outflow-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend-fact,
+.legend-forecast { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+.legend-fact { background: var(--text-primary); }
+.legend-forecast {
+  border: 1px solid var(--text-primary);
+  background: repeating-linear-gradient(45deg, var(--bg-surface) 0 3px, var(--text-primary) 3px 5px);
+}
+@media (max-width: 760px) {
+  .outflow-summary { grid-template-columns: 1fr; }
+}

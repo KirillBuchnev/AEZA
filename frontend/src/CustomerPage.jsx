@@ -169,7 +169,7 @@ export function CustomerPage({ id, version, onToast }) {
             description={
               customer.risk_score == null
                 ? "Мало данных: нет активных услуг или даты окончания. Когда появятся, оценка посчитается сама."
-                : "Сумма баллов сработавших признаков, максимум 100. Баллы меняются в «Модели риска»."
+                : "Индекс аккаунта — сумма индексов его услуг; каждый индекс от 0 до 100, поэтому сумма может быть больше 100. Веса — в «Модели риска»."
             }
           />
           {customer.risk_score == null ? (
@@ -200,13 +200,12 @@ export function CustomerPage({ id, version, onToast }) {
                 </div>
               ))}
               <div className="total-row">
-                <b>Risk-score</b>
+                <b>Индекс аккаунта</b>
                 <span className="muted">
                   {reasons
                     .map((reason) => Math.round(reason.points * 10) / 10)
                     .join(" + ")}{" "}
                   = {Math.round(pointsSum * 10) / 10}
-                  {pointsSum > 100 && " → ограничено 100"}
                 </span>
               </div>
             </div>
@@ -241,12 +240,8 @@ export function CustomerPage({ id, version, onToast }) {
             </div>
             <div className="calc-line">
               <i>×</i>
-              <span>Risk-score / 100</span>
-              <b>
-                {scorePercent == null
-                  ? "нет оценки"
-                  : (scorePercent / 100).toFixed(2).replace(".", ",")}
-              </b>
+              <span>Индекс / 100, по каждой услуге</span>
+              <b>{customer.risk_score == null ? "нет оценки" : "см. услуги"}</b>
             </div>
           </div>
           <div className="calc-result">

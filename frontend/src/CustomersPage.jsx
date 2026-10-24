@@ -23,13 +23,11 @@ export function CustomersPage({
   pageNumber,
   setPageNumber,
 }) {
-  const pages = Math.max(1, Math.ceil(customers.length / PAGE_SIZE));
-  const shown = customers.slice(
-    (pageNumber - 1) * PAGE_SIZE,
-    pageNumber * PAGE_SIZE,
-  );
+  // The server pages the list: `customers` is the current page and `total` covers all filters.
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const shown = customers;
   const counts = summary?.risk_counts || {};
-  const first = customers.length ? (pageNumber - 1) * PAGE_SIZE + 1 : 0;
+  const first = total ? (pageNumber - 1) * PAGE_SIZE + 1 : 0;
 
   return (
     <>
@@ -108,8 +106,7 @@ export function CustomersPage({
         )}
         <div className="table-foot">
           <span>
-            {first}–{Math.min(pageNumber * PAGE_SIZE, customers.length)} из{" "}
-            {customers.length}
+            {first}–{Math.min(pageNumber * PAGE_SIZE, total)} из {total}
           </span>
           <button
             className="icon-button flip"

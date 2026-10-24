@@ -9,6 +9,7 @@ import {
   Segments,
 } from "./Shared.jsx";
 import { money, moneyShort, plural, riskText } from "./format.js";
+import { OutflowChart } from "./OutflowChart.jsx";
 import mascotHappy from "./assets/mascot-happy.webp";
 
 const levels = ["high", "medium", "low", "unscored"];
@@ -19,23 +20,25 @@ const levelColor = {
   unscored: "var(--border-default)",
 };
 
-function topReasons(customers) {
-  const counts = new Map();
-  customers
-    .filter((customer) => customer.risk_level && customer.risk_level !== "low")
-    .forEach((customer) =>
-      customer.reasons?.forEach((reason) => {
-        if (reason.code === "no_active_signals") return;
-        const item = counts.get(reason.code) || { ...reason, count: 0 };
-        item.count += 1;
-        counts.set(reason.code, item);
-      }),
-    );
-  return [...counts.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+const reasonTitles = {
+  autoprolong_disabled: "Ручное продление",
+  insufficient_balance: "Не хватает средств",
+  renewal_urgency: "Срочность продления",
+  prolong_wait: "Ожидание оплаты",
+};
+
+// Counts come from the summary, which covers every customer, not from the loaded page.
+function topReasons(summary) {
+  return Object.entries(summary?.reason_counts || {})
+    .filter(([, count]) => count > 0)
+    .map(([code, count]) => ({ code, title: reasonTitles[code] || code, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 }
 
 export function Overview({
   summary,
+  outflow,
   customers,
   activeReason,
   setActiveReason,
@@ -50,25 +53,14 @@ export function Overview({
   const counts = summary?.risk_counts || {};
   const horizon = summary?.prediction_horizon_days || 30;
   const high = counts.high ?? 0;
-  const reasons = useMemo(() => topReasons(customers), [customers]);
+  const reasons = useMemo(() => topReasons(summary), [summary]);
   const maxReason = Math.max(1, ...reasons.map((reason) => reason.count));
 
-  const lossByLevel = useMemo(() => {
-    const result = {};
-    customers.forEach((customer) => {
-      const key = customer.risk_level || "unscored";
-      result[key] = (result[key] || 0) + (customer.potential_loss_minor || 0);
-    });
-    return result;
-  }, [customers]);
+  const lossByLevel = summary?.potential_loss_by_level_minor || {};
 
   const exposure = useMemo(
-    () =>
-      customers
-        .filter((customer) => customer.potential_loss_minor > 0)
-        .sort((a, b) => b.potential_loss_minor - a.potential_loss_minor)
-        .slice(0, 6),
-    [customers],
+    () => (summary?.top_exposure || []).slice(0, 6),
+    [summary],
   );
   const maxExposure = Math.max(
     1,
@@ -103,6 +95,13 @@ export function Overview({
           Экспорт CSV
         </button>
       </PageHead>
+      <section className="outflow-section">
+        <CardHead
+          title="Отток: факты и прогноз"
+          description="Слева — что уже произошло по снимкам, справа — ожидаемые непродления по дням окончания. Линия «сегодня» разделяет их."
+        />
+        <OutflowChart outflow={outflow} />
+      </section>
 
       <section className="hero" aria-label="Главное">
         <div className="hero-col">

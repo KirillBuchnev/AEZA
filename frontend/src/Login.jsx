@@ -1,9 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./api.js";
+import {
+  codewordError,
+  matchError,
+  passwordError,
+  usernameError,
+} from "./authRules.js";
 import { Brand } from "./Icons.jsx";
 import mascotLaptop from "./assets/mascot-laptop.webp";
 
-const USERNAME_RE = /^[A-Za-z0-9._@-]{3,64}$/;
+const SSO_NOTICES = {
+  failed: "Вход через SSO не выполнен. Попробуйте ещё раз.",
+  denied: "Эта учётная запись не подключена к AEZA. Обратитесь к администратору.",
+  unavailable: "Сервис SSO временно недоступен. Войдите по логину и паролю.",
+};
+
+// The SSO callback reports a failure in the query string: read it once and clean the URL.
+function readSsoNotice() {
+  const reason = new URLSearchParams(window.location.search).get("sso");
+  if (!reason) return "";
+  window.history.replaceState(null, "", window.location.pathname);
+  return SSO_NOTICES[reason] || SSO_NOTICES.failed;
+}
 
 function Field({
   label,
@@ -44,7 +62,7 @@ function Field({
   );
 }
 
-function LoginForm({ onLogin, onMode, initialUsername, notice }) {
+function LoginForm({ onLogin, onMode, initialUsername, notice, methods }) {
   const [username, setUsername] = useState(initialUsername || "demo");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -119,16 +137,31 @@ function LoginForm({ onLogin, onMode, initialUsername, notice }) {
       <button className="button button-primary button-wide" disabled={loading}>
         {loading ? "Проверяем…" : "Войти"}
       </button>
-      <p className="form-switch">
-        Нет аккаунта?{" "}
-        <button
-          type="button"
-          className="link"
-          onClick={() => onMode("register")}
-        >
-          Зарегистрироваться
-        </button>
-      </p>
+      {methods.sso?.enabled && (
+        <>
+          <div className="auth-divider">
+            <span>или</span>
+          </div>
+          <a
+            className="button button-secondary button-wide"
+            href="/api/v1/auth/oidc/login"
+          >
+            {methods.sso.label || "Войти через SSO"}
+          </a>
+        </>
+      )}
+      {methods.registration && (
+        <p className="form-switch">
+          Нет аккаунта?{" "}
+          <button
+            type="button"
+            className="link"
+            onClick={() => onMode("register")}
+          >
+            Зарегистрироваться
+          </button>
+        </p>
+      )}
     </form>
   );
 }
@@ -154,17 +187,14 @@ function RegisterForm({ onRegistered, onMode }) {
     const next = {};
     if (!values.last_name.trim()) next.last_name = "Укажите фамилию";
     if (!values.first_name.trim()) next.first_name = "Укажите имя";
-    if (!USERNAME_RE.test(values.username.trim()))
-      next.username = "От 3 символов: латиница, цифры и . _ @ -";
-    if (values.password.length < 8) next.password = "Пароль от 8 символов";
-    if (values.password_confirm !== values.password)
-      next.password_confirm = "Пароли не совпадают";
-    if (values.codeword.trim().length < 4)
-      next.codeword = "Кодовое слово от 4 символов";
-    else if (
-      values.codeword.trim().toLowerCase() === values.password.toLowerCase()
-    )
-      next.codeword = "Кодовое слово не должно совпадать с паролем";
+    const login = usernameError(values.username.trim());
+    if (login) next.username = login;
+    const password = passwordError(values.password, values.username.trim());
+    if (password) next.password = password;
+    const match = matchError(values.password, values.password_confirm);
+    if (match) next.password_confirm = match;
+    const codeword = codewordError(values.codeword, values.password);
+    if (codeword) next.codeword = codeword;
     return next;
   }
 
@@ -293,6 +323,8 @@ function RegisterForm({ onRegistered, onMode }) {
 }
 
 function ResetForm({ onMode, initialUsername }) {
+  const [step, setStep] = useState("verify");
+  const [resetToken, setResetToken] = useState("");
   const [form, setForm] = useState({
     username: initialUsername === "demo" ? "" : initialUsername || "",
     codeword: "",
@@ -305,32 +337,27 @@ function ResetForm({ onMode, initialUsername }) {
   const set = (key) => (value) =>
     setForm((current) => ({ ...current, [key]: value }));
 
-  async function submit(event) {
+  function focusFirst(next) {
+    document.getElementById(`field-${Object.keys(next)[0]}`)?.focus();
+  }
+
+  async function verify(event) {
     event.preventDefault();
     setServerError("");
     const next = {};
-    if (!form.username.trim()) next.username = "Укажите логин";
+    const login = usernameError(form.username.trim());
+    if (login) next.username = login;
     if (!form.codeword.trim()) next.codeword = "Укажите кодовое слово";
-    if (form.new_password.length < 8)
-      next.new_password = "Пароль от 8 символов";
-    if (form.new_password_confirm !== form.new_password)
-      next.new_password_confirm = "Пароли не совпадают";
     setErrors(next);
-    if (Object.keys(next).length) {
-      document.getElementById(`field-${Object.keys(next)[0]}`)?.focus();
-      return;
-    }
+    if (Object.keys(next).length) return focusFirst(next);
     setLoading(true);
     try {
-      await api.resetPassword({ ...form, username: form.username.trim() });
-      onMode(
-        "login",
-        form.username.trim(),
-        "Пароль изменён. Войдите с новым паролем.",
-      );
+      const result = await api.verifyCodeword(form.username.trim(), form.codeword);
+      setResetToken(result.reset_token);
+      setStep("password");
     } catch (requestError) {
       setServerError(
-        requestError.status === 400
+        requestError.status === 401
           ? "Логин или кодовое слово не подходят. Проверьте раскладку."
           : requestError.message,
       );
@@ -339,58 +366,100 @@ function ResetForm({ onMode, initialUsername }) {
     }
   }
 
+  async function reset(event) {
+    event.preventDefault();
+    setServerError("");
+    const next = {};
+    const password = passwordError(form.new_password, form.username.trim());
+    if (password) next.new_password = password;
+    const match = matchError(form.new_password, form.new_password_confirm);
+    if (match) next.new_password_confirm = match;
+    setErrors(next);
+    if (Object.keys(next).length) return focusFirst(next);
+    setLoading(true);
+    try {
+      await api.resetPassword({
+        reset_token: resetToken,
+        new_password: form.new_password,
+        new_password_confirm: form.new_password_confirm,
+      });
+      onMode("login", form.username.trim(), "Пароль изменён. Войдите с новым паролем.");
+    } catch (requestError) {
+      if (requestError.status === 400) {
+        setStep("verify");
+        setResetToken("");
+        setServerError("Ссылка для сброса устарела. Введите кодовое слово ещё раз.");
+      } else setServerError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <form className="login-form" onSubmit={submit} noValidate>
+    <form className="login-form" onSubmit={step === "verify" ? verify : reset} noValidate>
       <header>
         <h1 className="h1">Сброс пароля</h1>
-        <p>Введите логин и кодовое слово, которое указывали при регистрации</p>
+        <p>
+          {step === "verify"
+            ? "Введите логин и кодовое слово, которое указывали при регистрации"
+            : "Задайте новый пароль. Ссылка для сброса действует 10 минут."}
+        </p>
       </header>
-      <Field
-        label="Логин"
-        name="username"
-        autoComplete="username"
-        spellCheck={false}
-        autoCapitalize="none"
-        value={form.username}
-        onChange={set("username")}
-        error={errors.username}
-      />
-      <Field
-        label="Кодовое слово"
-        name="codeword"
-        autoComplete="off"
-        spellCheck={false}
-        value={form.codeword}
-        onChange={set("codeword")}
-        error={errors.codeword}
-      />
-      <div className="fields">
-        <Field
-          label="Новый пароль"
-          name="new_password"
-          type="password"
-          autoComplete="new-password"
-          value={form.new_password}
-          onChange={set("new_password")}
-          error={errors.new_password}
-        />
-        <Field
-          label="Повторите пароль"
-          name="new_password_confirm"
-          type="password"
-          autoComplete="new-password"
-          value={form.new_password_confirm}
-          onChange={set("new_password_confirm")}
-          error={errors.new_password_confirm}
-        />
-      </div>
+      {step === "verify" ? (
+        <>
+          <Field
+            label="Логин"
+            name="username"
+            autoComplete="username"
+            spellCheck={false}
+            autoCapitalize="none"
+            value={form.username}
+            onChange={set("username")}
+            error={errors.username}
+          />
+          <Field
+            label="Кодовое слово"
+            name="codeword"
+            autoComplete="off"
+            spellCheck={false}
+            value={form.codeword}
+            onChange={set("codeword")}
+            error={errors.codeword}
+          />
+        </>
+      ) : (
+        <div className="fields">
+          <Field
+            label="Новый пароль"
+            name="new_password"
+            type="password"
+            autoComplete="new-password"
+            value={form.new_password}
+            onChange={set("new_password")}
+            error={errors.new_password}
+          />
+          <Field
+            label="Повторите пароль"
+            name="new_password_confirm"
+            type="password"
+            autoComplete="new-password"
+            value={form.new_password_confirm}
+            onChange={set("new_password_confirm")}
+            error={errors.new_password_confirm}
+          />
+        </div>
+      )}
       {serverError && (
         <p className="inline-error" role="alert">
           {serverError}
         </p>
       )}
       <button className="button button-primary button-wide" disabled={loading}>
-        {loading ? "Меняем пароль…" : "Сменить пароль"}
+        {loading
+          ? "Подождите…"
+          : step === "verify"
+            ? "Продолжить"
+            : "Сменить пароль"}
       </button>
       <p className="form-switch">
         Вспомнили?{" "}
@@ -404,6 +473,26 @@ function ResetForm({ onMode, initialUsername }) {
 
 export function Login({ onLogin, onRegistered }) {
   const [view, setView] = useState({ mode: "login", username: "", notice: "" });
+  const [methods, setMethods] = useState({
+    password: true,
+    registration: false,
+    sso: { enabled: false, label: "" },
+  });
+  const [ssoNotice] = useState(readSsoNotice);
+  useEffect(() => {
+    let active = true;
+    api
+      .authMethods()
+      .then((available) => {
+        if (active) setMethods(available);
+      })
+      .catch(() => {
+        /* Without the list the password form still works. */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
   const onMode = (mode, username = "", notice = "") =>
     setView({ mode, username, notice });
 
@@ -438,7 +527,7 @@ export function Login({ onLogin, onRegistered }) {
         />
       </section>
       <div className="login-side">
-        {view.mode === "register" ? (
+        {view.mode === "register" && methods.registration ? (
           <RegisterForm onRegistered={onRegistered} onMode={onMode} />
         ) : view.mode === "reset" ? (
           <ResetForm onMode={onMode} initialUsername={view.username} />
@@ -448,7 +537,8 @@ export function Login({ onLogin, onRegistered }) {
             onLogin={onLogin}
             onMode={onMode}
             initialUsername={view.username}
-            notice={view.notice}
+            notice={view.notice || ssoNotice}
+            methods={methods}
           />
         )}
       </div>

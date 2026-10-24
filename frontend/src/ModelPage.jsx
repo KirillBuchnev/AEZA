@@ -10,31 +10,39 @@ const featureHints = {
     "autoprolong = false, а продление попадает в горизонт прогноза",
   insufficient_balance:
     "Доступного баланса меньше, чем стоимость продлений в горизонте",
-  failed_prolong_payment:
-    "В снимке есть транзакция продления со статусом not_performed",
+  renewal_urgency:
+    "Срок продления в ближайшие 7 дней; вклад растёт к сроку",
 };
 
+// Levels of the account index, which is a sum of service indices. The service levels
+// are the main thresholds above. Ranges match the backend validation.
 const extraSettings = {
-  urgency_days: { label: "Срочное продление, дней", min: 1, max: 30 },
-  grace_days: { label: "Ожидание оплаты, дней", min: 1, max: 14 },
-  customer_medium_risk_min: {
-    label: "Средний риск клиента от",
+  account_medium_risk_min: {
+    label: "Средний риск аккаунта от (сумма индексов услуг)",
     min: 0,
-    max: 19999,
+    max: 999,
   },
-  customer_high_risk_min: {
-    label: "Высокий риск клиента от",
+  account_high_risk_min: {
+    label: "Высокий риск аккаунта от (сумма индексов услуг)",
     min: 1,
-    max: 20000,
+    max: 1000,
   },
 };
 
-const ignored = new Set(["weights", "features", "recalculated", "changed_at"]);
+// The PATCH body accepts exactly these keys; everything else in the draft (version,
+// revision, normalizer, features, timestamps) is read-only and must not be sent.
+const EDITABLE_SETTINGS = [
+  "prediction_horizon_days",
+  "high_risk_min",
+  "medium_risk_min",
+  "account_high_risk_min",
+  "account_medium_risk_min",
+];
 
 function toPayload(draft) {
   const payload = { weights: draft.weights };
-  Object.entries(draft).forEach(([key, value]) => {
-    if (!ignored.has(key) && typeof value === "number") payload[key] = value;
+  EDITABLE_SETTINGS.forEach((key) => {
+    payload[key] = draft[key];
   });
   return payload;
 }
@@ -79,6 +87,9 @@ export function ModelPage({ settings, summary, onSave, saving }) {
     );
 
   const codes = featureCodes(settings);
+  // Labels come from the features list the backend returns: one object per factor.
+  const featureTitle = (code) =>
+    settings.features?.find((feature) => feature.code === code)?.title || code;
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);
   const thresholdError =
     draft.high_risk_min <= draft.medium_risk_min
@@ -109,7 +120,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
       .filter((code) => draft.weights[code] !== settings.weights[code])
       .map(
         (code) =>
-          `«${settings.features?.[code] || code}» ${settings.weights[code]} → ${draft.weights[code]}`,
+          `«${featureTitle(code)}» ${settings.weights[code]} → ${draft.weights[code]}`,
       );
     const before = summary;
     try {
@@ -160,14 +171,14 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             <CardHead
               icon="info"
               title="Признаки и баллы"
-              description="Risk-score клиента = сумма баллов сработавших признаков, от 0 до 100."
+              description="Индекс услуги — сумма баллов её признаков, от 0 до 100. Индекс аккаунта — сумма индексов его услуг, может быть больше 100."
             />
           </div>
           {codes.map((code) => (
             <div className="coef" key={code}>
               <AezaIcon name={reasonIcon[code] || "info"} size={40} />
               <div className="coef-text">
-                <b>{settings.features?.[code] || code}</b>
+                <b>{featureTitle(code)}</b>
                 <small>{featureHints[code] || code}</small>
               </div>
               <input
@@ -177,7 +188,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
                 max="100"
                 value={draft.weights[code]}
                 onChange={(event) => setWeight(code, event.target.value)}
-                aria-label={`Баллы: ${settings.features?.[code] || code}`}
+                aria-label={`Баллы: ${featureTitle(code)}`}
               />
               <input
                 className="num-input"
@@ -186,7 +197,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
                 max="100"
                 value={draft.weights[code]}
                 onChange={(event) => setWeight(code, event.target.value)}
-                aria-label={`Баллы числом: ${settings.features?.[code] || code}`}
+                aria-label={`Баллы числом: ${featureTitle(code)}`}
               />
             </div>
           ))}
@@ -329,7 +340,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             />
             <div className="formula">
               <b>
-                Потери = max(продления в горизонте − баланс, 0) × score / 100
+                Потери = Σ по услугам: недостаток услуги × индекс услуги / 100
               </b>
               <small>
                 Считаем по каждому клиенту и складываем. Если баланс покрывает
