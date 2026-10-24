@@ -112,6 +112,24 @@ def test_outflow_separates_facts_from_forecast(open_app):
         assert "не калибровано" in forecast["method"].lower()
 
 
+def test_outflow_places_waiting_services_on_the_day_they_are_deleted(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [
+                service("fresh", status="prolong_wait", expires_in_days=-1, auto=False),
+                service("stale", status="prolong_wait", expires_in_days=-30, auto=False),
+            ], balance=0),
+        )
+        forecast = client.get(OUTFLOW).json()["forecast"]
+        waiting_days = [bucket for bucket in forecast["buckets"] if bucket["services_waiting"]]
+        deadline = (datetime.now(timezone.utc) + timedelta(days=4)).date().isoformat()
+        assert [bucket["date"] for bucket in waiting_days] == [deadline]
+        assert forecast["waiting_now"]["services"] == 1
+        assert forecast["waiting_now"]["beyond_grace_services"] == 1
+
+
 def test_customers_sort_both_ways_and_unscored_stay_last(open_app):
     with open_app() as (client, _):
         sign_in(client)

@@ -1303,6 +1303,11 @@
           "services_due": {
             "title": "Services Due",
             "type": "integer"
+          },
+          "services_waiting": {
+            "default": 0,
+            "title": "Services Waiting",
+            "type": "integer"
           }
         },
         "required": [
@@ -2113,6 +2118,11 @@
       },
       "WaitingNow": {
         "properties": {
+          "beyond_grace_services": {
+            "default": 0,
+            "title": "Beyond Grace Services",
+            "type": "integer"
+          },
           "expected_loss_minor": {
             "title": "Expected Loss Minor",
             "type": "integer"

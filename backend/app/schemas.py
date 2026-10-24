@@ -429,6 +429,7 @@ class OutflowFacts(BaseModel):
 class OutflowForecastDay(BaseModel):
     date: str
     services_due: int
+    services_waiting: int = 0
     services_at_risk: int
     expected_non_renewals: float
     expected_loss_minor: int
@@ -438,6 +439,7 @@ class WaitingNow(BaseModel):
     services: int
     expected_non_renewals: float
     expected_loss_minor: int
+    beyond_grace_services: int = 0
 
 
 class OutflowForecast(BaseModel):

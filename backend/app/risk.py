@@ -650,30 +650,48 @@ def outflow_forecast(
     now: datetime,
     horizon_days: int,
 ) -> dict[str, Any]:
-    """Expected non-renewals by due day. This is index-based, not a calibrated probability."""
+    """Expected non-renewals by the day they are decided. This is index-based, not a calibrated probability.
+
+    A renewal is decided on its expiry day. A service waiting for payment is deleted when its grace ends,
+    so it is placed on that day. One that is already past its grace should be gone: it is counted aside
+    as a data problem instead of being forecast."""
+    horizon_end = (now + timedelta(days=horizon_days)).date()
     buckets: dict[str, dict[str, Any]] = {}
     waiting_services = 0
     waiting_expected = 0.0
     waiting_loss = 0
+    beyond_grace = 0
     for customer in evaluated:
         for service in customer["services"]:
             if not service["due"] or service["risk_score"] is None:
                 continue
             expected = service["risk_score"] / 100
-            if service["status"] == "prolong_wait":
+            expires_at = as_utc(service["expires_at"])
+            waiting = service["status"] == "prolong_wait"
+            if waiting:
+                grace_end = expires_at + timedelta(days=GRACE_PERIOD_DAYS)
+                if grace_end <= now:
+                    beyond_grace += 1
+                    continue
                 waiting_services += 1
                 waiting_expected += expected
                 waiting_loss += service["potential_loss_minor"]
+                decided = grace_end
+            else:
+                decided = expires_at
+            if decided.date() > horizon_end:
                 continue
-            day = as_utc(service["expires_at"]).date().isoformat()
+            day = decided.date().isoformat()
             bucket = buckets.setdefault(day, {
                 "date": day,
                 "services_due": 0,
+                "services_waiting": 0,
                 "services_at_risk": 0,
                 "expected_non_renewals": 0.0,
                 "expected_loss_minor": 0,
             })
             bucket["services_due"] += 1
+            bucket["services_waiting"] += waiting
             bucket["services_at_risk"] += service["risk_level"] in {"high", "medium"}
             bucket["expected_non_renewals"] += expected
             bucket["expected_loss_minor"] += service["potential_loss_minor"]
@@ -682,7 +700,7 @@ def outflow_forecast(
     for bucket in ordered:
         bucket["expected_non_renewals"] = round(bucket["expected_non_renewals"], 2)
     return {
-        "method": "Сумма индексов риска услуг по дням продления (индекс / 100). Не калибровано по историческим исходам.",
+        "method": "Сумма индексов риска услуг по дням решения (индекс / 100): день окончания срока, для ожидающих оплаты день удаления. Не калибровано по историческим исходам.",
         "horizon_days": horizon_days,
         "from_date": now.date().isoformat(),
         "buckets": ordered,
@@ -690,13 +708,12 @@ def outflow_forecast(
             "services": waiting_services,
             "expected_non_renewals": round(waiting_expected, 2),
             "expected_loss_minor": waiting_loss,
+            "beyond_grace_services": beyond_grace,
         },
         "totals": {
-            "services_due": sum(bucket["services_due"] for bucket in ordered) + waiting_services,
+            "services_due": sum(bucket["services_due"] for bucket in ordered),
             "services_at_risk": sum(bucket["services_at_risk"] for bucket in ordered),
-            "expected_non_renewals": round(
-                sum(bucket["expected_non_renewals"] for bucket in ordered) + waiting_expected, 2
-            ),
+            "expected_non_renewals": round(sum(bucket["expected_non_renewals"] for bucket in ordered), 2),
         },
     }
 

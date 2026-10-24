@@ -2507,7 +2507,7 @@ a.button {
 /* Outflow chart: facts are solid, the forecast is hatched, a dashed line marks "today". */
 .outflow-section { margin: 24px 0 8px; }
 .outflow { display: grid; gap: 14px; }
-.outflow-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.outflow-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .outflow-chip {
   display: grid;
   gap: 2px;
@@ -2525,11 +2525,17 @@ a.button {
 .outflow-today { stroke: var(--text-primary); stroke-width: 1.5; stroke-dasharray: 4 4; }
 .outflow-bar-fact { fill: var(--text-primary); }
 .outflow-bar-forecast { stroke: var(--text-primary); stroke-width: 1; }
+.outflow-hatch-bg { fill: var(--bg-surface); }
+.outflow-hatch-line { stroke: var(--text-primary); }
+.outflow-dot { fill: var(--brand-blue); stroke: var(--bg-surface); stroke-width: 1.5; }
+.outflow-note { fill: var(--text-secondary); font-size: 12px; }
+.outflow-warn { color: var(--text-primary); font-weight: 500; }
 .outflow-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--text-secondary); font-size: 13px; }
 .outflow-legend span { display: inline-flex; align-items: center; gap: 8px; }
 .legend-fact,
 .legend-forecast { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
 .legend-fact { background: var(--text-primary); }
+.legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--brand-blue); box-shadow: 0 0 0 1.5px var(--bg-surface), 0 0 0 2.5px var(--border-default); }
 .legend-forecast {
   border: 1px solid var(--text-primary);
   background: repeating-linear-gradient(45deg, var(--bg-surface) 0 3px, var(--text-primary) 3px 5px);

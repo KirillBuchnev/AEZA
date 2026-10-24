@@ -183,13 +183,35 @@ class MoneyAndForecastTest(unittest.TestCase):
             evaluated(service(service_id="s-3", status="prolong_wait", expires_in_days=-1), balance=0),
         ]
         forecast = outflow_forecast(evaluated_customers, NOW, 30)
-        self.assertEqual(len(forecast["buckets"]), 1)
-        bucket = forecast["buckets"][0]
-        self.assertEqual(bucket["services_due"], 2)
+        self.assertEqual([bucket["services_due"] for bucket in forecast["buckets"]], [2, 1])
+        bucket, waiting = forecast["buckets"]
         self.assertEqual(bucket["expected_non_renewals"], round((58.0 + 53.6) / 100, 2))
         self.assertEqual(forecast["waiting_now"]["services"], 1)
         self.assertEqual(forecast["waiting_now"]["expected_non_renewals"], 0.56)
+        self.assertEqual(forecast["totals"]["services_due"], 3)
+        self.assertEqual(waiting["services_waiting"], 1)
         self.assertIn("не калибровано", forecast["method"].lower())
+
+    def test_waiting_service_is_placed_on_the_day_its_grace_ends(self) -> None:
+        # Expired one day ago, so the five-day grace ends in four days.
+        waiting = evaluated(service(status="prolong_wait", expires_in_days=-1), balance=0)
+        forecast = outflow_forecast([waiting], NOW, 30)
+        self.assertEqual([bucket["date"] for bucket in forecast["buckets"]], ["2026-10-28"])
+        self.assertEqual(forecast["buckets"][0]["services_waiting"], 1)
+
+    def test_waiting_service_past_its_grace_is_counted_aside_not_forecast(self) -> None:
+        stale = evaluated(service(status="prolong_wait", expires_in_days=-30), balance=0)
+        forecast = outflow_forecast([stale], NOW, 30)
+        self.assertEqual(forecast["buckets"], [])
+        self.assertEqual(forecast["waiting_now"]["services"], 0)
+        self.assertEqual(forecast["waiting_now"]["beyond_grace_services"], 1)
+        self.assertEqual(forecast["totals"]["expected_non_renewals"], 0)
+
+    def test_waiting_service_whose_grace_ends_after_the_horizon_is_not_drawn(self) -> None:
+        waiting = evaluated(service(status="prolong_wait", expires_in_days=-1), balance=0)
+        forecast = outflow_forecast([waiting], NOW, 2)
+        self.assertEqual(forecast["buckets"], [])
+        self.assertEqual(forecast["waiting_now"]["services"], 1)
 
 
 class NearTermLossTest(unittest.TestCase):

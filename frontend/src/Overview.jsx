@@ -100,7 +100,7 @@ export function Overview({
       <section className="outflow-section">
         <CardHead
           title="Отток: факты и прогноз"
-          description="Слева — что уже произошло по снимкам, справа — ожидаемые непродления по дням окончания. Линия «сегодня» разделяет их."
+          description="Слева — что уже ушло по снимкам, справа — услуги под риском по дням решения и ожидаемые непродления. Линия «сегодня» разделяет их."
         />
         <OutflowChart outflow={outflow} days={outflowDays} onDays={setOutflowDays} />
       </section>
