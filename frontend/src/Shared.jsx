@@ -32,7 +32,7 @@ export function Topbar({ crumbs, live, theme, onTheme, onMenu }) {
       </nav>
       <LiveStatus {...live} />
       <button
-        className="icon-button"
+        className="icon-button theme-key"
         onClick={onTheme}
         aria-label={
           theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"
@@ -114,11 +114,20 @@ export function mainReason(customer) {
       detail: customer.reasons?.[0]?.explanation || "",
     };
   const rest = reasons.length - 1;
+  const available =
+    (customer.balance_minor || 0) +
+    (customer.bonus_spend_enabled ? customer.bonus_balance_minor || 0 : 0);
+  const specific =
+    reasons[0].code === "insufficient_balance" && customer.due_revenue_minor
+      ? `Нужно ${money(customer.due_revenue_minor)}, доступно ${money(available)}`
+      : "";
+  const more = rest
+    ? `ещё ${rest} ${plural(rest, ["признак", "признака", "признаков"])}`
+    : "";
   return {
     title: reasons[0].title,
-    detail: rest
-      ? `+ ещё ${rest} ${plural(rest, ["признак", "признака", "признаков"])}`
-      : reasons[0].explanation,
+    detail:
+      [specific, more].filter(Boolean).join(" · ") || reasons[0].explanation,
   };
 }
 

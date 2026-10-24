@@ -91,7 +91,13 @@ export function Overview({
         title="Риск оттока"
         description="Кому нужно внимание, почему и сколько можем потерять"
       >
-        <span className="chip">Горизонт: {horizon} дней</span>
+        <button
+          className="chip chip-link"
+          onClick={() => onNavigate.page("model")}
+          title="Горизонт меняется в «Модели риска»"
+        >
+          Горизонт: {horizon} дней
+        </button>
         <button className="button button-secondary" onClick={onExport}>
           <Icon name="download" size={16} />
           Экспорт CSV

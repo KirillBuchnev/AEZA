@@ -211,6 +211,16 @@ export function ModelPage({ settings, summary, onSave, saving }) {
         </section>
 
         <div className="stack">
+          {!lastChange && (
+            <section className="impact">
+              <span>Что изменится</span>
+              <b>Поменяйте балл и нажмите «Сохранить и пересчитать»</b>
+              <small>
+                Здесь появится, сколько клиентов сменили уровень и как
+                изменились потери. Обзор и список обновятся сами.
+              </small>
+            </section>
+          )}
           {lastChange && summary && (
             <section className="impact" aria-live="polite">
               <span>После последнего изменения</span>

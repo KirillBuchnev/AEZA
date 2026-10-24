@@ -112,9 +112,17 @@ export function CustomerPage({ id, version, onToast }) {
             {plural(customer.service_count, ["услуга", "услуги", "услуг"])}
           </p>
         </div>
-        <button className="button button-secondary" onClick={copyEmail}>
-          Скопировать email
-        </button>
+        <div className="page-head-actions">
+          <button className="button button-secondary" onClick={copyEmail}>
+            Скопировать email
+          </button>
+          <a
+            className="button button-primary"
+            href={`mailto:${customer.email}`}
+          >
+            Написать клиенту
+          </a>
+        </div>
       </div>
 
       <section className="strip" aria-label="Деньги клиента">
@@ -135,7 +143,7 @@ export function CustomerPage({ id, version, onToast }) {
         <div>
           <span>Реферальный</span>
           <b className="number">{money(customer.withdraw_balance_minor)}</b>
-          <small>withdrawBalance · не для продлений</small>
+          <small>withdrawBalance</small>
         </div>
         <div>
           <span>Пополнено всего</span>

@@ -1881,107 +1881,188 @@ button.kv-row:hover > span:nth-child(2) {
   --glyph: var(--brand-black);
 }
 
-/* Объёмная клавиша: юбка с градиентом, верх клавиши, тень — как брелок-кейкап */
+/* Физическая клавиша: верх + видимая стенка снизу. При нажатии клавиша целиком
+   уходит вниз на свой ход (--travel), стенка исчезает, верх утапливается внутрь. */
 .aicon-key {
-  --tile: #1c1c1c;
-  background: linear-gradient(#3a3a3a, #000);
-  box-shadow: 0 5px 8px -2px rgb(0 0 0 / 0.25);
+  --tile: #262626;
+  --wall: #050505;
+  --glyph: var(--brand-blue);
+  --travel: max(3px, calc(var(--size) * 0.1));
+  margin-bottom: var(--travel);
+  background: var(--tile);
+  box-shadow:
+    0 var(--travel) 0 var(--wall),
+    0 calc(var(--travel) + 2px) 6px rgb(0 0 0 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.14);
+  transition:
+    transform 0.07s ease-out,
+    box-shadow 0.07s ease-out;
 }
 
 .aicon-blue {
   --tile: var(--brand-blue);
+  --wall: #1b86ad;
   --glyph: #000;
-  background: linear-gradient(#8fdef8, #1e8fba);
+}
+
+/* Светлая тема: тёмная клавиша, бирюзовый значок. Тёмная тема: бирюзовая клавиша, чёрный значок */
+:root[data-theme="dark"] .aicon-key {
+  --tile: var(--brand-blue);
+  --wall: #1b86ad;
+  --glyph: #000;
 }
 
 .aicon-face {
   display: grid;
   place-items: center;
-  width: 80%;
-  height: 76%;
-  margin-bottom: 8%;
-  border-radius: calc(var(--size) * 0.19);
-  background: var(--tile);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3);
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(rgb(255 255 255 / 0.1), transparent 60%);
 }
 
 .aicon-face svg {
-  width: 62%;
-  height: 62%;
-}
-
-/* Нажатие как на клавиатуре: при наведении клавиша чуть приподнимается,
-   при нажатии верх проседает, а тень под юбкой почти исчезает. */
-.aicon-key,
-.aicon-face {
-  transition:
-    transform 0.08s ease-out,
-    box-shadow 0.08s ease-out;
-}
-
-.aicon-key:hover .aicon-face,
-:is(button, .kv-row, tr):hover .aicon-key .aicon-face {
-  transform: translateY(-1px);
+  width: 58%;
+  height: 58%;
 }
 
 .aicon-key:active,
-:is(button, .kv-row, tr):active .aicon-key {
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-  transform: translateY(1px);
+:is(button, a, .kv-row, tr):active .aicon-key {
+  transform: translateY(var(--travel));
+  box-shadow:
+    0 0 0 var(--wall),
+    0 1px 2px rgb(0 0 0 / 0.3),
+    inset 0 2px 5px rgb(0 0 0 / 0.35);
 }
 
-.aicon-key:active .aicon-face,
-:is(button, .kv-row, tr):active .aicon-key .aicon-face {
-  transform: translateY(3px);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1);
+/* Один раз при открытии обзора три клавиши «простукивают» по очереди */
+@keyframes key-tap {
+  45% {
+    transform: translateY(var(--travel));
+    box-shadow:
+      0 0 0 var(--wall),
+      inset 0 2px 5px rgb(0 0 0 / 0.35);
+  }
+}
+
+.hero .aicon-key {
+  animation: key-tap 0.26s ease-in-out both;
+  animation-delay: 0.35s;
+}
+
+.hero-col:nth-child(2) .aicon-key {
+  animation-delay: 0.6s;
+}
+
+.hero-col:nth-child(3) .aicon-key {
+  animation-delay: 0.85s;
 }
 
 .hero-q .aicon {
   margin-right: 2px;
 }
 
-/* Кнопки и клавиши риска — тоже клавиши: нижний край и проседание */
+/* Кнопки — тоже клавиши: стенка снизу, при нажатии уходят на ход */
 .button {
-  --key-edge: var(--border-default);
+  --key-edge: #cfcfcf;
   box-shadow: 0 3px 0 var(--key-edge);
   transition:
-    transform 0.08s ease-out,
-    box-shadow 0.08s ease-out;
+    transform 0.07s ease-out,
+    box-shadow 0.07s ease-out;
 }
 
 .button-primary {
   --key-edge: #3a3a3a;
 }
 
+:root[data-theme="dark"] .button {
+  --key-edge: #3a3a40;
+}
+
 :root[data-theme="dark"] .button-primary {
-  --key-edge: #8a8a8a;
+  --key-edge: #8e8e93;
 }
 
 .button:not(:disabled):active {
-  box-shadow: 0 0 0 var(--key-edge);
   transform: translateY(3px);
+  box-shadow:
+    0 0 0 var(--key-edge),
+    inset 0 2px 4px rgb(0 0 0 / 0.18);
+}
+
+/* Клавиши риска: стенка темнее своего цвета */
+.key-high {
+  --wall: color-mix(in srgb, var(--risk-high) 62%, #000);
+}
+
+.key-medium {
+  --wall: color-mix(in srgb, var(--risk-medium) 62%, #000);
+}
+
+.key-low {
+  --wall: color-mix(in srgb, var(--risk-low) 62%, #000);
 }
 
 .key:not(.key-unscored) {
-  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.18);
+  --travel: 3px;
+  margin-bottom: var(--travel);
+  box-shadow:
+    0 var(--travel) 0 var(--wall),
+    inset 0 1px 0 rgb(255 255 255 / 0.3);
   transition:
-    transform 0.08s ease-out,
-    box-shadow 0.08s ease-out;
+    transform 0.07s ease-out,
+    box-shadow 0.07s ease-out;
 }
 
-.ctable tbody tr:active .key:not(.key-unscored) {
-  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.18);
-  transform: translateY(2px);
+.key-large:not(.key-unscored) {
+  --travel: 6px;
 }
 
-.segment,
-.nav-item {
-  transition: transform 0.08s ease-out;
+.ctable tbody tr:active .key:not(.key-unscored),
+.key:not(.key-unscored):active {
+  transform: translateY(var(--travel));
+  box-shadow:
+    0 0 0 var(--wall),
+    inset 0 2px 4px rgb(0 0 0 / 0.25);
 }
 
-.segment:active,
-.nav-item:active {
-  transform: translateY(2px);
+/* Переключатель темы — клавиша: тёмная в светлой теме, светлая в тёмной */
+.topbar .icon-button.theme-key {
+  margin-bottom: 3px;
+  border: 0;
+  background: #262626;
+  color: var(--brand-blue);
+  box-shadow:
+    0 3px 0 #000,
+    inset 0 1px 0 rgb(255 255 255 / 0.14);
+  transition:
+    transform 0.07s ease-out,
+    box-shadow 0.07s ease-out,
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+:root[data-theme="dark"] .topbar .icon-button.theme-key {
+  background: var(--brand-blue);
+  color: #000;
+  box-shadow:
+    0 3px 0 #1b86ad,
+    inset 0 1px 0 rgb(255 255 255 / 0.4);
+}
+
+.topbar .icon-button.theme-key:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 0 0 transparent,
+    inset 0 2px 4px rgb(0 0 0 / 0.35);
+}
+
+.segment {
+  transition: transform 0.07s ease-out;
+}
+
+.segment:active {
+  transform: translateY(1px);
 }
 
 .title-with-icon {
@@ -2274,11 +2355,29 @@ a.nav-item {
   width: auto;
 }
 
-.aicon-face svg {
-  width: 68%;
-  height: 68%;
-}
-
 input[type="number"] {
   font-variant-numeric: tabular-nums;
+}
+
+.chip-link {
+  cursor: pointer;
+}
+
+.chip-link:hover {
+  border-color: var(--text-secondary);
+}
+
+a.button {
+  text-decoration: none;
+}
+
+/* В тёмной теме чёрные блоки отделяем от фона тонкой рамкой */
+:root[data-theme="dark"] :is(.hero, .impact, .dev, .toast) {
+  outline: 1px solid var(--border-default);
+  outline-offset: -1px;
+}
+
+:root[data-theme="dark"] .aicon-flat {
+  --tile: var(--brand-blue);
+  --glyph: #000;
 }
