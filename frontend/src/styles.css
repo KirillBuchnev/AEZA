@@ -1139,6 +1139,22 @@ button.kv-row:hover > span:nth-child(2) {
   white-space: nowrap;
 }
 
+/* Below 1440 px the table fits its card: no fixed minimum width, and the reason column truncates first. */
+@media (max-width: 1440px) {
+  .ctable {
+    min-width: 0;
+  }
+
+  .ctable th,
+  .ctable td {
+    padding: 0 8px;
+  }
+
+  .reason-cell {
+    max-width: 180px;
+  }
+}
+
 .table-foot {
   display: flex;
   align-items: center;
