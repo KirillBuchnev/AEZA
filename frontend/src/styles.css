@@ -2477,8 +2477,6 @@ a.button {
 .outflow-chip span { color: var(--text-secondary); font-size: 13px; }
 .outflow-chip b { font-size: 24px; font-variant-numeric: tabular-nums; color: var(--text-primary); }
 .outflow-chip small { color: var(--text-secondary); font-size: 12px; }
-.outflow-chip-fact { border-left: 4px solid var(--text-primary); }
-.outflow-chip-forecast { border-left: 4px dashed var(--text-primary); }
 .outflow-svg { display: block; width: 100%; height: auto; }
 .outflow-grid { stroke: var(--border-default); stroke-width: 1; }
 .outflow-tick { fill: var(--text-secondary); font-size: 11px; }
