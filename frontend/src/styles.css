@@ -2242,6 +2242,22 @@ button.kv-row:hover > span:nth-child(2) {
     flex-wrap: wrap;
   }
 
+  .coef {
+    gap: 12px 16px;
+  }
+
+  .coef-text {
+    flex: 1 1 calc(100% - 56px);
+  }
+
+  .save-bar > span {
+    flex-basis: 100%;
+  }
+
+  .save-bar .button {
+    flex: 1;
+  }
+
   .range {
     flex: 1;
   }

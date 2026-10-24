@@ -161,8 +161,16 @@ export function CustomerPage({ id, version, onToast }) {
         <section className="card">
           <CardHead
             icon="info"
-            title="Почему такой риск"
-            description="Сумма баллов сработавших признаков, максимум 100. Баллы меняются в «Модели риска»."
+            title={
+              customer.risk_score == null
+                ? "Почему нет оценки"
+                : "Почему такой риск"
+            }
+            description={
+              customer.risk_score == null
+                ? "Оценку не ставим, когда данных не хватает — это честнее, чем угадывать"
+                : "Сумма баллов сработавших признаков, максимум 100. Баллы меняются в «Модели риска»."
+            }
           />
           {customer.risk_score == null ? (
             <p className="muted">
@@ -243,7 +251,16 @@ export function CustomerPage({ id, version, onToast }) {
           </div>
           <div className="calc-result">
             <span className="small muted">Ожидаемая потеря</span>
-            <b className="number">{money(customer.potential_loss_minor)}</b>
+            <b className="number">
+              {customer.risk_score == null
+                ? "—"
+                : money(customer.potential_loss_minor)}
+            </b>
+            {customer.risk_score == null && (
+              <span className="small muted">
+                Не считаем: без оценки риска сумма была бы выдумкой
+              </span>
+            )}
           </div>
           <p className="small muted">
             Доступный баланс — основной плюс бонусный, если bonusState разрешает
