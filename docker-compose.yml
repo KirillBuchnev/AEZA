@@ -4,6 +4,7 @@ services:
       context: ./backend
     environment:
       AEZA_ENVIRONMENT: ${AEZA_ENVIRONMENT:-development}
+      AEZA_SEED: ${AEZA_SEED:-case}
       AEZA_ADMIN_USERNAME: ${AEZA_ADMIN_USERNAME:-demo}
       AEZA_ADMIN_PASSWORD: ${AEZA_ADMIN_PASSWORD:-local-demo-change-this-password}
       AEZA_ADMIN_CODEWORD: ${AEZA_ADMIN_CODEWORD:-demo-codeword}
