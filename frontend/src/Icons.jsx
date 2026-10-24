@@ -1,6 +1,58 @@
+import { BrandLogo } from "./BrandLogo.jsx";
 import { riskClass, riskText } from "./format.js";
+import walletIcon from "./assets/icons/01-wallet.svg";
+import timeIcon from "./assets/icons/02-time.svg";
+import currenciesIcon from "./assets/icons/03-currencies.svg";
+import infoIcon from "./assets/icons/04-info.svg";
+import warningIcon from "./assets/icons/05-warning.svg";
+import statusHighIcon from "./assets/icons/06-status-high.svg";
+import statusMidIcon from "./assets/icons/07-status-mid.svg";
+import statusLowIcon from "./assets/icons/08-status-low.svg";
+import chartIcon from "./assets/icons/guide-bar-chart.png";
+import communityIcon from "./assets/icons/guide-community.png";
+import editIcon from "./assets/icons/guide-edit.png";
+import hourglassIcon from "./assets/icons/guide-hourglass.png";
+import shieldIcon from "./assets/icons/guide-shield-check.png";
+import shoppingBagIcon from "./assets/icons/guide-shopping-bag.png";
+
+// Brand icons: the generated set (SVG) and the guidebook icon page (PNG, black tile + cyan glyph).
+const BRAND_ICONS = {
+  wallet: walletIcon,
+  clock: timeIcon,
+  currencies: currenciesIcon,
+  info: infoIcon,
+  warning: warningIcon,
+  "status-high": statusHighIcon,
+  "status-mid": statusMidIcon,
+  "status-low": statusLowIcon,
+  chart: chartIcon,
+  users: communityIcon,
+  edit: editIcon,
+  hourglass: hourglassIcon,
+  shield: shieldIcon,
+  bag: shoppingBagIcon,
+};
+
+const STATUS_ICON = {
+  high: "status-high",
+  medium: "status-mid",
+  low: "status-low",
+  unscored: "warning",
+};
 
 export function Icon({ name, size = 18 }) {
+  if (BRAND_ICONS[name]) {
+    return (
+      <img
+        className="brand-icon"
+        src={BRAND_ICONS[name]}
+        width={size}
+        height={size}
+        alt=""
+        aria-hidden="true"
+      />
+    );
+  }
   const common = {
     width: size,
     height: size,
@@ -96,6 +148,12 @@ export function Icon({ name, size = 18 }) {
         <path d="M12 11v5m0-8h.01" />
       </>
     ),
+    key: (
+      <>
+        <circle cx="8" cy="15" r="4" />
+        <path d="m11 12 9-9m-3 3 2 2m-4-1 2 2" />
+      </>
+    ),
     refresh: (
       <>
         <path d="M20 7v5h-5M4 17v-5h5" />
@@ -106,21 +164,15 @@ export function Icon({ name, size = 18 }) {
   return <svg {...common}>{paths[name] || paths.info}</svg>;
 }
 
-export function Brand({ compact = false }) {
+export function Brand({ compact = false, inverse = false }) {
   return (
     <div
       className={`brand${compact ? " brand-compact" : ""}`}
+      role="img"
       aria-label="AEZA аналитика удержания"
     >
-      <div className="brand-mark">
-        A<span className="brand-cut" />
-      </div>
-      {!compact && (
-        <div className="brand-copy">
-          <span className="brand-name">aéza</span>
-          <span className="brand-caption">аналитика удержания</span>
-        </div>
-      )}
+      <BrandLogo inverse={inverse} folded={compact} />
+      {!compact && <span className="brand-caption">аналитика удержания</span>}
     </div>
   );
 }
@@ -129,7 +181,7 @@ export function RiskBadge({ level, label }) {
   const value = level || "unscored";
   return (
     <span className={`risk-badge risk-${riskClass(value)}`}>
-      <span className="risk-dot" />
+      <Icon name={STATUS_ICON[value]} size={16} />
       {label || riskText[value]}
     </span>
   );

@@ -14,16 +14,14 @@ export function CustomersPage({
   setPageNumber,
 }) {
   const pages = Math.max(1, Math.ceil(total / 8));
-  const shown = customers.slice((pageNumber - 1) * 8, pageNumber * 8);
   const currentFilterLabel = filters.risk_level
     ? riskText[filters.risk_level]
     : "Все статусы";
   return (
     <>
       <PageHeader
-        eyebrow="КЛИЕНТСКАЯ БАЗА"
         title="Клиенты"
-        description="Найдите аккаунт и откройте подробные сигналы риска."
+        description="Поиск по ID и email, фильтр по риску и сортировка."
         onMenu={onNavigate.menu}
         action={
           <span className="total-chip">
@@ -77,18 +75,23 @@ export function CustomersPage({
               aria-label="Сортировка клиентов"
             >
               <option value="risk_score:desc">По риску</option>
-              <option value="id:asc">По ID</option>
-              <option value="email:asc">По email</option>
-              <option value="balance:desc">По балансу</option>
-              <option value="total_replenished:desc">По пополнениям</option>
-              <option value="potential_loss:desc">По сумме риска</option>
+              <option value="id:asc">По ID ↑</option>
+              <option value="id:desc">По ID ↓</option>
+              <option value="email:asc">По email ↑</option>
+              <option value="email:desc">По email ↓</option>
+              <option value="balance:asc">По балансу ↑</option>
+              <option value="balance:desc">По балансу ↓</option>
+              <option value="total_replenished:asc">По пополнениям ↑</option>
+              <option value="total_replenished:desc">По пополнениям ↓</option>
+              <option value="potential_loss:asc">По сумме риска ↑</option>
+              <option value="potential_loss:desc">По сумме риска ↓</option>
             </select>
             <Icon name="chevron" size={15} />
           </label>
           <span className="toolbar-count">{currentFilterLabel}</span>
         </div>
         <CustomerTable
-          customers={shown}
+          customers={customers}
           onSelect={onSelectCustomer}
           sortBy={filters.sort_by}
           order={filters.order}
@@ -127,13 +130,6 @@ export function CustomersPage({
           </div>
         </div>
       </section>
-      <div className="client-bottom-note">
-        <Icon name="info" size={16} />
-        <span>
-          Кликните по строке, чтобы увидеть услуги, историю транзакций и расчёт
-          оценки.
-        </span>
-      </div>
     </>
   );
 }

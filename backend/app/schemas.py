@@ -36,7 +36,7 @@ class TransactionType(str, Enum):
 
 
 class ServiceSnapshot(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="ignore")
 
     id: str | None = Field(default=None, min_length=1, max_length=120)
     name: str = Field(min_length=1, max_length=160)
@@ -62,7 +62,7 @@ class ServiceSnapshot(BaseModel):
 
 
 class TransactionSnapshot(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="ignore")
 
     id: str | None = Field(default=None, min_length=1, max_length=120)
     service_id: str | None = Field(
@@ -86,7 +86,7 @@ class TransactionSnapshot(BaseModel):
 
 
 class CustomerSnapshot(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="ignore")
 
     id: str = Field(min_length=1, max_length=120)
     email: str = Field(min_length=3, max_length=254)
@@ -113,8 +113,21 @@ class CustomerSnapshot(BaseModel):
         le=MAX_MONEY_MINOR,
         validation_alias=AliasChoices("total_replenished_minor", "totalReplenished"),
     )
-    services: list[ServiceSnapshot] = Field(default_factory=list, max_length=100)
-    transactions: list[TransactionSnapshot] = Field(default_factory=list, max_length=250)
+    services: list[ServiceSnapshot] = Field(default_factory=list, max_length=5_000)
+    transactions: list[TransactionSnapshot] = Field(default_factory=list, max_length=10_000)
+
+    @field_validator("bonus_spend_enabled", mode="before")
+    @classmethod
+    def normalize_bonus_state(cls, value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().casefold()
+            if normalized in {"unlocked", "enabled", "true", "1", "yes", "on"}:
+                return True
+            if normalized in {"locked", "disabled", "false", "0", "no", "off"}:
+                return False
+        raise ValueError("bonusState must be a boolean or unlocked/locked")
 
     @field_validator("id", mode="before")
     @classmethod
@@ -123,7 +136,7 @@ class CustomerSnapshot(BaseModel):
 
 
 class SnapshotUpload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     customers: list[CustomerSnapshot] = Field(max_length=5_000)
 
@@ -133,6 +146,40 @@ class LoginRequest(BaseModel):
 
     username: str = Field(min_length=1, max_length=120)
     password: str = Field(min_length=1, max_length=1024)
+
+
+class RegisterRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=120)
+    first_name: str = Field(min_length=1, max_length=120)
+    last_name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=1, max_length=256)
+    password_confirm: str = Field(min_length=1, max_length=256)
+    codeword: str = Field(min_length=1, max_length=256)
+
+
+class VerifyCodewordRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=120)
+    codeword: str = Field(min_length=1, max_length=256)
+
+
+class PasswordResetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reset_token: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=1, max_length=256)
+    new_password_confirm: str = Field(min_length=1, max_length=256)
+
+
+class PasswordChangeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password: str = Field(min_length=1, max_length=256)
+    new_password_confirm: str = Field(min_length=1, max_length=256)
 
 
 class ModelSettingsPatch(BaseModel):
@@ -147,7 +194,9 @@ class ModelSettingsPatch(BaseModel):
 class RiskReason(BaseModel):
     code: str
     title: str
-    points: int
+    # A contribution changes with time-to-renewal, balance shortfall and grace
+    # progress; keeping one decimal prevents fixed stepwise buckets.
+    points: float
     explanation: str
 
 
@@ -166,6 +215,11 @@ class CustomerListItem(BaseModel):
     reasons: list[RiskReason]
     due_revenue_minor: int
     potential_loss_minor: int
+    account_risk_sum: int | None
+    max_service_score: int | None
+    high_count: int
+    revenue_at_risk_minor: int
+    uncovered_revenue_at_risk_minor: int
 
 
 class CustomerListResponse(BaseModel):
@@ -185,6 +239,16 @@ class ServiceDetail(BaseModel):
     payment_term: str | None
     status: str
     expires_at: datetime | None
+    risk_score: int | None
+    risk_level: str | None
+    risk_label: str
+    reasons: list[RiskReason]
+    due_revenue_minor: int
+    available_balance_minor: int
+    uncovered_revenue_minor: int
+    potential_loss_minor: int
+    revenue_at_risk_minor: int
+    grace_remaining_days: int | None
 
 
 class TransactionDetail(BaseModel):
@@ -201,7 +265,12 @@ class CustomerCalculation(BaseModel):
     due_revenue_minor: int
     available_balance_minor: int
     uncovered_revenue_minor: int
-    risk_score_percent: int | None
+    risk_score_index: int | None
+    account_risk_sum: int | None
+    max_service_score: int | None
+    high_count: int
+    revenue_at_risk_minor: int
+    uncovered_revenue_at_risk_minor: int
     potential_loss_minor: int
 
 
@@ -217,7 +286,14 @@ class CustomerDetail(CustomerListItem):
 
 class UserResponse(BaseModel):
     username: str
+    first_name: str
+    last_name: str
     role: str
+
+
+class PasswordResetTokenResponse(BaseModel):
+    reset_token: str
+    expires_at: datetime
 
 
 class LoginResponse(BaseModel):
@@ -226,10 +302,12 @@ class LoginResponse(BaseModel):
 
 
 class ModelSettingsResponse(BaseModel):
+    version: int
     prediction_horizon_days: int
     high_risk_min: int
     medium_risk_min: int
     weights: dict[str, int]
+    formula: dict[str, int]
     features: dict[str, str]
     recalculated: bool | None = None
     changed_at: datetime | None = None

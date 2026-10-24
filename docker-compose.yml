@@ -6,13 +6,20 @@ services:
       AEZA_ENVIRONMENT: ${AEZA_ENVIRONMENT:-development}
       AEZA_ADMIN_USERNAME: ${AEZA_ADMIN_USERNAME:-demo}
       AEZA_ADMIN_PASSWORD: ${AEZA_ADMIN_PASSWORD:-local-demo-change-this-password}
+      AEZA_ADMIN_CODEWORD: ${AEZA_ADMIN_CODEWORD:-demo-codeword}
+      AEZA_ADMIN_FIRST_NAME: ${AEZA_ADMIN_FIRST_NAME:-Демо}
+      AEZA_ADMIN_LAST_NAME: ${AEZA_ADMIN_LAST_NAME:-Аналитик}
+      AEZA_REGISTRATION_ENABLED: ${AEZA_REGISTRATION_ENABLED:-}
       AEZA_RATE_LIMIT_SECRET: ${AEZA_RATE_LIMIT_SECRET:-}
+      AEZA_TRUSTED_PROXY_IPS: ${AEZA_TRUSTED_PROXY_IPS:-10.233.40.10}
       AEZA_DATABASE_PATH: /data/aeza.db
       AEZA_COOKIE_SECURE: ${AEZA_COOKIE_SECURE:-false}
       AEZA_SESSION_DAYS: ${AEZA_SESSION_DAYS:-7}
-      AEZA_METRICS_TOKEN: ${AEZA_METRICS_TOKEN:-}
+      AEZA_METRICS_TOKEN: ${AEZA_METRICS_TOKEN:-local-demo-metrics-token-change-this-before-production}
       AEZA_DOCS_ENABLED: ${AEZA_DOCS_ENABLED:-}
       AEZA_ALLOWED_ORIGINS: ${AEZA_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8001,http://127.0.0.1:8001}
+    networks:
+      - aeza
     ports:
       - "127.0.0.1:${AEZA_API_PORT:-8001}:8000"
     volumes:
@@ -37,6 +44,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      aeza:
+        # Fixed address: the API trusts X-Real-IP only from this proxy (AEZA_TRUSTED_PROXY_IPS).
+        ipv4_address: 10.233.40.10
     ports:
       - "127.0.0.1:5173:8080"
     read_only: true
@@ -48,6 +59,12 @@ services:
       - /var/cache/nginx:rw,noexec,nosuid,size=16m,mode=1777
       - /tmp:rw,noexec,nosuid,size=16m
     restart: unless-stopped
+
+networks:
+  aeza:
+    ipam:
+      config:
+        - subnet: 10.233.40.0/24
 
 volumes:
   aeza-data:

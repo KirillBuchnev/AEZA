@@ -46,7 +46,7 @@ export function ReasonList({ customers, activeReason, onSelect }) {
                 reason.code === "insufficient_balance"
                   ? "wallet"
                   : reason.code === "prolong_wait"
-                    ? "clock"
+                    ? "hourglass"
                     : "pulse"
               }
               size={16}
@@ -131,9 +131,8 @@ export function Overview({
   return (
     <>
       <PageHeader
-        eyebrow="ЦЕНТР УДЕРЖАНИЯ"
         title="Риск непродления"
-        description="Поймите, кому помочь в первую очередь и какая выручка под угрозой."
+        description="Клиенты, которые могут не продлить услуги, и сумма под угрозой."
         onMenu={onNavigate.menu}
         action={
           <>
@@ -168,7 +167,7 @@ export function Overview({
           label="Высокий риск"
           value={summary?.risk_counts?.high ?? "—"}
           note={`${summary?.risk_counts?.medium ?? 0} со средним риском`}
-          icon="pulse"
+          icon="status-high"
           tone="metric-high"
           onClick={() => onNavigate.filter("high")}
         />
@@ -176,14 +175,14 @@ export function Overview({
           label="Выручка под риском"
           value={money(summary?.potential_loss_minor)}
           note={`За ${summary?.prediction_horizon_days || 30} дней · оценка`}
-          icon="wallet"
+          icon="currencies"
           tone="metric-highlight"
         />
         <MetricCard
           label="Недостаточно данных"
           value={summary?.risk_counts?.unscored ?? "—"}
           note="Нужна проверка источника"
-          icon="info"
+          icon="warning"
           tone="metric-muted"
           onClick={() => onNavigate.filter("unscored")}
         />
@@ -192,7 +191,6 @@ export function Overview({
         <article className="panel reason-panel">
           <div className="panel-heading">
             <div>
-              <span className="section-index">01 / СИГНАЛЫ</span>
               <h2>Почему клиенты в риске</h2>
               <p>Выберите причину, чтобы сузить список.</p>
             </div>
@@ -215,7 +213,6 @@ export function Overview({
         <article className="panel priority-panel">
           <div className="panel-heading priority-heading">
             <div>
-              <span className="section-index">02 / ВЫБОРКА</span>
               <h2>{reasonLabel || "Приоритетные клиенты"}</h2>
               <p>
                 {activeReason
@@ -252,7 +249,6 @@ export function Overview({
       <section className="panel exposure-panel">
         <div className="panel-heading exposure-heading">
           <div>
-            <span className="section-index">03 / ДЕНЕЖНЫЙ ЭФФЕКТ</span>
             <h2>Где сосредоточена сумма риска</h2>
             <p>
               Потенциальная потеря учитывает недостаток средств и оценку

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
 import { Icon, RiskBadge } from "./Icons.jsx";
-import { dateLabel, money } from "./format.js";
+import { dateLabel, money, points, riskText } from "./format.js";
 
 export function CustomerDrawer({ id, onClose }) {
   const [customer, setCustomer] = useState(null);
@@ -55,7 +55,6 @@ export function CustomerDrawer({ id, onClose }) {
         aria-label="Карточка клиента"
       >
         <div className="drawer-top">
-          <span className="section-index">КАРТОЧКА КЛИЕНТА</span>
           <button
             className="icon-button drawer-close"
             onClick={onClose}
@@ -95,6 +94,17 @@ export function CustomerDrawer({ id, onClose }) {
                 <b>{money(customer.balance_minor)}</b>
               </div>
               <div>
+                <span>Стоимость услуг в месяц</span>
+                <b>
+                  {money(
+                    customer.services.reduce(
+                      (total, service) => total + (service.price_minor || 0),
+                      0,
+                    ),
+                  )}
+                </b>
+              </div>
+              <div>
                 <span>Сумма риска</span>
                 <b className="drawer-loss">
                   {money(customer.potential_loss_minor)}
@@ -109,6 +119,22 @@ export function CustomerDrawer({ id, onClose }) {
               <div>
                 <span>Услуг</span>
                 <b>{customer.service_count}</b>
+              </div>
+              <div>
+                <span>Доступные бонусы</span>
+                <b>
+                  {customer.bonus_spend_enabled
+                    ? money(customer.bonus_balance_minor)
+                    : "Не используются"}
+                </b>
+              </div>
+              <div>
+                <span>Индекс услуг</span>
+                <b>
+                  {customer.account_risk_sum == null
+                    ? "Нет оценки"
+                    : `${customer.account_risk_sum} / 100+`}
+                </b>
               </div>
             </div>
             <section className="drawer-section">
@@ -127,7 +153,7 @@ export function CustomerDrawer({ id, onClose }) {
                         reason.code === "insufficient_balance"
                           ? "wallet"
                           : reason.code === "prolong_wait"
-                            ? "clock"
+                            ? "hourglass"
                             : "pulse"
                       }
                       size={16}
@@ -136,7 +162,7 @@ export function CustomerDrawer({ id, onClose }) {
                   <div>
                     <b>
                       {reason.title}
-                      {reason.points > 0 && <i>+{reason.points}</i>}
+                      {reason.points > 0 && <i>+{points(reason.points)}</i>}
                     </b>
                     <p>{reason.explanation}</p>
                   </div>
@@ -161,6 +187,8 @@ export function CustomerDrawer({ id, onClose }) {
                           ? "Автопродление включено"
                           : "Автопродление выключено"}{" "}
                         · до {dateLabel(service.expires_at)}
+                        {service.grace_remaining_days != null &&
+                          ` · grace: ${service.grace_remaining_days} дн.`}
                       </small>
                     </div>
                     <div className="service-amount">
@@ -168,6 +196,16 @@ export function CustomerDrawer({ id, onClose }) {
                       <small>
                         {serviceStatus[service.status] || service.status}
                       </small>
+                      <small>
+                        {service.risk_score == null
+                          ? "Нет оценки"
+                          : `${service.risk_score} / 100 · ${riskText[service.risk_level] || service.risk_label}`}
+                      </small>
+                      {service.uncovered_revenue_minor > 0 && (
+                        <small className="service-deficit">
+                          Дефицит {money(service.uncovered_revenue_minor)}
+                        </small>
+                      )}
                     </div>
                   </div>
                 ))
@@ -177,7 +215,10 @@ export function CustomerDrawer({ id, onClose }) {
             </section>
             <section className="drawer-section">
               <div className="drawer-section-title">
-                <h3>Последние транзакции</h3>
+                <h3>
+                  <Icon name="bag" size={16} />
+                  Последние транзакции
+                </h3>
                 <span>{customer.transactions.length}</span>
               </div>
               {customer.transactions.length ? (
@@ -229,7 +270,7 @@ export function CustomerDrawer({ id, onClose }) {
                 <b>
                   {customer.risk_score == null
                     ? "Нет оценки"
-                    : `${customer.risk_score}%`}
+                    : `${customer.risk_score} / 100`}
                 </b>
               </div>
               <div className="calculation-result">

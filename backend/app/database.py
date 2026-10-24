@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Iterator
 
-from .risk import DEFAULT_MODEL_SETTINGS, demo_snapshot
+from .risk import DEFAULT_MODEL_SETTINGS, MODEL_VERSION, demo_snapshot, merge_model_settings
 
 
 class Database:
@@ -28,7 +28,7 @@ class Database:
         finally:
             connection.close()
 
-    def initialize(self) -> None:
+    def initialize(self, admin_profile: dict[str, str] | None = None) -> None:
         with self.connection() as connection:
             connection.executescript(
                 """
@@ -75,15 +75,47 @@ class Database:
                     window_started_at TEXT NOT NULL,
                     failures INTEGER NOT NULL CHECK (failures >= 1)
                 );
+                CREATE TABLE IF NOT EXISTS users (
+                    username TEXT PRIMARY KEY,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    codeword_hash TEXT NOT NULL,
+                    role TEXT NOT NULL DEFAULT 'analyst',
+                    created_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    token_hash TEXT PRIMARY KEY,
+                    username TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_services_customer ON services(customer_id);
                 CREATE INDEX IF NOT EXISTS idx_transactions_customer ON transactions(customer_id);
                 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
                 """
             )
-            connection.execute(
-                "INSERT OR IGNORE INTO app_state(key, value) VALUES ('model_settings', ?)",
-                (json.dumps(DEFAULT_MODEL_SETTINGS, ensure_ascii=False),),
-            )
+            settings_row = connection.execute(
+                "SELECT value FROM app_state WHERE key = 'model_settings'"
+            ).fetchone()
+            if settings_row is None:
+                connection.execute(
+                    "INSERT INTO app_state(key, value) VALUES ('model_settings', ?)",
+                    (json.dumps(DEFAULT_MODEL_SETTINGS, ensure_ascii=False),),
+                )
+            else:
+                stored_settings = json.loads(settings_row["value"])
+                if stored_settings.get("version", 1) < MODEL_VERSION:
+                    migrated = merge_model_settings({
+                        "prediction_horizon_days": stored_settings.get(
+                            "prediction_horizon_days",
+                            DEFAULT_MODEL_SETTINGS["prediction_horizon_days"],
+                        ),
+                    })
+                    connection.execute(
+                        "UPDATE app_state SET value = ? WHERE key = 'model_settings'",
+                        (json.dumps(migrated, ensure_ascii=False),),
+                    )
             connection.execute(
                 "INSERT OR IGNORE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
                 (datetime.now(timezone.utc).isoformat(),),
@@ -103,6 +135,136 @@ class Database:
                     "INSERT OR REPLACE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
                     (datetime.now(timezone.utc).isoformat(),),
                 )
+            elif source_kind["value"] == "demo":
+                # Demo dates are relative to the current day. Refresh only the
+                # synthetic source; an uploaded snapshot remains untouched.
+                self._replace_snapshot(connection, demo_snapshot())
+                connection.execute(
+                    "INSERT OR REPLACE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
+                    (datetime.now(timezone.utc).isoformat(),),
+                )
+            if admin_profile is not None:
+                exists = connection.execute(
+                    "SELECT 1 FROM users WHERE username = ?",
+                    (admin_profile["username"],),
+                ).fetchone()
+                if exists is None:
+                    connection.execute(
+                        """
+                        INSERT INTO users (
+                            username, first_name, last_name, password_hash,
+                            codeword_hash, role, created_at
+                        ) VALUES (?, ?, ?, ?, ?, 'analyst', ?)
+                        """,
+                        (
+                            admin_profile["username"],
+                            admin_profile["first_name"],
+                            admin_profile["last_name"],
+                            admin_profile["password_hash"],
+                            admin_profile["codeword_hash"],
+                            datetime.now(timezone.utc).isoformat(),
+                        ),
+                    )
+
+    def get_user(self, username: str) -> dict[str, Any] | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT username, first_name, last_name, password_hash, codeword_hash, role
+                FROM users WHERE username = ?
+                """,
+                (username,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def list_users(self) -> list[dict[str, Any]]:
+        with self.connection() as connection:
+            rows = connection.execute("SELECT username, password_hash FROM users").fetchall()
+        return [dict(row) for row in rows]
+
+    def create_user(
+        self,
+        username: str,
+        first_name: str,
+        last_name: str,
+        password_hash: str,
+        codeword_hash: str,
+    ) -> None:
+        with self.connection() as connection:
+            connection.execute(
+                """
+                INSERT INTO users (
+                    username, first_name, last_name, password_hash,
+                    codeword_hash, role, created_at
+                ) VALUES (?, ?, ?, ?, ?, 'analyst', ?)
+                """,
+                (
+                    username,
+                    first_name,
+                    last_name,
+                    password_hash,
+                    codeword_hash,
+                    datetime.now(timezone.utc).isoformat(),
+                ),
+            )
+
+    def set_password(self, username: str, password_hash: str) -> None:
+        with self.connection() as connection:
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
+
+    def delete_user_sessions(self, username: str, keep_token_hash: str | None = None) -> None:
+        with self.connection() as connection:
+            if keep_token_hash is None:
+                connection.execute("DELETE FROM sessions WHERE username = ?", (username,))
+            else:
+                connection.execute(
+                    "DELETE FROM sessions WHERE username = ? AND token_hash != ?",
+                    (username, keep_token_hash),
+                )
+
+    def create_password_reset(self, token_hash: str, username: str, expires_at: str) -> None:
+        with self.connection() as connection:
+            connection.execute("DELETE FROM password_resets WHERE username = ?", (username,))
+            connection.execute(
+                "INSERT INTO password_resets(token_hash, username, expires_at, created_at) VALUES (?, ?, ?, ?)",
+                (token_hash, username, expires_at, datetime.now(timezone.utc).isoformat()),
+            )
+
+    def peek_password_reset(self, token_hash: str) -> str | None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connection() as connection:
+            row = connection.execute(
+                "SELECT username FROM password_resets WHERE token_hash = ? AND expires_at > ?",
+                (token_hash, now),
+            ).fetchone()
+        return row["username"] if row else None
+
+    def consume_password_reset(self, token_hash: str) -> str | None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self.connection() as connection:
+            row = connection.execute(
+                "DELETE FROM password_resets WHERE token_hash = ? AND expires_at > ? RETURNING username",
+                (token_hash, now),
+            ).fetchone()
+            return row["username"] if row else None
+
+    def replace_password(self, username: str, password_hash: str, keep_token_hash: str | None = None) -> None:
+        """Set the password and revoke sessions in one transaction."""
+        with self.connection() as connection:
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
+            if keep_token_hash is None:
+                connection.execute("DELETE FROM sessions WHERE username = ?", (username,))
+            else:
+                connection.execute(
+                    "DELETE FROM sessions WHERE username = ? AND token_hash != ?",
+                    (username, keep_token_hash),
+                )
 
     def model_settings(self) -> dict[str, Any]:
         with self.connection() as connection:
@@ -110,14 +272,14 @@ class Database:
                 "SELECT value FROM app_state WHERE key = 'model_settings'"
             ).fetchone()
             if row is None:
-                return DEFAULT_MODEL_SETTINGS.copy()
-            return json.loads(row["value"])
+                return merge_model_settings(DEFAULT_MODEL_SETTINGS)
+            return merge_model_settings(json.loads(row["value"]))
 
     def save_model_settings(self, settings: dict[str, Any]) -> None:
         with self.connection() as connection:
             connection.execute(
                 "INSERT OR REPLACE INTO app_state(key, value) VALUES ('model_settings', ?)",
-                (json.dumps(settings, ensure_ascii=False),),
+                (json.dumps(merge_model_settings(settings), ensure_ascii=False),),
             )
 
     def source_info(self) -> dict[str, str]:

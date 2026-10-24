@@ -1,0 +1,383 @@
+/* Brand layer: Exo 2 for headings, Inter for text, guidebook palette, expanding logo. */
+
+h1,
+h2,
+h3,
+.eyebrow,
+.section-index,
+.login-intro h1,
+.dialog-top h2 {
+  font-family: "Exo 2 Variable", "Exo 2", Inter, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* Logo: four rounded tiles; é is the anchor, the others slide into place. */
+.brand-logo {
+  --tile: 34px;
+  --gap: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap);
+}
+.brand-tile {
+  display: inline-grid;
+  place-items: center;
+  width: var(--tile);
+  height: var(--tile);
+  border-radius: calc(var(--tile) * 0.25);
+  background: #0a0a0a;
+  color: #ffffff;
+  font: 700 calc(var(--tile) * 0.6) / 1 "Inter Variable", Inter, sans-serif;
+  transition:
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.5s ease;
+}
+.brand-logo-inverse .brand-tile {
+  background: #ffffff;
+  color: #0a0a0a;
+}
+.brand-tile-2 {
+  transition-delay: 0.08s;
+}
+.brand-tile-3 {
+  transition-delay: 0.16s;
+}
+.brand-logo:not(.is-open):not(.is-folded) .brand-tile-0 {
+  opacity: 0;
+  transform: translateX(calc(var(--tile) * 0.14));
+}
+.brand-logo:not(.is-open):not(.is-folded) .brand-tile-2,
+.brand-logo:not(.is-open):not(.is-folded) .brand-tile-3 {
+  opacity: 0;
+  transform: translateX(calc(var(--tile) * -0.14));
+}
+.brand-logo.is-folded .brand-tile-0,
+.brand-logo.is-folded .brand-tile-2,
+.brand-logo.is-folded .brand-tile-3 {
+  display: none;
+}
+.brand-logo.is-open:hover .brand-tile-0 {
+  transform: translateX(calc(var(--tile) * -0.06));
+}
+.brand-logo.is-open:hover .brand-tile-3 {
+  transform: translateX(calc(var(--tile) * 0.06));
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.brand-caption {
+  font: 500 12px / 1.2 Inter, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9fb0c6;
+}
+.brand-compact {
+  align-items: center;
+}
+.brand-compact .brand-logo {
+  --tile: 36px;
+}
+.sidebar .brand-logo {
+  --tile: 36px;
+}
+
+/* Pattern from the guidebook */
+.brand-pattern {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Login hero */
+.login-intro {
+  position: relative;
+  overflow: hidden;
+  background: var(--rail);
+  color: #ffffff;
+}
+.login-intro > * {
+  position: relative;
+  z-index: 1;
+}
+.login-intro .login-pattern {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: 24%;
+  z-index: 0;
+}
+.login-intro .login-footer {
+  position: relative;
+  z-index: 2;
+  padding: 12px 0 14px;
+  background: var(--rail);
+}
+.login-card .field-label {
+  margin-top: 16px;
+}
+.login-card .field-row .field-label,
+.login-card .password-label-row .field-label {
+  margin-top: 0;
+}
+.login-card .input-wrap {
+  margin-top: 6px;
+}
+.login-intro .brand-logo {
+  --tile: 46px;
+  --gap: 4px;
+}
+.login-intro h1 span {
+  color: var(--accent);
+}
+.login-slogan {
+  margin: 22px 0 0;
+  font: 800 15px / 1.2 "Exo 2 Variable", "Exo 2", Inter, sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.login-mascot {
+  display: none;
+  position: absolute;
+  right: 4%;
+  bottom: 64px;
+  z-index: 1;
+  height: min(42vh, 420px);
+  width: auto;
+  pointer-events: none;
+}
+@media (min-width: 1280px) {
+  .login-mascot {
+    display: block;
+  }
+}
+
+/* Forms */
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.field-hint {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.auth-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+.auth-link:hover {
+  text-decoration-color: var(--ink);
+}
+.auth-switch {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+  font-size: 14px;
+}
+.button-primary {
+  color: #0a0a0a;
+}
+.button-primary:hover:not(:disabled) {
+  color: #0a0a0a;
+}
+.sidebar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #d3dced;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+/* Dialog */
+.dialog-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 10, 10, 0.45);
+}
+.dialog-card {
+  width: min(440px, 100%);
+  padding: 24px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgba(10, 10, 10, 0.25);
+}
+.dialog-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dialog-top h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.dialog-lead {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Risk badges: a neutral chip; the status plate from the icon set carries the colour. */
+.risk-badge.risk-high,
+.risk-badge.risk-medium,
+.risk-badge.risk-low,
+.risk-badge.risk-unscored {
+  gap: 8px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: #0a0a0a;
+}
+
+/* Icons: generated set (SVG) and guidebook tiles (PNG) */
+.brand-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+.drawer-section-title h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.score-high {
+  color: #b3510f;
+}
+
+/* Navigation */
+.nav-item-active {
+  background: var(--accent);
+  color: #0a0a0a;
+}
+.nav-item-active svg {
+  color: #0a0a0a;
+}
+
+/* Accessibility pass: visible focus, contrast of controls, reduced motion. */
+.input-wrap input:focus-visible,
+.select-box select:focus-visible,
+.number-control input:focus-visible,
+:focus-visible {
+  outline: 3px solid #0a0a0a;
+  outline-offset: 2px;
+}
+.sidebar :focus-visible,
+.login-intro :focus-visible {
+  outline-color: #ffffff;
+}
+.input-wrap,
+.search-box,
+.select-box,
+.number-control {
+  border-color: #8a93a3;
+}
+.score-medium {
+  color: #8a5a12;
+}
+.pagination-button:hover,
+.number-control button:hover,
+.calculation-note button,
+.button-secondary:hover,
+.password-toggle:hover {
+  color: #0a0a0a;
+}
+.app-loading .brand-caption {
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo .brand-tile {
+    transition: none !important;
+  }
+}
+
+.export-button {
+  white-space: nowrap;
+}
+
+/* Review fixes: contrast of cyan text and the highlight tile, focus in search, mascot overlap, login breakpoint */
+.text-link,
+.table-more,
+.table-sort span,
+.pagination-button:hover,
+.number-control button:hover {
+  color: #0a0a0a;
+}
+.metric-card.metric-highlight,
+.metric-card.metric-highlight * {
+  color: #0a0a0a !important;
+}
+.metric-card.metric-highlight .metric-icon {
+  background: rgba(10, 10, 10, 0.12);
+}
+.search-box:focus-within {
+  border-color: #0a0a0a;
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.12);
+}
+.search-box input::placeholder,
+.score-empty {
+  color: #5c6470;
+}
+.login-intro-content {
+  max-width: 440px;
+}
+.login-mobile-brand .brand-caption {
+  color: var(--muted);
+}
+.login-intro-content > .login-slogan {
+  color: var(--accent);
+}
+@media (max-width: 1439px) {
+  .login-mascot {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .login-screen {
+    display: block;
+    background: #fff;
+  }
+  .login-intro {
+    display: none;
+  }
+  .login-mobile-brand {
+    display: block;
+    margin-bottom: 32px;
+  }
+}

@@ -12,7 +12,6 @@ export function PageHeader({ title, description, eyebrow, action, onMenu }) {
         <span className="hamburger" />
       </button>
       <div>
-        <div className="eyebrow">{eyebrow}</div>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>

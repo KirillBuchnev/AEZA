@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import ipaddress
 import json
-import secrets
+import sqlite3
 from typing import Any, AsyncIterator, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
@@ -24,9 +24,26 @@ from .schemas import (
     LoginResponse,
     ModelSettingsPatch,
     ModelSettingsResponse,
+    PasswordChangeRequest,
+    PasswordResetRequest,
+    PasswordResetTokenResponse,
+    RegisterRequest,
     SnapshotImportResponse,
     SnapshotUpload,
     UserResponse,
+    VerifyCodewordRequest,
+)
+from .security import (
+    DUMMY_HASH,
+    RESET_TOKEN_MINUTES,
+    codeword_error,
+    hash_secret,
+    new_token,
+    normalize_codeword,
+    normalize_username,
+    password_error,
+    username_error,
+    verify_secret,
 )
 
 
@@ -34,9 +51,30 @@ config = load_config()
 database = Database(config.database_path)
 
 
+def _admin_profile() -> dict[str, str]:
+    return {
+        "username": normalize_username(config.admin_username),
+        "first_name": config.admin_first_name,
+        "last_name": config.admin_last_name,
+        "password_hash": hash_secret(config.admin_password),
+        "codeword_hash": hash_secret(normalize_codeword(config.admin_codeword)),
+    }
+
+
+PUBLISHED_DEMO_PASSWORDS = ("local-demo-change-this-password", "demo-local-only-change-me")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    database.initialize()
+    database.initialize(admin_profile=_admin_profile())
+    if config.environment == "production":
+        # Any account, including rows left by a development run, must not keep a published demo password.
+        for user in database.list_users():
+            if any(verify_secret(password, user["password_hash"]) for password in PUBLISHED_DEMO_PASSWORDS):
+                raise RuntimeError(
+                    "Production refuses to start: an account has a published demo password. "
+                    "Use a new AEZA_DATABASE_PATH volume, or change that password in the panel first."
+                )
     yield
 
 
@@ -130,19 +168,42 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def _client_key(request: Request) -> str:
-    """Return a keyed, non-reversible identifier for login throttling."""
-    forwarded_address = request.headers.get("x-real-ip", "")
-    socket_address = request.client.host if request.client else "unknown"
-    try:
-        client_address = ipaddress.ip_address(forwarded_address or socket_address).compressed
-    except ValueError:
-        client_address = socket_address
+def _throttle_key(scope: str, value: str) -> str:
+    """Return a keyed, non-reversible identifier for an attempt counter."""
     return hmac.new(
         config.rate_limit_secret,
-        client_address.encode("utf-8"),
+        f"{scope}:{value}".encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
+
+
+def _scoped_client_key(request: Request, scope: str) -> str:
+    return _throttle_key(scope, _client_key(request))
+
+
+def _too_many_attempts(retry_after: int) -> HTTPException:
+    return HTTPException(
+        status_code=429,
+        detail="Слишком много попыток. Попробуйте позже.",
+        headers={"Retry-After": str(retry_after)},
+    )
+
+
+def _client_key(request: Request) -> str:
+    """Return a keyed, non-reversible identifier for login throttling."""
+    socket_address = request.client.host if request.client else "unknown"
+    try:
+        normalized_socket = ipaddress.ip_address(socket_address).compressed
+    except ValueError:
+        normalized_socket = socket_address
+    forwarded_address = ""
+    if normalized_socket in config.trusted_proxy_ips:
+        forwarded_address = request.headers.get("x-real-ip", "")
+    try:
+        client_address = ipaddress.ip_address(forwarded_address or normalized_socket).compressed
+    except ValueError:
+        client_address = normalized_socket
+    return _throttle_key("ip", client_address)
 
 
 def _unauthorized() -> HTTPException:
@@ -179,6 +240,11 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "reasons": customer["reasons"],
         "due_revenue_minor": customer["due_revenue_minor"],
         "potential_loss_minor": customer["potential_loss_minor"],
+        "account_risk_sum": customer["account_risk_sum"],
+        "max_service_score": customer["max_service_score"],
+        "high_count": customer["high_count"],
+        "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
+        "uncovered_revenue_at_risk_minor": customer["uncovered_revenue_at_risk_minor"],
     }
 
 
@@ -210,42 +276,34 @@ def health() -> dict[str, str]:
 
 @app.post("/api/v1/auth/login", tags=["auth"], summary="Войти по логину и паролю", response_model=LoginResponse)
 def login(body: LoginRequest, request: Request, response: Response) -> dict[str, Any]:
+    username = normalize_username(body.username)
     client_key = _client_key(request)
-    retry_after = database.begin_login_attempt(client_key)
-    if retry_after:
-        raise HTTPException(
-            status_code=429,
-            detail="Слишком много попыток входа. Попробуйте позже.",
-            headers={"Retry-After": str(retry_after)},
-        )
+    account_key = _throttle_key("login-user", username)
+    for key, limit in ((client_key, 5), (account_key, 10)):
+        retry_after = database.begin_login_attempt(key, max_attempts=limit)
+        if retry_after:
+            raise HTTPException(
+                status_code=429,
+                detail="Слишком много попыток входа. Попробуйте позже.",
+                headers={"Retry-After": str(retry_after)},
+            )
 
-    username_ok = hmac.compare_digest(body.username.encode("utf-8"), config.admin_username.encode("utf-8"))
-    password_ok = hmac.compare_digest(body.password.encode("utf-8"), config.admin_password.encode("utf-8"))
-    if not (username_ok and password_ok):
+    user = database.get_user(username)
+    password_ok = verify_secret(body.password, user["password_hash"] if user else DUMMY_HASH)
+    if user is None or not password_ok:
         raise HTTPException(status_code=401, detail="Неверный логин или пароль.")
 
     database.clear_login_attempts(client_key)
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=config.session_days)
-    database.create_session(_token_hash(token), config.admin_username, expires_at.isoformat())
-    response.set_cookie(
-        key=SESSION_COOKIE,
-        value=token,
-        max_age=config.session_days * 24 * 60 * 60,
-        httponly=True,
-        secure=config.cookie_secure,
-        samesite="lax",
-        path="/",
-    )
-    return {
-        "user": {"username": config.admin_username, "role": "analyst"},
-        "expires_at": expires_at.isoformat(),
-    }
+    database.clear_login_attempts(account_key)
+    return _start_session(response, user)
 
 
 @app.get("/api/v1/auth/me", tags=["auth"], summary="Получить текущего пользователя", response_model=UserResponse)
 def current_user(username: str = Depends(require_session)) -> dict[str, Any]:
-    return {"username": username, "role": "analyst"}
+    user = database.get_user(username)
+    if user is None:
+        raise _unauthorized()
+    return _profile(user)
 
 
 @app.post("/api/v1/auth/logout", status_code=204, tags=["auth"], summary="Завершить сессию")
@@ -262,6 +320,151 @@ def logout(request: Request, response: Response) -> Response:
     )
     response.status_code = 204
     return response
+
+
+def _profile(user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "username": user["username"],
+        "first_name": user["first_name"],
+        "last_name": user["last_name"],
+        "role": user["role"],
+    }
+
+
+def _start_session(response: Response, user: dict[str, Any]) -> dict[str, Any]:
+    token = new_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(days=config.session_days)
+    database.create_session(_token_hash(token), user["username"], expires_at.isoformat())
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=token,
+        max_age=config.session_days * 24 * 60 * 60,
+        httponly=True,
+        secure=config.cookie_secure,
+        samesite="lax",
+        path="/",
+    )
+    return {"user": _profile(user), "expires_at": expires_at.isoformat()}
+
+
+@app.post("/api/v1/auth/register", status_code=201, tags=["auth"], summary="Зарегистрироваться", response_model=LoginResponse)
+def register(body: RegisterRequest, request: Request, response: Response) -> dict[str, Any]:
+    if not config.registration_enabled:
+        raise HTTPException(status_code=403, detail="Регистрация отключена администратором.")
+    client_key = _scoped_client_key(request, "register")
+    retry_after = database.begin_login_attempt(client_key, max_attempts=10)
+    if retry_after:
+        raise _too_many_attempts(retry_after)
+
+    username = normalize_username(body.username)
+    first_name = body.first_name.strip()
+    last_name = body.last_name.strip()
+    if not first_name or not last_name:
+        raise HTTPException(status_code=422, detail="Укажите имя и фамилию.")
+    if len(first_name) > 60 or len(last_name) > 60:
+        raise HTTPException(status_code=422, detail="Имя и фамилия должны быть не длиннее 60 символов.")
+    error = username_error(username)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+    if body.password != body.password_confirm:
+        raise HTTPException(status_code=422, detail="Пароли не совпадают.")
+    error = password_error(body.password, username)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+    error = codeword_error(body.codeword, body.password)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+    if database.get_user(username) is not None:
+        raise HTTPException(status_code=409, detail="Логин уже занят.")
+    try:
+        database.create_user(
+            username,
+            first_name,
+            last_name,
+            hash_secret(body.password),
+            hash_secret(normalize_codeword(body.codeword)),
+        )
+    except sqlite3.IntegrityError:
+        raise HTTPException(status_code=409, detail="Логин уже занят.")
+
+    database.clear_login_attempts(client_key)
+    return _start_session(response, database.get_user(username))
+
+
+@app.post("/api/v1/auth/password/verify-codeword", tags=["auth"], summary="Проверить кодовое слово для сброса", response_model=PasswordResetTokenResponse)
+def verify_codeword(body: VerifyCodewordRequest, request: Request) -> dict[str, Any]:
+    username = normalize_username(body.username)
+    address_key = _scoped_client_key(request, "reset-ip")
+    retry_after = database.begin_login_attempt(address_key, max_attempts=30)
+    if retry_after:
+        raise _too_many_attempts(retry_after)
+    client_key = _throttle_key("reset", username)
+    retry_after = database.begin_login_attempt(client_key)
+    if retry_after:
+        raise _too_many_attempts(retry_after)
+
+    user = database.get_user(username)
+    stored = user["codeword_hash"] if user else DUMMY_HASH
+    codeword_ok = verify_secret(normalize_codeword(body.codeword), stored)
+    if user is None or not codeword_ok:
+        raise HTTPException(status_code=401, detail="Неверный логин или кодовое слово.")
+
+    database.clear_login_attempts(client_key)
+    token = new_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_MINUTES)
+    database.create_password_reset(_token_hash(token), username, expires_at.isoformat())
+    return {"reset_token": token, "expires_at": expires_at.isoformat()}
+
+
+@app.post("/api/v1/auth/password/reset", status_code=204, tags=["auth"], summary="Задать новый пароль после проверки кодового слова")
+def reset_password(body: PasswordResetRequest) -> Response:
+    if body.new_password != body.new_password_confirm:
+        raise HTTPException(status_code=422, detail="Пароли не совпадают.")
+    token = _token_hash(body.reset_token)
+    expired = HTTPException(status_code=400, detail="Ссылка для сброса устарела. Начните восстановление заново.")
+    username = database.peek_password_reset(token)
+    if username is None:
+        raise expired
+    error = password_error(body.new_password, username)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+    if database.consume_password_reset(token) is None:
+        raise expired
+
+    database.replace_password(username, hash_secret(body.new_password))
+    return Response(status_code=204)
+
+
+@app.post("/api/v1/auth/password/change", status_code=204, tags=["auth"], summary="Сменить пароль текущего пользователя")
+def change_password(
+    body: PasswordChangeRequest,
+    request: Request,
+    username: str = Depends(require_session),
+) -> Response:
+    user = database.get_user(username)
+    if user is None:
+        raise _unauthorized()
+    change_key = _throttle_key("change-password", username)
+    retry_after = database.begin_login_attempt(change_key, max_attempts=5)
+    if retry_after:
+        raise _too_many_attempts(retry_after)
+    if not verify_secret(body.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Текущий пароль указан неверно.")
+    database.clear_login_attempts(change_key)
+    if body.new_password != body.new_password_confirm:
+        raise HTTPException(status_code=422, detail="Пароли не совпадают.")
+    if body.new_password == body.current_password:
+        raise HTTPException(status_code=422, detail="Новый пароль должен отличаться от текущего.")
+    error = password_error(body.new_password, username)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
+
+    database.replace_password(
+        username,
+        hash_secret(body.new_password),
+        keep_token_hash=_token_hash(request.cookies.get(SESSION_COOKIE, "")),
+    )
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/customers", tags=["customers"], summary="Список клиентов с оценкой риска", response_model=CustomerListResponse)

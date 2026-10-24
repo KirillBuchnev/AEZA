@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Icon, RiskBadge } from "./Icons.jsx";
 import { PageHeader } from "./Shared.jsx";
-import { featureOrder } from "./format.js";
+import { featureOrder, money, riskText } from "./format.js";
 
 export function ModelPage({ settings, onSave, saving }) {
   const [draft, setDraft] = useState(settings);
@@ -13,6 +13,30 @@ export function ModelPage({ settings, onSave, saving }) {
     );
 
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);
+  const formula = settings.formula || {
+    normalizer: 110,
+    urgency_weight: 20,
+    action_horizon_days: 7,
+  };
+  const exampleUrgency = Math.max(
+    0,
+    Math.min(1, 1 - 3 / (formula.action_horizon_days * 24)),
+  );
+  const exampleScore = Math.round(
+    Math.min(
+      100,
+      ((draft.weights.autoprolong_disabled + formula.urgency_weight) *
+        exampleUrgency *
+        100) /
+        formula.normalizer,
+    ),
+  );
+  const exampleLevel =
+    exampleScore >= draft.high_risk_min
+      ? "high"
+      : exampleScore >= draft.medium_risk_min
+        ? "medium"
+        : "low";
   const updateWeight = (code, value) =>
     setDraft((current) => ({
       ...current,
@@ -37,7 +61,6 @@ export function ModelPage({ settings, onSave, saving }) {
   return (
     <>
       <PageHeader
-        eyebrow="ПРАВИЛА ОЦЕНКИ"
         title="Модель риска"
         description="Настройте, как сигналы влияют на оценку непродления."
         action={
@@ -51,7 +74,6 @@ export function ModelPage({ settings, onSave, saving }) {
         <section className="panel model-main-panel">
           <div className="panel-heading">
             <div>
-              <span className="section-index">01 / ПЕРИОД ПРОГНОЗА</span>
               <h2>Когда искать риск</h2>
               <p>Учитываем услуги, срок которых скоро заканчивается.</p>
             </div>
@@ -112,9 +134,11 @@ export function ModelPage({ settings, onSave, saving }) {
           <div className="section-divider" />
           <div className="panel-heading weights-heading">
             <div>
-              <span className="section-index">02 / СИЛА ПРИЗНАКОВ</span>
               <h2>Что влияет на оценку</h2>
-              <p>Баллы активных причин складываются, максимум — 100.</p>
+              <p>
+                Вклад причин меняется вместе со срочностью и дефицитом, максимум
+                — 100.
+              </p>
             </div>
           </div>
           <div className="weight-list">
@@ -126,7 +150,7 @@ export function ModelPage({ settings, onSave, saving }) {
                       code === "insufficient_balance"
                         ? "wallet"
                         : code === "prolong_wait"
-                          ? "clock"
+                          ? "hourglass"
                           : "pulse"
                     }
                     size={16}
@@ -170,7 +194,6 @@ export function ModelPage({ settings, onSave, saving }) {
           <div className="threshold-area">
             <div className="panel-heading">
               <div>
-                <span className="section-index">03 / УРОВНИ РИСКА</span>
                 <h2>Границы оценки</h2>
                 <p>Отметки определяют цвет и уровень клиента.</p>
               </div>
@@ -282,7 +305,6 @@ export function ModelPage({ settings, onSave, saving }) {
               <Icon name="info" size={20} />
             </span>
             <div>
-              <span className="section-index">ПОНЯТНЫЙ РАСЧЁТ</span>
               <h3>Что означает оценка</h3>
             </div>
           </div>
@@ -292,19 +314,22 @@ export function ModelPage({ settings, onSave, saving }) {
             специалиста.
           </p>
           <div className="example-score">
-            <span>Пример клиента</span>
+            <span>Пример: срок через 3 часа, ручное продление</span>
             <b>
-              <strong>55</strong> / 100
+              <strong>{exampleScore}</strong> / 100
             </b>
             <div className="example-meter">
-              <i />
+              <i style={{ width: `${exampleScore}%` }} />
             </div>
-            <RiskBadge level="medium" />
+            <RiskBadge level={exampleLevel} label={riskText[exampleLevel]} />
           </div>
           <div className="formula-card">
             <b>Потенциальная потеря</b>
-            <span>Недостаток на продления × оценка риска</span>
-            <code>€100 × 55% = €55</code>
+            <span>Недостаток на продления × индекс риска</span>
+            <code>
+              {money(10000)} × {exampleScore} / 100 ={" "}
+              {money((10000 * exampleScore) / 100)}
+            </code>
           </div>
           <div className="model-disclaimer">
             <Icon name="info" size={15} />

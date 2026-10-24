@@ -48,6 +48,83 @@ paths:
       responses:
         '204':
           description: Сессия завершена, cookie очищена
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      security: []
+      summary: Зарегистрироваться по логину, имени, фамилии, паролю и кодовому слову
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Аккаунт создан, открыта cookie-сессия
+        '403':
+          description: Регистрация отключена администратором
+        '409':
+          description: Логин уже занят
+        '422':
+          description: Не прошла проверка логина, пароля или кодового слова
+        '429':
+          description: Слишком много попыток
+  /api/v1/auth/password/verify-codeword:
+    post:
+      tags: [auth]
+      security: []
+      summary: Проверить кодовое слово и получить одноразовый токен сброса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyCodewordRequest'
+      responses:
+        '200':
+          description: Токен сброса действует 10 минут
+        '401':
+          description: Неверный логин или кодовое слово
+        '429':
+          description: Слишком много попыток, блокировка на 15 минут
+  /api/v1/auth/password/reset:
+    post:
+      tags: [auth]
+      security: []
+      summary: Задать новый пароль по токену сброса
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '204':
+          description: Пароль изменён, все сессии пользователя завершены
+        '400':
+          description: Токен устарел или уже использован
+        '422':
+          description: Пароль не прошёл проверку
+  /api/v1/auth/password/change:
+    post:
+      tags: [auth]
+      summary: Сменить пароль текущего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+      responses:
+        '204':
+          description: Пароль изменён, другие сессии завершены
+        '400':
+          description: Текущий пароль указан неверно
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Новый пароль не прошёл проверку
   /api/v1/customers:
     get:
       tags: [customers]
@@ -193,6 +270,36 @@ components:
       properties:
         username: { type: string, minLength: 1 }
         password: { type: string, minLength: 1 }
+    RegisterRequest:
+      type: object
+      required: [username, first_name, last_name, password, password_confirm, codeword]
+      properties:
+        username: { type: string, description: 'От 3 до 40 символов: латиница, цифры, точка, дефис, подчёркивание, @' }
+        first_name: { type: string, minLength: 1, maxLength: 120 }
+        last_name: { type: string, minLength: 1, maxLength: 120 }
+        password: { type: string, description: 'От 10 до 128 символов, буквы и цифры, не совпадает с логином' }
+        password_confirm: { type: string }
+        codeword: { type: string, description: 'От 6 до 64 символов, не только цифры и не типовое слово, регистр не важен, не совпадает с паролем' }
+    VerifyCodewordRequest:
+      type: object
+      required: [username, codeword]
+      properties:
+        username: { type: string, minLength: 1 }
+        codeword: { type: string, minLength: 1 }
+    PasswordResetRequest:
+      type: object
+      required: [reset_token, new_password, new_password_confirm]
+      properties:
+        reset_token: { type: string, minLength: 1 }
+        new_password: { type: string, description: 'Те же правила, что у пароля при регистрации' }
+        new_password_confirm: { type: string }
+    PasswordChangeRequest:
+      type: object
+      required: [current_password, new_password, new_password_confirm]
+      properties:
+        current_password: { type: string, minLength: 1 }
+        new_password: { type: string, description: 'Те же правила, что у пароля при регистрации' }
+        new_password_confirm: { type: string }
     ModelSettingsPatch:
       type: object
       properties:
@@ -208,10 +315,13 @@ components:
       properties:
         customers:
           type: array
+          maxItems: 5000
           items:
             $ref: '#/components/schemas/CustomerSnapshot'
     CustomerSnapshot:
       type: object
+      additionalProperties: true
+      description: Неизвестные поля игнорируются при импорте.
       required: [id, email, balance]
       properties:
         id: { type: [string, integer] }
@@ -219,18 +329,25 @@ components:
         balance: { type: integer, description: Основной баланс в евроцентах }
         withdrawBalance: { type: integer, default: 0 }
         bonusBalance: { type: integer, default: 0 }
-        bonusState: { type: boolean, default: false }
+        bonusState:
+          oneOf:
+            - { type: boolean }
+            - { type: string, enum: [unlocked, locked] }
+          default: false
         totalReplenished: { type: integer, default: 0 }
         services:
           type: array
+          maxItems: 5000
           items:
             $ref: '#/components/schemas/ServiceSnapshot'
         transactions:
           type: array
+          maxItems: 10000
           items:
             $ref: '#/components/schemas/TransactionSnapshot'
     ServiceSnapshot:
       type: object
+      additionalProperties: true
       required: [name, price, autoprolong, status]
       properties:
         id: { type: [string, integer] }
@@ -242,6 +359,7 @@ components:
         expiresAt: { type: [string, 'null'], format: date-time }
     TransactionSnapshot:
       type: object
+      additionalProperties: true
       required: [status, type, amount]
       properties:
         id: { type: [string, integer] }

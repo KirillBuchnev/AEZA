@@ -5,14 +5,20 @@ export function Sidebar({
   setPage,
   user,
   onLogout,
+  onChangePassword,
   mobileOpen,
   setMobileOpen,
 }) {
   const items = [
-    { id: "overview", label: "Обзор", icon: "grid" },
+    { id: "overview", label: "Обзор", icon: "chart" },
     { id: "customers", label: "Клиенты", icon: "users" },
-    { id: "model", label: "Модель риска", icon: "sliders" },
+    { id: "model", label: "Модель риска", icon: "edit" },
   ];
+  const fullName =
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ") ||
+    user?.username ||
+    "Аналитик";
+  const initial = (user?.first_name || user?.username || "A").slice(0, 1).toUpperCase();
   return (
     <>
       {mobileOpen && (
@@ -24,9 +30,8 @@ export function Sidebar({
       )}
       <aside className={`sidebar${mobileOpen ? " sidebar-open" : ""}`}>
         <div className="sidebar-brand">
-          <Brand />
+          <Brand inverse />
         </div>
-        <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
         <nav className="main-nav" aria-label="Основная навигация">
           {items.map((item) => (
             <button
@@ -44,35 +49,18 @@ export function Sidebar({
           ))}
         </nav>
         <div className="sidebar-divider" />
-        <div className="sidebar-tip">
-          <span className="tip-kicker">КАК ЭТО РАБОТАЕТ</span>
-          <p>
-            Риск помогает заметить, кому может понадобиться помощь до продления.
-          </p>
-          <button
-            onClick={() => {
-              setPage("model");
-              setMobileOpen(false);
-            }}
-          >
-            Настроить оценку <Icon name="arrow" size={15} />
-          </button>
-        </div>
         <div className="sidebar-bottom">
           <div className="demo-status">
             <span className="status-indicator" />
             <span>
               <b>Демо-данные</b>
-              <small>Пример клиентского снимка</small>
             </span>
           </div>
           <div className="sidebar-user">
-            <span className="avatar">
-              {(user?.username || "A").slice(0, 1).toUpperCase()}
-            </span>
+            <span className="avatar">{initial}</span>
             <span className="user-copy">
-              <b>{user?.username || "Аналитик"}</b>
-              <small>Аналитик</small>
+              <b>{fullName}</b>
+              <small>{user?.username ? `@${user.username}` : "Аналитик"}</small>
             </span>
             <button
               className="icon-button logout-button"
@@ -83,6 +71,16 @@ export function Sidebar({
               <Icon name="logout" size={17} />
             </button>
           </div>
+          <button
+            className="sidebar-link"
+            onClick={() => {
+              setMobileOpen(false);
+              onChangePassword();
+            }}
+          >
+            <Icon name="key" size={16} />
+            Сменить пароль
+          </button>
         </div>
       </aside>
     </>

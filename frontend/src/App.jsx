@@ -4,10 +4,13 @@ import { Brand } from "./Icons.jsx";
 import { CustomerDrawer } from "./CustomerDrawer.jsx";
 import { CustomersPage } from "./CustomersPage.jsx";
 import { Login } from "./Login.jsx";
+import { PasswordDialog } from "./PasswordDialog.jsx";
 import { ModelPage } from "./ModelPage.jsx";
 import { Overview } from "./Overview.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { Toast } from "./Shared.jsx";
+
+const CUSTOMER_PAGE_SIZE = 8;
 
 function toCsvCell(cell) {
   const value = String(cell);
@@ -27,6 +30,7 @@ export default function App() {
   const [drawerId, setDrawerId] = useState("");
   const [activeReason, setActiveReason] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -75,8 +79,9 @@ export default function App() {
           risk_level: filters.risk_level,
           sort_by: filters.sort_by,
           order: filters.order,
-          limit: 200,
-          offset: 0,
+          limit: page === "customers" ? CUSTOMER_PAGE_SIZE : 200,
+          offset:
+            page === "customers" ? (pageNumber - 1) * CUSTOMER_PAGE_SIZE : 0,
         }),
         api.settings(),
       ]);
@@ -88,6 +93,12 @@ export default function App() {
       if (error.status === 401) {
         setAuthenticated(false);
         setUser(null);
+        setPasswordOpen(false);
+        setDrawerId("");
+        setSummary(null);
+        setCustomers([]);
+        setSettings(null);
+        setPage("overview");
       } else setToast({ kind: "error", message: error.message });
     } finally {
       setLoading(false);
@@ -98,6 +109,8 @@ export default function App() {
     filters.risk_level,
     filters.sort_by,
     filters.order,
+    page,
+    pageNumber,
   ]);
 
   useEffect(() => {
@@ -110,6 +123,10 @@ export default function App() {
     stream.addEventListener("data_changed", () => {
       refreshData();
     });
+    // On a dropped stream, a fresh read tells whether the session is still valid.
+    stream.addEventListener("error", () => {
+      refreshData();
+    });
     return () => stream.close();
   }, [authenticated, refreshData]);
 
@@ -119,9 +136,8 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  async function handleLogin(username, password) {
-    const result = await api.login(username, password);
-    setUser(result.user);
+  function handleSession(currentUser) {
+    setUser(currentUser);
     setAuthenticated(true);
   }
 
@@ -132,6 +148,8 @@ export default function App() {
       /* The session may already have expired. */
     }
     setAuthenticated(false);
+    setPasswordOpen(false);
+    setDrawerId("");
     setSummary(null);
     setCustomers([]);
     setSettings(null);
@@ -227,7 +245,7 @@ export default function App() {
   if (!authenticated)
     return (
       <>
-        <Login onLogin={handleLogin} />
+        <Login onSession={handleSession} />
         <Toast
           message={toast?.message}
           kind={toast?.kind}
@@ -258,6 +276,7 @@ export default function App() {
         page={page}
         setPage={(nextPage) => {
           setPage(nextPage);
+          setPageNumber(1);
           if (nextPage === "overview") {
             setFilters((current) => ({
               ...current,
@@ -271,6 +290,7 @@ export default function App() {
         }}
         user={user}
         onLogout={handleLogout}
+        onChangePassword={() => setPasswordOpen(true)}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
@@ -322,7 +342,6 @@ export default function App() {
           <footer className="app-footer">
             <span>
               <Brand compact />
-              <span>ПАНЕЛЬ АНАЛИТИКИ УДЕРЖАНИЯ</span>
             </span>
             <span className="footer-live">
               <i />
@@ -339,6 +358,29 @@ export default function App() {
       </main>
       {drawerId && (
         <CustomerDrawer id={drawerId} onClose={() => setDrawerId("")} />
+      )}
+      {passwordOpen && (
+        <PasswordDialog
+          username={user?.username}
+          onExpired={() => {
+            setPasswordOpen(false);
+            setDrawerId("");
+            setAuthenticated(false);
+            setUser(null);
+            setSummary(null);
+            setCustomers([]);
+            setSettings(null);
+            setPage("overview");
+          }}
+          onClose={() => setPasswordOpen(false)}
+          onDone={() => {
+            setPasswordOpen(false);
+            setToast({
+              kind: "success",
+              message: "Пароль изменён. Другие сессии завершены.",
+            });
+          }}
+        />
       )}
       <Toast
         message={toast?.message}

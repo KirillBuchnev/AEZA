@@ -5,6 +5,12 @@ export const money = (minor = 0) =>
     minimumFractionDigits: 2,
   }).format((minor || 0) / 100);
 
+export const points = (value = 0) =>
+  new Intl.NumberFormat("ru-RU", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(value || 0);
+
 export const dateLabel = (value) =>
   value
     ? new Intl.DateTimeFormat("ru-RU", {

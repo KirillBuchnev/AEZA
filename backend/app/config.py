@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import ipaddress
 import os
 from urllib.parse import urlsplit
 
@@ -20,8 +21,13 @@ class AppConfig:
     cookie_secure: bool
     session_days: int
     metrics_token: str
+    trusted_proxy_ips: tuple[str, ...]
     allowed_origins: tuple[str, ...]
     docs_enabled: bool
+    admin_codeword: str
+    admin_first_name: str
+    admin_last_name: str
+    registration_enabled: bool
 
 
 def load_config() -> AppConfig:
@@ -31,8 +37,14 @@ def load_config() -> AppConfig:
 
     username = os.getenv("AEZA_ADMIN_USERNAME", "admin")
     password = os.getenv("AEZA_ADMIN_PASSWORD", "demo-local-only-change-me")
+    codeword = os.getenv("AEZA_ADMIN_CODEWORD", "").strip()
+    if not codeword and environment != "production":
+        codeword = "demo-codeword"
     cookie_secure = _boolean("AEZA_COOKIE_SECURE")
-    metrics_token = os.getenv("AEZA_METRICS_TOKEN", "")
+    metrics_token = os.getenv(
+        "AEZA_METRICS_TOKEN",
+        "local-demo-metrics-token-change-this-before-production",
+    ).strip()
     configured_rate_limit_secret = os.getenv("AEZA_RATE_LIMIT_SECRET", "").strip()
     rate_limit_secret = configured_rate_limit_secret or f"development:{password}"
     origins = os.getenv(
@@ -41,14 +53,31 @@ def load_config() -> AppConfig:
     )
 
     allowed_origins = tuple(origin.strip().rstrip("/") for origin in origins.split(",") if origin.strip())
+    trusted_proxy_ips = tuple(
+        address.strip()
+        for address in os.getenv("AEZA_TRUSTED_PROXY_IPS", "").split(",")
+        if address.strip()
+    )
+    for address in trusted_proxy_ips:
+        try:
+            ipaddress.ip_address(address)
+        except ValueError as error:
+            raise ValueError("AEZA_TRUSTED_PROXY_IPS must contain valid IP addresses.") from error
     docs_enabled = _boolean("AEZA_DOCS_ENABLED", default=environment != "production")
     session_days = int(os.getenv("AEZA_SESSION_DAYS", "7"))
     if not 1 <= session_days <= 30:
         raise ValueError("AEZA_SESSION_DAYS must be between 1 and 30.")
 
     if environment == "production":
-        if username.lower() in {"admin", "demo"} or len(password) < 16 or password == "local-demo-change-this-password":
+        if username.lower() in {"admin", "demo"} or len(password) < 16 or password in {"local-demo-change-this-password", "demo-local-only-change-me"}:
             raise ValueError("Production requires a non-default admin username and a password of at least 16 characters.")
+        if (
+            len(codeword) < 8
+            or codeword == "demo-codeword"
+            or codeword.isdigit()
+            or codeword.casefold() in {"password", "qwerty", "codeword", "letmein", "aeza"}
+        ):
+            raise ValueError("Production requires AEZA_ADMIN_CODEWORD with at least 8 characters.")
         if not cookie_secure:
             raise ValueError("AEZA_COOKIE_SECURE=true is required in production.")
         if (
@@ -56,8 +85,11 @@ def load_config() -> AppConfig:
             or configured_rate_limit_secret == "local-demo-rate-limit-secret-change-this-before-production"
         ):
             raise ValueError("Production requires AEZA_RATE_LIMIT_SECRET with at least 32 characters.")
-        if metrics_token and len(metrics_token) < 32:
-            raise ValueError("AEZA_METRICS_TOKEN must have at least 32 characters in production.")
+        if (
+            len(metrics_token) < 32
+            or metrics_token == "local-demo-metrics-token-change-this-before-production"
+        ):
+            raise ValueError("Production requires a non-default AEZA_METRICS_TOKEN with at least 32 characters.")
         if not allowed_origins or any(
             urlsplit(origin).scheme != "https"
             or not urlsplit(origin).hostname
@@ -79,6 +111,11 @@ def load_config() -> AppConfig:
         cookie_secure=cookie_secure,
         session_days=session_days,
         metrics_token=metrics_token,
+        trusted_proxy_ips=trusted_proxy_ips,
         allowed_origins=allowed_origins,
         docs_enabled=docs_enabled,
+        admin_codeword=codeword,
+        admin_first_name=os.getenv("AEZA_ADMIN_FIRST_NAME", "Демо").strip() or "Демо",
+        admin_last_name=os.getenv("AEZA_ADMIN_LAST_NAME", "Аналитик").strip() or "Аналитик",
+        registration_enabled=_boolean("AEZA_REGISTRATION_ENABLED", default=environment != "production"),
     )
