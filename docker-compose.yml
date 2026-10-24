@@ -13,7 +13,7 @@ services:
       AEZA_REGISTRATION_ENABLED: ${AEZA_REGISTRATION_ENABLED:-}
       AEZA_RATE_LIMIT_SECRET: ${AEZA_RATE_LIMIT_SECRET:-}
       AEZA_TRUSTED_PROXY_IPS: ${AEZA_TRUSTED_PROXY_IPS:-10.233.40.10}
-      AEZA_DATABASE_PATH: /data/aeza.db
+      AEZA_DATABASE_URL: postgresql+psycopg://aeza:${AEZA_POSTGRES_PASSWORD:-aeza-local-only-change-me}@postgres:5432/aeza
       AEZA_COOKIE_SECURE: ${AEZA_COOKIE_SECURE:-false}
       AEZA_SESSION_DAYS: ${AEZA_SESSION_DAYS:-7}
       AEZA_METRICS_TOKEN: ${AEZA_METRICS_TOKEN:-local-demo-metrics-token-change-this-before-production}
@@ -26,12 +26,16 @@ services:
       AEZA_OIDC_SCOPES: ${AEZA_OIDC_SCOPES:-openid profile email}
       AEZA_OIDC_AUTO_PROVISION: ${AEZA_OIDC_AUTO_PROVISION:-false}
       AEZA_OIDC_USERNAME_CLAIM: ${AEZA_OIDC_USERNAME_CLAIM:-preferred_username}
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - aeza
     ports:
       - "127.0.0.1:${AEZA_API_PORT:-8001}:8000"
     volumes:
-      - aeza-data:/data
+      # The SQLite file of the previous runtime, read once by: python -m app.migration /data/aeza.db
+      - aeza-data:/data:ro
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=16m
@@ -44,6 +48,24 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aeza
+      POSTGRES_USER: aeza
+      POSTGRES_PASSWORD: ${AEZA_POSTGRES_PASSWORD:-aeza-local-only-change-me}
+    networks:
+      - aeza
+    # No published port: only the API reaches the database, over the compose network.
+    volumes:
+      - aeza-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aeza -d aeza"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
   frontend:
@@ -76,3 +98,4 @@ networks:
 
 volumes:
   aeza-data:
+  aeza-pg:

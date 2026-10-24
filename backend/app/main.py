@@ -6,13 +6,13 @@ import hmac
 import ipaddress
 import json
 import logging
-import sqlite3
 from typing import Any, AsyncIterator, Callable, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.security import APIKeyCookie
+from sqlalchemy.exc import IntegrityError
 
 from .exports import export
 
@@ -55,7 +55,7 @@ from .security import (
 
 
 config = load_config()
-database = Database(config.database_path)
+database = Database(config.database_url)
 logger = logging.getLogger("aeza")
 
 
@@ -88,7 +88,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             if any(verify_secret(password, user["password_hash"]) for password in PUBLISHED_DEMO_PASSWORDS):
                 raise RuntimeError(
                     "Production refuses to start: an account has a published demo password. "
-                    "Use a new AEZA_DATABASE_PATH volume, or change that password in the panel first."
+                    "Point AEZA_DATABASE_URL at a new database, or change that password in the panel first."
                 )
     yield
 
@@ -202,6 +202,7 @@ SORT_FIELDS = {
     "high_count": "high_count",
     "potential_loss": "potential_loss_minor",
     "revenue_at_risk": "revenue_at_risk_minor",
+    "near_term_loss": "near_term_loss_minor",
     "service_count": "service_count",
 }
 
@@ -297,6 +298,7 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "monthly_cost_minor": customer["monthly_cost_minor"],
         "potential_loss_minor": customer["potential_loss_minor"],
         "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
+        "near_term_loss_minor": customer["near_term_loss_minor"],
         "account_risk_sum": customer["account_risk_sum"],
         "max_service_score": customer["max_service_score"],
         "high_count": customer["high_count"],
@@ -332,6 +334,7 @@ def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[
         "risk_counts": counts,
         "potential_loss_minor": sum(customer["potential_loss_minor"] for customer in customers),
         "revenue_at_risk_minor": sum(customer["revenue_at_risk_minor"] for customer in customers),
+        "near_term_loss_minor": sum(customer["near_term_loss_minor"] for customer in customers),
         "monthly_cost_minor": sum(customer["monthly_cost_minor"] for customer in customers),
         "currency": "EUR",
         "prediction_horizon_days": model["prediction_horizon_days"],
@@ -448,7 +451,7 @@ def _oidc_user(issuer: str, claims: dict[str, Any]) -> dict[str, Any] | None:
     last_name = str(claims.get("family_name") or "").strip()[:60]
     try:
         database.create_user(username, first_name, last_name, OIDC_ONLY_SECRET, OIDC_ONLY_SECRET)
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         return None
     database.link_oidc_identity(issuer, subject, username)
     return database.get_user(username)
@@ -631,7 +634,7 @@ def register(body: RegisterRequest, request: Request, response: Response) -> dic
             hash_secret(normalize_codeword(body.codeword)),
             middle_name=middle_name,
         )
-    except sqlite3.IntegrityError:
+    except IntegrityError:
         raise HTTPException(status_code=409, detail="Логин уже занят.")
 
     database.clear_login_attempts(client_key)
@@ -723,7 +726,7 @@ def list_customers(
     data_status: Literal["all", "clean", "issues"] = "all",
     sort_by: Literal[
         "id", "email", "balance", "total_replenished", "monthly_cost", "due_revenue",
-        "risk_score", "max_service_score", "high_count", "potential_loss", "revenue_at_risk", "service_count",
+        "risk_score", "max_service_score", "high_count", "potential_loss", "revenue_at_risk", "near_term_loss", "service_count",
     ] = "risk_score",
     order: Literal["asc", "desc"] = "desc",
     limit: int = Query(default=50, ge=1, le=200),
@@ -979,7 +982,7 @@ EXPORT_FIELDS = {
     "customers": ["id", "email", "balance_minor", "withdraw_balance_minor", "bonus_balance_minor", "bonus_spend_enabled", "total_replenished_minor"],
     "services": ["id", "customer_id", "name", "price_minor", "auto_prolong", "payment_term", "status", "expires_at"],
     "transactions": ["id", "customer_id", "service_id", "status", "type", "amount_minor", "created_at"],
-    "risk": ["id", "email", "risk_score", "risk_level", "potential_loss_minor", "revenue_at_risk_minor", "monthly_cost_minor", "unscored_services_count", "data_issues_count", "recommended_action_code", "recommended_action_text"],
+    "risk": ["id", "email", "risk_score", "risk_level", "potential_loss_minor", "revenue_at_risk_minor", "near_term_loss_minor", "monthly_cost_minor", "unscored_services_count", "data_issues_count", "recommended_action_code", "recommended_action_text"],
     "outflow": ["observed_at", "snapshot_id", "customer_id", "service_id", "event_type", "from_status", "to_status", "price_minor"],
 }
 
@@ -995,6 +998,7 @@ def _export_rows(entity: str) -> list[dict[str, Any]]:
                 "risk_level": customer["risk_level"],
                 "potential_loss_minor": customer["potential_loss_minor"],
                 "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
+                "near_term_loss_minor": customer["near_term_loss_minor"],
                 "monthly_cost_minor": customer["monthly_cost_minor"],
                 "unscored_services_count": customer["unscored_services_count"],
                 "data_issues_count": len(customer["data_quality"]),
@@ -1066,6 +1070,9 @@ def prometheus_metrics(request: Request) -> PlainTextResponse:
         "# HELP aeza_revenue_at_risk_eur Renewal value weighted by the risk index.",
         "# TYPE aeza_revenue_at_risk_eur gauge",
         f"aeza_revenue_at_risk_eur {summary['revenue_at_risk_minor'] / 100:.2f}",
+        "# HELP aeza_near_term_loss_eur Full price of renewals at medium or high risk inside the 7-day action window.",
+        "# TYPE aeza_near_term_loss_eur gauge",
+        f"aeza_near_term_loss_eur {summary['near_term_loss_minor'] / 100:.2f}",
         "# HELP aeza_monthly_cost_eur Monthly cost of eligible services.",
         "# TYPE aeza_monthly_cost_eur gauge",
         f"aeza_monthly_cost_eur {summary['monthly_cost_minor'] / 100:.2f}",

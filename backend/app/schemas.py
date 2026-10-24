@@ -229,6 +229,7 @@ class CustomerListItem(BaseModel):
     monthly_cost_minor: int
     potential_loss_minor: int
     revenue_at_risk_minor: int
+    near_term_loss_minor: int
     account_risk_sum: float | None
     max_service_score: float | None
     high_count: int
@@ -269,6 +270,7 @@ class ServiceDetail(BaseModel):
     uncovered_revenue_minor: int
     potential_loss_minor: int
     revenue_at_risk_minor: int
+    near_term_loss_minor: int
     monthly_cost_minor: int
     grace_remaining_days: int | None
 
@@ -294,6 +296,7 @@ class CustomerCalculation(BaseModel):
     max_service_score: float | None
     high_count: int
     revenue_at_risk_minor: int
+    near_term_loss_minor: int
     potential_loss_minor: int
     monthly_cost_minor: int
 
@@ -383,6 +386,7 @@ class AnalyticsSummary(BaseModel):
     top_exposure: list[ExposureItem]
     potential_loss_minor: int
     revenue_at_risk_minor: int
+    near_term_loss_minor: int
     monthly_cost_minor: int
     currency: str
     prediction_horizon_days: int

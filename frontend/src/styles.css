@@ -844,6 +844,32 @@ p {
   text-decoration: underline;
 }
 
+.hero-money {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+}
+
+.hero-money > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-dark);
+  font-size: 13px;
+}
+
+.hero-money dt {
+  color: var(--text-on-dark-secondary);
+}
+
+.hero-money dd {
+  margin: 0;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .stripes {
   position: absolute;
   top: -20px;

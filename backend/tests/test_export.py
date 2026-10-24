@@ -47,7 +47,7 @@ def test_risk_queue_export_carries_the_recommended_action(open_app):
         sign_in(client)
         response = client.get(EXPORT.format(entity="risk"), params={"format": "csv"})
         header = response.content.decode("utf-8-sig").splitlines()[0].split(";")
-        assert {"risk_score", "risk_level", "recommended_action_text"} <= set(header)
+        assert {"risk_score", "risk_level", "recommended_action_text", "near_term_loss_minor"} <= set(header)
 
 
 def test_sensitive_tables_are_not_exported(open_app):

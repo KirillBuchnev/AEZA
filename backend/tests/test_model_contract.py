@@ -192,6 +192,46 @@ class MoneyAndForecastTest(unittest.TestCase):
         self.assertIn("не калибровано", forecast["method"].lower())
 
 
+class NearTermLossTest(unittest.TestCase):
+    """Possible losses in the 7-day action window: full price of renewals at medium or high risk."""
+
+    def test_high_renewal_inside_window_counts_at_full_price(self) -> None:
+        result = evaluated(service(auto_prolong=False, expires_in_days=3 / 24), balance=10_000)
+        self.assertEqual(result["services"][0]["risk_level"], "high")
+        self.assertEqual(result["near_term_loss_minor"], 10_000)
+        self.assertEqual(result["revenue_at_risk_minor"], 5_800)
+
+    def test_medium_renewal_inside_window_counts_at_full_price(self) -> None:
+        result = evaluated(service(auto_prolong=True, expires_in_days=3), balance=0)
+        self.assertEqual(result["services"][0]["risk_level"], "medium")
+        self.assertEqual(result["near_term_loss_minor"], 10_000)
+
+    def test_low_renewal_is_excluded_though_it_is_at_risk_money(self) -> None:
+        result = evaluated(service(auto_prolong=True, expires_in_days=3), balance=9_000)
+        self.assertEqual(result["services"][0]["risk_level"], "low")
+        self.assertGreater(result["revenue_at_risk_minor"], 0)
+        self.assertEqual(result["near_term_loss_minor"], 0)
+
+    def test_renewal_outside_the_action_window_is_not_near_term(self) -> None:
+        result = evaluated(service(auto_prolong=False, expires_in_days=20), balance=0)
+        self.assertEqual(result["near_term_loss_minor"], 0)
+        self.assertEqual(result["revenue_at_risk_minor"], 0)
+
+    def test_waiting_service_at_risk_counts_as_near_term(self) -> None:
+        result = evaluated(service(status="prolong_wait", auto_prolong=False, expires_in_days=-1), balance=0)
+        self.assertEqual(result["near_term_loss_minor"], 10_000)
+
+    def test_near_term_loss_sums_only_services_in_the_window(self) -> None:
+        result = evaluated(
+            service(service_id="a", auto_prolong=False, expires_in_days=3 / 24),
+            service(service_id="b", price=4_000, auto_prolong=False, expires_in_days=20),
+            balance=10_000,
+        )
+        self.assertEqual(result["near_term_loss_minor"], 10_000)
+        self.assertEqual(result["calculation"]["near_term_loss_minor"], 10_000)
+        self.assertEqual(sum(s["near_term_loss_minor"] for s in result["services"]), 10_000)
+
+
 class ModelSettingsTest(unittest.TestCase):
     def test_divisor_is_the_sum_of_weights(self) -> None:
         self.assertEqual(model_divisor(merge_model_settings(DEFAULT_MODEL_SETTINGS)), 110)

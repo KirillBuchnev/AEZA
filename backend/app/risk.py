@@ -447,6 +447,8 @@ def _evaluate_service(
         "uncovered_revenue_minor": shortfall,
         "potential_loss_minor": round(shortfall * score / 100) if score is not None else 0,
         "revenue_at_risk_minor": round(price * score / 100) if score is not None else 0,
+        # Unweighted: the full price of a renewal that falls inside the action window and is at medium or high risk.
+        "near_term_loss_minor": price if urgency > 0 and level in {"high", "medium"} else 0,
         "monthly_cost_minor": _monthly_cost(price, service.get("payment_term")),
         "grace_remaining_days": grace_remaining,
     }
@@ -535,6 +537,7 @@ def evaluate_customer(
     high_count = sum(service["risk_level"] == "high" for service in assessed)
     potential_loss = sum(service["potential_loss_minor"] for service in service_results)
     revenue_at_risk = sum(service["revenue_at_risk_minor"] for service in service_results)
+    near_term_loss = sum(service["near_term_loss_minor"] for service in service_results)
     monthly_cost = sum(service["monthly_cost_minor"] for service in service_results)
 
     reasons = _account_reasons(assessed)
@@ -605,6 +608,7 @@ def evaluate_customer(
         "uncovered_revenue_minor": uncovered_total,
         "potential_loss_minor": potential_loss,
         "revenue_at_risk_minor": revenue_at_risk,
+        "near_term_loss_minor": near_term_loss,
         "monthly_cost_minor": monthly_cost,
         "account_risk_sum": account_sum,
         "max_service_score": max_score,
@@ -624,6 +628,7 @@ def evaluate_customer(
             "max_service_score": max_score,
             "high_count": high_count,
             "revenue_at_risk_minor": revenue_at_risk,
+            "near_term_loss_minor": near_term_loss,
             "potential_loss_minor": potential_loss,
             "monthly_cost_minor": monthly_cost,
         },

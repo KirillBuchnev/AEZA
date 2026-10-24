@@ -171,8 +171,18 @@ export function Overview({
             <span className="h1">€</span>
           </div>
           <span className="hero-note">
-            за {horizon} дней · с учётом цены услуг, балансов и риска
+            на ближайшие 7 дней · с учётом цены услуг, балансов и риска
           </span>
+          <dl className="hero-money">
+            <div>
+              <dt>Продления под риском</dt>
+              <dd>{money(summary?.revenue_at_risk_minor)}</dd>
+            </div>
+            <div>
+              <dt>Возможные ближайшие потери</dt>
+              <dd>{money(summary?.near_term_loss_minor)}</dd>
+            </div>
+          </dl>
           <button className="link" onClick={() => onNavigate.page("model")}>
             Как считается →
           </button>

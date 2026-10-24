@@ -11,13 +11,31 @@ def _boolean(name: str, default: bool = False) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def normalize_database_url(url: str) -> str:
+    """Accept the common PostgreSQL spellings and map them to the psycopg 3 driver this service ships with."""
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            url = "postgresql+psycopg://" + url.removeprefix(prefix)
+    if not url.startswith(("postgresql+psycopg://", "sqlite:///")):
+        raise ValueError("The database URL must start with postgresql+psycopg:// or sqlite:///.")
+    return url
+
+
+def _database_url() -> str:
+    """AEZA_DATABASE_URL selects PostgreSQL. Without it the app keeps the SQLite file from AEZA_DATABASE_PATH."""
+    url = os.getenv("AEZA_DATABASE_URL", "").strip()
+    if not url:
+        return f"sqlite:///{os.getenv('AEZA_DATABASE_PATH', 'data/aeza.db')}"
+    return normalize_database_url(url)
+
+
 @dataclass(frozen=True)
 class AppConfig:
     environment: str
     admin_username: str
     admin_password: str
     rate_limit_secret: bytes
-    database_path: str
+    database_url: str
     cookie_secure: bool
     session_days: int
     metrics_token: str
@@ -136,7 +154,7 @@ def load_config() -> AppConfig:
         admin_username=username,
         admin_password=password,
         rate_limit_secret=rate_limit_secret.encode("utf-8"),
-        database_path=os.getenv("AEZA_DATABASE_PATH", "data/aeza.db"),
+        database_url=_database_url(),
         cookie_secure=cookie_secure,
         session_days=session_days,
         metrics_token=metrics_token,

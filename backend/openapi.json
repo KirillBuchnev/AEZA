@@ -28,6 +28,10 @@
             "title": "Monthly Cost Minor",
             "type": "integer"
           },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
           "potential_loss_by_level_minor": {
             "additionalProperties": {
               "type": "integer"
@@ -105,6 +109,7 @@
           "top_exposure",
           "potential_loss_minor",
           "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "monthly_cost_minor",
           "currency",
           "prediction_horizon_days",
@@ -235,6 +240,10 @@
             "title": "Monthly Cost Minor",
             "type": "integer"
           },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
           "normalizer": {
             "title": "Normalizer",
             "type": "integer"
@@ -282,6 +291,7 @@
           "max_service_score",
           "high_count",
           "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "potential_loss_minor",
           "monthly_cost_minor"
         ],
@@ -369,6 +379,10 @@
           },
           "monthly_cost_minor": {
             "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
             "type": "integer"
           },
           "potential_loss_minor": {
@@ -479,6 +493,7 @@
           "monthly_cost_minor",
           "potential_loss_minor",
           "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "account_risk_sum",
           "max_service_score",
           "high_count",
@@ -555,6 +570,10 @@
           },
           "monthly_cost_minor": {
             "title": "Monthly Cost Minor",
+            "type": "integer"
+          },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
             "type": "integer"
           },
           "potential_loss_minor": {
@@ -636,6 +655,7 @@
           "monthly_cost_minor",
           "potential_loss_minor",
           "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "account_risk_sum",
           "max_service_score",
           "high_count",
@@ -1595,6 +1615,10 @@
             "title": "Name",
             "type": "string"
           },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
           "payment_term": {
             "anyOf": [
               {
@@ -1688,6 +1712,7 @@
           "uncovered_revenue_minor",
           "potential_loss_minor",
           "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "monthly_cost_minor",
           "grace_remaining_days"
         ],
@@ -2657,6 +2682,7 @@
                 "high_count",
                 "potential_loss",
                 "revenue_at_risk",
+                "near_term_loss",
                 "service_count"
               ],
               "title": "Sort By",

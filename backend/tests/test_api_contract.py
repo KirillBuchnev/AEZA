@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta, timezone
 import json
 
+from sqlalchemy import text
+
 from app.database import Database
 
 
@@ -184,8 +186,8 @@ def test_customer_detail_argues_reasons_and_pins_the_snapshot(open_app):
         assert detail["calculation"]["normalizer"] == 110
 
 
-def test_upgrade_keeps_custom_weights_and_thresholds(open_app, tmp_path):
-    database = Database(str(tmp_path / "aeza.db"))
+def test_upgrade_keeps_custom_weights_and_thresholds(open_app, database_url):
+    database = Database(database_url)
     database.initialize(admin_profile=None)
     stored = {
         "version": 2,
@@ -201,7 +203,10 @@ def test_upgrade_keeps_custom_weights_and_thresholds(open_app, tmp_path):
         "formula": {"normalizer": 110, "urgency_weight": 20},
     }
     with database.connection() as connection:
-        connection.execute("UPDATE app_state SET value = ? WHERE key = 'model_settings'", (json.dumps(stored),))
+        connection.execute(
+            text("UPDATE app_state SET value = :value WHERE key = 'model_settings'"),
+            {"value": json.dumps(stored)},
+        )
 
     with open_app() as (client, _):
         sign_in(client)
@@ -225,6 +230,23 @@ def test_summary_splits_potential_loss_by_level(open_app):
         assert summary["potential_loss_by_level_minor"]["high"] == 9_380  # index 93.8 on a 10 000 shortfall
         assert summary["potential_loss_by_level_minor"]["low"] == 0
         assert summary["potential_loss_minor"] == summary["potential_loss_by_level_minor"]["high"]
+
+
+def test_near_term_loss_is_sortable_and_matches_the_summary(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=10_000)], balance=0),
+            customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),
+        )
+        summary = client.get("/api/v1/analytics/summary").json()
+        assert summary["near_term_loss_minor"] == 10_000  # full price: manual renewal inside 7 days, high risk
+        assert summary["revenue_at_risk_minor"] == 9_380  # the same renewal weighted by index 93.8: no balance covers it
+        items = client.get(CUSTOMERS, params={"sort_by": "near_term_loss", "order": "desc"}).json()["items"]
+        assert [item["id"] for item in items] == ["1", "2"]
+        assert items[0]["near_term_loss_minor"] == 10_000
+        assert items[1]["near_term_loss_minor"] == 0
 
 
 def test_settings_report_control_cases_and_queue_sorts_by_service_count(open_app):

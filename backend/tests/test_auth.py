@@ -1,8 +1,8 @@
 import importlib
-import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
 
 ADMIN_USERNAME = "demo"
 ADMIN_PASSWORD = "local-demo-change-this-password"
@@ -57,25 +57,19 @@ def change(client, current, new_password, confirm=None):
     )
 
 
-def test_bootstrap_admin_logs_in_and_secrets_are_hashed(open_app, tmp_path):
-    with open_app() as (client, _):
+def test_bootstrap_admin_logs_in_and_secrets_are_hashed(open_app, database_url, tmp_path):
+    with open_app() as (client, main):
         assert login(client, ADMIN_USERNAME, ADMIN_PASSWORD).status_code == 200
         assert client.get("/api/v1/auth/me").json()["username"] == ADMIN_USERNAME
+        admin = main.database.get_user(ADMIN_USERNAME)
 
-    database_file = (tmp_path / "aeza.db").read_bytes()
-    assert ADMIN_PASSWORD.encode() not in database_file
-    assert ADMIN_CODEWORD.encode() not in database_file
-
-    db = sqlite3.connect(tmp_path / "aeza.db")
-    try:
-        password_hash, codeword_hash = db.execute(
-            "SELECT password_hash, codeword_hash FROM users WHERE username = ?",
-            (ADMIN_USERNAME,),
-        ).fetchone()
-    finally:
-        db.close()
-    assert password_hash.startswith("scrypt$")
-    assert codeword_hash.startswith("scrypt$")
+    assert admin["password_hash"].startswith("scrypt$")
+    assert admin["codeword_hash"].startswith("scrypt$")
+    if database_url.startswith("sqlite"):
+        # A file can be searched for plaintext; PostgreSQL data lives outside the test process.
+        database_file = (tmp_path / "aeza.db").read_bytes()
+        assert ADMIN_PASSWORD.encode() not in database_file
+        assert ADMIN_CODEWORD.encode() not in database_file
 
 
 def test_register_creates_profile_and_signs_in(open_app):
@@ -169,17 +163,13 @@ def test_reset_token_is_single_use(open_app):
         assert reset(client, token, "Third-55555").status_code == 400
 
 
-def test_reset_token_expires(open_app, tmp_path):
-    with open_app() as (client, _):
+def test_reset_token_expires(open_app):
+    with open_app() as (client, main):
         register(client, codeword="my-word")
         token = verify(client, "ivan", "my-word").json()["reset_token"]
 
-        db = sqlite3.connect(tmp_path / "aeza.db")
-        try:
-            db.execute("UPDATE password_resets SET expires_at = '2000-01-01T00:00:00+00:00'")
-            db.commit()
-        finally:
-            db.close()
+        with main.database.connection() as connection:
+            connection.execute(text("UPDATE password_resets SET expires_at = '2000-01-01T00:00:00+00:00'"))
 
         response = reset(client, token, NEW_PASSWORD)
         assert response.status_code == 400

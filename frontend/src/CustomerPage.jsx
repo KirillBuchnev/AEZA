@@ -37,6 +37,18 @@ function ServiceDetail({ service }) {
           {money(service.uncovered_revenue_minor)} × индекс {lossShare} / 100
         </p>
       )}
+      {service.revenue_at_risk_minor > 0 && (
+        <p className="service-loss">
+          Продление под риском: {money(service.revenue_at_risk_minor)} = цена{" "}
+          {money(service.price_minor)} × индекс {lossShare} / 100
+        </p>
+      )}
+      {service.near_term_loss_minor > 0 && (
+        <p className="service-loss">
+          Возможная потеря за 7 дней: {money(service.near_term_loss_minor)} —
+          полная цена продления, риск средний или высокий
+        </p>
+      )}
       <p className="service-action">
         <b>Действие:</b> {service.recommended_action?.text || "—"}
       </p>
@@ -250,7 +262,7 @@ export function CustomerPage({ id, version, onToast }) {
           <CardHead
             icon="euro"
             title="Сколько можем потерять"
-            description={`Ожидаемая потеря за ${horizon} дней, если ничего не делать`}
+            description={`Ожидаемая потеря по продлениям ближайших 7 дней, если ничего не делать`}
           />
           <div>
             <div className="calc-line">
@@ -288,6 +300,24 @@ export function CustomerPage({ id, version, onToast }) {
                 Без оценки риска сумму не считаем
               </span>
             )}
+          </div>
+          <div className="calc-line">
+            <i />
+            <span>Продления под риском</span>
+            <b>
+              {customer.risk_score == null
+                ? "—"
+                : money(customer.revenue_at_risk_minor)}
+            </b>
+          </div>
+          <div className="calc-line">
+            <i />
+            <span>Возможные ближайшие потери, 7 дней</span>
+            <b>
+              {customer.risk_score == null
+                ? "—"
+                : money(customer.near_term_loss_minor)}
+            </b>
           </div>
           <p className="small muted">
             Доступный баланс: основной плюс бонусный, если bonusState разрешает

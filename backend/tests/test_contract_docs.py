@@ -55,6 +55,8 @@ def test_metrics_agree_with_the_summary(open_app):
         assert levels["high"] == summary["risk_counts"]["high"]
         loss = next(float(line.split()[-1]) for line in text.splitlines() if line.startswith("aeza_potential_loss_eur "))
         assert loss == pytest.approx(summary["potential_loss_minor"] / 100, abs=0.01)
+        near_term = next(float(line.split()[-1]) for line in text.splitlines() if line.startswith("aeza_near_term_loss_eur "))
+        assert near_term == pytest.approx(summary["near_term_loss_minor"] / 100, abs=0.01)
 
 
 def test_settings_and_snapshot_survive_a_restart(open_app):
