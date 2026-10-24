@@ -1,402 +1,457 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "./api.js";
-import mascot from "./assets/brand/aeza-tyan-infra.webp";
-import { BrandLogo, BrandPattern } from "./BrandLogo.jsx";
-import { Brand, Icon } from "./Icons.jsx";
-import {
-  codewordError,
-  matchError,
-  passwordError,
-  usernameError,
-} from "./authRules.js";
+import { Brand } from "./Icons.jsx";
+import mascotLaptop from "./assets/mascot-laptop.webp";
 
-const MODES = {
-  login: "login",
-  register: "register",
-  forgot: "forgot",
-  reset: "reset",
-  done: "done",
-};
+const USERNAME_RE = /^[A-Za-z0-9._@-]{3,64}$/;
 
-const COPY = {
-  [MODES.login]: {
-    title: "С возвращением",
-    lead: "Войдите, чтобы открыть аналитику клиентов.",
-    submit: "Войти в панель",
-  },
-  [MODES.register]: {
-    title: "Создать аккаунт",
-    lead: "Имя и кодовое слово понадобятся, если забудете пароль.",
-    submit: "Создать аккаунт",
-  },
-  [MODES.forgot]: {
-    title: "Восстановление пароля",
-    lead: "Введите логин и кодовое слово, которое указали при регистрации.",
-    submit: "Проверить кодовое слово",
-  },
-  [MODES.reset]: {
-    title: "Новый пароль",
-    lead: "Не короче 10 символов, с буквами и цифрами.",
-    submit: "Сохранить пароль",
-  },
-  [MODES.done]: {
-    title: "Пароль изменён",
-    lead: "Теперь войдите с новым паролем.",
-    submit: "",
-  },
-};
-
-const EMPTY_FORM = {
-  username: "",
-  password: "",
-  confirm: "",
-  firstName: "",
-  lastName: "",
-  codeword: "",
-};
-
-const HIDDEN_FIELD = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  opacity: 0,
-  pointerEvents: "none",
-};
-
-function validate(mode, form) {
-  if (mode === MODES.login) {
-    return form.username.trim() && form.password ? "" : "Введите логин и пароль.";
-  }
-  if (mode === MODES.register) {
-    if (!form.firstName.trim() || !form.lastName.trim()) return "Укажите имя и фамилию.";
-    const username = form.username.trim().toLowerCase();
-    return (
-      usernameError(username) ||
-      passwordError(form.password, username) ||
-      matchError(form.password, form.confirm) ||
-      codewordError(form.codeword, form.password)
-    );
-  }
-  if (mode === MODES.forgot) {
-    return form.username.trim() && form.codeword.trim()
-      ? ""
-      : "Введите логин и кодовое слово.";
-  }
-  if (mode === MODES.reset) {
-    return (
-      passwordError(form.password, form.username.trim()) ||
-      matchError(form.password, form.confirm)
-    );
-  }
-  return "";
+function Field({
+  label,
+  hint,
+  error,
+  name,
+  type = "text",
+  autoComplete,
+  value,
+  onChange,
+  optional = false,
+  ...rest
+}) {
+  const id = `field-${name}`;
+  return (
+    <label className={`field${error ? " field-error" : ""}`} htmlFor={id}>
+      <span>
+        {label}
+        {optional && <em className="optional"> · необязательно</em>}
+      </span>
+      <input
+        id={id}
+        name={name}
+        type={type}
+        autoComplete={autoComplete}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error || hint ? `${id}-note` : undefined}
+        {...rest}
+      />
+      {(error || hint) && (
+        <small id={`${id}-note`} role={error ? "alert" : undefined}>
+          {error || hint}
+        </small>
+      )}
+    </label>
+  );
 }
 
-export function Login({ onSession }) {
-  const [mode, setMode] = useState(MODES.login);
-  const [form, setForm] = useState({ ...EMPTY_FORM, username: "demo" });
-  const [resetToken, setResetToken] = useState("");
+function LoginForm({ onLogin, onMode, initialUsername, notice }) {
+  const [username, setUsername] = useState(initialUsername || "demo");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Bumped on every mode switch so a late response cannot overwrite the screen the user moved to.
-  const requestRef = useRef(0);
-
-  const copy = COPY[mode];
-  const update = (field) => (event) => setForm({ ...form, [field]: event.target.value });
-
-  function switchMode(nextMode) {
-    requestRef.current += 1;
-    setLoading(false);
-    setMode(nextMode);
-    setError("");
-    setShowPassword(false);
-    setForm((current) => ({
-      ...EMPTY_FORM,
-      username: nextMode === MODES.register ? "" : current.username,
-    }));
-  }
 
   async function submit(event) {
     event.preventDefault();
     setError("");
-    const problem = validate(mode, form);
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    const token = requestRef.current;
     setLoading(true);
     try {
-      if (mode === MODES.login) {
-        // The session cookie is already set by the server, so a late reply still signs the user in.
-        const result = await api.login(form.username.trim(), form.password);
-        onSession(result.user);
-      } else if (mode === MODES.register) {
-        const result = await api.register({
-          username: form.username.trim(),
-          first_name: form.firstName.trim(),
-          last_name: form.lastName.trim(),
-          password: form.password,
-          password_confirm: form.confirm,
-          codeword: form.codeword,
-        });
-        onSession(result.user);
-      } else if (mode === MODES.forgot) {
-        const result = await api.verifyCodeword(form.username.trim(), form.codeword);
-        if (token !== requestRef.current) return;
-        setResetToken(result.reset_token);
-        setForm((current) => ({ ...EMPTY_FORM, username: current.username }));
-        setMode(MODES.reset);
-      } else if (mode === MODES.reset) {
-        await api.resetPassword({
-          reset_token: resetToken,
-          new_password: form.password,
-          new_password_confirm: form.confirm,
-        });
-        if (token !== requestRef.current) return;
-        setForm((current) => ({ ...EMPTY_FORM, username: current.username }));
-        setMode(MODES.done);
-      }
+      await onLogin(username.trim(), password);
     } catch (requestError) {
-      if (token !== requestRef.current) return;
-      if (mode === MODES.reset && requestError.status === 400) {
-        // The reset token expired or was used: start the recovery again from the codeword step.
-        setResetToken("");
-        setForm((current) => ({ ...EMPTY_FORM, username: current.username }));
-        setMode(MODES.forgot);
-        setError("Ссылка для сброса устарела. Введите логин и кодовое слово ещё раз.");
-        return;
-      }
-      setError(requestError.message || "Не удалось выполнить запрос.");
+      setError(
+        requestError.status === 401
+          ? "Неверный логин или пароль. Проверьте раскладку и Caps Lock."
+          : requestError.message || "Не удалось войти. Попробуйте ещё раз.",
+      );
     } finally {
-      if (token === requestRef.current) setLoading(false);
+      setLoading(false);
     }
   }
 
-  const passwordType = showPassword ? "text" : "password";
-  const passwordToggle = (
-    <button
-      className="password-toggle"
-      type="button"
-      onClick={() => setShowPassword((value) => !value)}
-    >
-      {showPassword ? "Скрыть" : "Показать"}
-    </button>
+  return (
+    <form className="login-form" onSubmit={submit} noValidate>
+      <header>
+        <h1 className="h1">Вход</h1>
+        <p>Панель защищена: данные клиентов видят только сотрудники</p>
+      </header>
+      {notice && (
+        <p className="form-notice" role="status">
+          {notice}
+        </p>
+      )}
+      <Field
+        label="Логин"
+        name="username"
+        autoComplete="username"
+        spellCheck={false}
+        autoCapitalize="none"
+        value={username}
+        onChange={setUsername}
+        required
+      />
+      <div className="field-with-action">
+        <Field
+          label="Пароль"
+          name="password"
+          type={showPassword ? "text" : "password"}
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          error={error}
+          required
+        />
+        <button
+          type="button"
+          className="link field-action"
+          onClick={() => onMode("reset", username)}
+        >
+          Забыли пароль?
+        </button>
+      </div>
+      <button
+        type="button"
+        className="link"
+        style={{ alignSelf: "flex-start" }}
+        onClick={() => setShowPassword((value) => !value)}
+      >
+        {showPassword ? "Скрыть пароль" : "Показать пароль"}
+      </button>
+      <button className="button button-primary button-wide" disabled={loading}>
+        {loading ? "Проверяем…" : "Войти"}
+      </button>
+      <p className="form-switch">
+        Нет аккаунта?{" "}
+        <button
+          type="button"
+          className="link"
+          onClick={() => onMode("register")}
+        >
+          Зарегистрироваться
+        </button>
+      </p>
+    </form>
   );
+}
+
+function RegisterForm({ onRegistered, onMode }) {
+  const [form, setForm] = useState({
+    last_name: "",
+    first_name: "",
+    middle_name: "",
+    username: "",
+    password: "",
+    password_confirm: "",
+    codeword: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const set = (key) => (value) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
+  function validate(values) {
+    const next = {};
+    if (!values.last_name.trim()) next.last_name = "Укажите фамилию";
+    if (!values.first_name.trim()) next.first_name = "Укажите имя";
+    if (!USERNAME_RE.test(values.username.trim()))
+      next.username = "От 3 символов: латиница, цифры и . _ @ -";
+    if (values.password.length < 8) next.password = "Пароль от 8 символов";
+    if (values.password_confirm !== values.password)
+      next.password_confirm = "Пароли не совпадают";
+    if (values.codeword.trim().length < 4)
+      next.codeword = "Кодовое слово от 4 символов";
+    else if (
+      values.codeword.trim().toLowerCase() === values.password.toLowerCase()
+    )
+      next.codeword = "Кодовое слово не должно совпадать с паролем";
+    return next;
+  }
+
+  async function submit(event) {
+    event.preventDefault();
+    setTouched(true);
+    setServerError("");
+    const next = validate(form);
+    setErrors(next);
+    if (Object.keys(next).length) {
+      document.getElementById(`field-${Object.keys(next)[0]}`)?.focus();
+      return;
+    }
+    setLoading(true);
+    try {
+      const result = await api.register({
+        ...form,
+        middle_name: form.middle_name.trim() || null,
+      });
+      onRegistered(result.user);
+    } catch (requestError) {
+      if (requestError.status === 409) {
+        setErrors({ username: requestError.message });
+        document.getElementById("field-username")?.focus();
+      } else setServerError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const err = (key) => (touched ? errors[key] : "");
+  const onChange = (key) => (value) => {
+    set(key)(value);
+    if (touched) setErrors(validate({ ...form, [key]: value }));
+  };
 
   return (
-    <main className="login-screen">
-      <section className="login-intro">
-        <BrandPattern tone="dark" className="login-pattern" />
-        <div className="login-intro-top">
-          <BrandLogo inverse />
-        </div>
-        <div className="login-intro-content">
-          <h1>
-            Риск непродления
+    <form className="login-form" onSubmit={submit} noValidate>
+      <header>
+        <h1 className="h1">Регистрация</h1>
+        <p>Доступ к панели для сотрудников Aéza</p>
+      </header>
+      <div className="fields">
+        <Field
+          label="Фамилия"
+          name="last_name"
+          autoComplete="family-name"
+          value={form.last_name}
+          onChange={onChange("last_name")}
+          error={err("last_name")}
+        />
+        <Field
+          label="Имя"
+          name="first_name"
+          autoComplete="given-name"
+          value={form.first_name}
+          onChange={onChange("first_name")}
+          error={err("first_name")}
+        />
+      </div>
+      <Field
+        label="Отчество"
+        optional
+        name="middle_name"
+        autoComplete="additional-name"
+        value={form.middle_name}
+        onChange={onChange("middle_name")}
+      />
+      <Field
+        label="Логин"
+        name="username"
+        autoComplete="username"
+        spellCheck={false}
+        autoCapitalize="none"
+        hint="Латиница, цифры и . _ @ -, можно рабочий email"
+        value={form.username}
+        onChange={onChange("username")}
+        error={err("username")}
+      />
+      <div className="fields">
+        <Field
+          label="Пароль"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          value={form.password}
+          onChange={onChange("password")}
+          error={err("password")}
+        />
+        <Field
+          label="Повторите пароль"
+          name="password_confirm"
+          type="password"
+          autoComplete="new-password"
+          value={form.password_confirm}
+          onChange={onChange("password_confirm")}
+          error={err("password_confirm")}
+        />
+      </div>
+      <Field
+        label="Кодовое слово"
+        name="codeword"
+        autoComplete="off"
+        spellCheck={false}
+        hint="Спросим его, если забудете пароль. Регистр не важен"
+        value={form.codeword}
+        onChange={onChange("codeword")}
+        error={err("codeword")}
+      />
+      {serverError && (
+        <p className="inline-error" role="alert">
+          {serverError}
+        </p>
+      )}
+      <button className="button button-primary button-wide" disabled={loading}>
+        {loading ? "Создаём аккаунт…" : "Зарегистрироваться"}
+      </button>
+      <p className="form-switch">
+        Уже есть аккаунт?{" "}
+        <button type="button" className="link" onClick={() => onMode("login")}>
+          Войти
+        </button>
+      </p>
+    </form>
+  );
+}
+
+function ResetForm({ onMode, initialUsername }) {
+  const [form, setForm] = useState({
+    username: initialUsername === "demo" ? "" : initialUsername || "",
+    codeword: "",
+    new_password: "",
+    new_password_confirm: "",
+  });
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState("");
+  const set = (key) => (value) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
+  async function submit(event) {
+    event.preventDefault();
+    setServerError("");
+    const next = {};
+    if (!form.username.trim()) next.username = "Укажите логин";
+    if (!form.codeword.trim()) next.codeword = "Укажите кодовое слово";
+    if (form.new_password.length < 8)
+      next.new_password = "Пароль от 8 символов";
+    if (form.new_password_confirm !== form.new_password)
+      next.new_password_confirm = "Пароли не совпадают";
+    setErrors(next);
+    if (Object.keys(next).length) {
+      document.getElementById(`field-${Object.keys(next)[0]}`)?.focus();
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.resetPassword({ ...form, username: form.username.trim() });
+      onMode(
+        "login",
+        form.username.trim(),
+        "Пароль изменён. Войдите с новым паролем.",
+      );
+    } catch (requestError) {
+      setServerError(
+        requestError.status === 400
+          ? "Логин или кодовое слово не подходят. Проверьте раскладку."
+          : requestError.message,
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form className="login-form" onSubmit={submit} noValidate>
+      <header>
+        <h1 className="h1">Сброс пароля</h1>
+        <p>Введите логин и кодовое слово, которое указывали при регистрации</p>
+      </header>
+      <Field
+        label="Логин"
+        name="username"
+        autoComplete="username"
+        spellCheck={false}
+        autoCapitalize="none"
+        value={form.username}
+        onChange={set("username")}
+        error={errors.username}
+      />
+      <Field
+        label="Кодовое слово"
+        name="codeword"
+        autoComplete="off"
+        spellCheck={false}
+        value={form.codeword}
+        onChange={set("codeword")}
+        error={errors.codeword}
+      />
+      <div className="fields">
+        <Field
+          label="Новый пароль"
+          name="new_password"
+          type="password"
+          autoComplete="new-password"
+          value={form.new_password}
+          onChange={set("new_password")}
+          error={errors.new_password}
+        />
+        <Field
+          label="Повторите пароль"
+          name="new_password_confirm"
+          type="password"
+          autoComplete="new-password"
+          value={form.new_password_confirm}
+          onChange={set("new_password_confirm")}
+          error={errors.new_password_confirm}
+        />
+      </div>
+      {serverError && (
+        <p className="inline-error" role="alert">
+          {serverError}
+        </p>
+      )}
+      <button className="button button-primary button-wide" disabled={loading}>
+        {loading ? "Меняем пароль…" : "Сменить пароль"}
+      </button>
+      <p className="form-switch">
+        Вспомнили?{" "}
+        <button type="button" className="link" onClick={() => onMode("login")}>
+          Вернуться ко входу
+        </button>
+      </p>
+    </form>
+  );
+}
+
+export function Login({ onLogin, onRegistered }) {
+  const [view, setView] = useState({ mode: "login", username: "", notice: "" });
+  const onMode = (mode, username = "", notice = "") =>
+    setView({ mode, username, notice });
+
+  return (
+    <main className="login">
+      <section className="login-brand" aria-hidden="true">
+        <Brand inverse />
+        <div className="login-copy">
+          <p className="display">
+            Никакой магии.
             <br />
-            <span>по каждому клиенту.</span>
-          </h1>
-          <p>Кто не продлит услуги и сколько выручки это может стоить.</p>
-          <p className="login-slogan">Никакой магии. Только инфраструктура.</p>
+            Только цифры.
+          </p>
+          <p>
+            Покажем, кто из клиентов может не продлить, почему и сколько денег
+            на кону.
+          </p>
+        </div>
+        <div className="login-line" />
+        <div className="stripes">
+          <i />
+          <i />
+          <i />
         </div>
         <img
           className="login-mascot"
-          src={mascot}
+          src={mascotLaptop}
+          width="760"
+          height="931"
           alt=""
-          width="360"
-          height="541"
+          fetchPriority="high"
         />
-        <div className="login-footer">
-          <span>Демо-среда</span>
-        </div>
       </section>
-
-      <section className="login-panel">
-        <form className="login-card" onSubmit={submit} noValidate>
-          <div className="login-mobile-brand">
-            <Brand />
-          </div>
-          <h2>{copy.title}</h2>
-          <p className="login-lead">{copy.lead}</p>
-
-          {mode === MODES.done ? (
-            <button
-              className="button button-primary login-submit"
-              type="button"
-              onClick={() => switchMode(MODES.login)}
-            >
-              Войти
-              <Icon name="arrow" />
-            </button>
-          ) : (
-            <>
-              {mode === MODES.register && (
-                <div className="field-row">
-                  <div>
-                    <label className="field-label" htmlFor="first-name">Имя</label>
-                    <div className="input-wrap">
-                      <input
-                        id="first-name"
-                        autoComplete="given-name"
-                        maxLength={60}
-                        value={form.firstName}
-                        onChange={update("firstName")}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="field-label" htmlFor="last-name">Фамилия</label>
-                    <div className="input-wrap">
-                      <input
-                        id="last-name"
-                        autoComplete="family-name"
-                        maxLength={60}
-                        value={form.lastName}
-                        onChange={update("lastName")}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {(mode === MODES.login || mode === MODES.register || mode === MODES.forgot) && (
-                <>
-                  <label className="field-label" htmlFor="username">Логин</label>
-                  <div className="input-wrap">
-                    <input
-                      id="username"
-                      autoComplete="username"
-                      value={form.username}
-                      onChange={update("username")}
-                      spellCheck={false}
-                    />
-                  </div>
-                </>
-              )}
-
-              {(mode === MODES.login || mode === MODES.register || mode === MODES.reset) && (
-                <>
-                  <div className="password-label-row">
-                    <label className="field-label" htmlFor="password">
-                      {mode === MODES.reset ? "Новый пароль" : "Пароль"}
-                    </label>
-                    {mode === MODES.login && (
-                      <button className="auth-link" type="button" onClick={() => switchMode(MODES.forgot)}>
-                        Забыли пароль?
-                      </button>
-                    )}
-                  </div>
-                  <div className="input-wrap password-wrap">
-                    <input
-                      id="password"
-                      type={passwordType}
-                      autoComplete={mode === MODES.login ? "current-password" : "new-password"}
-                      value={form.password}
-                      onChange={update("password")}
-                    />
-                    {passwordToggle}
-                  </div>
-                </>
-              )}
-
-              {(mode === MODES.register || mode === MODES.reset) && (
-                <>
-                  <label className="field-label" htmlFor="confirm">Подтвердите пароль</label>
-                  <div className="input-wrap password-wrap">
-                    <input
-                      id="confirm"
-                      type={passwordType}
-                      autoComplete="new-password"
-                      value={form.confirm}
-                      onChange={update("confirm")}
-                    />
-                  </div>
-                </>
-              )}
-
-              {mode === MODES.reset && (
-                // Lets password managers pair the new password with the account.
-                <input
-                  type="text"
-                  name="username"
-                  autoComplete="username"
-                  value={form.username}
-                  readOnly
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  style={HIDDEN_FIELD}
-                />
-              )}
-
-              {(mode === MODES.register || mode === MODES.forgot) && (
-                <>
-                  <label className="field-label" htmlFor="codeword">Кодовое слово</label>
-                  <div className="input-wrap">
-                    <input
-                      id="codeword"
-                      autoComplete="off"
-                      value={form.codeword}
-                      onChange={update("codeword")}
-                      aria-describedby="codeword-hint"
-                    />
-                  </div>
-                  <span className="field-hint" id="codeword-hint">
-                    {mode === MODES.register
-                      ? "Запомните его: по нему восстанавливается пароль. От 6 до 64 символов, не только цифры."
-                      : "Регистр букв не важен."}
-                  </span>
-                </>
-              )}
-
-              {error && (
-                <div className="form-error" role="alert">
-                  {error}
-                </div>
-              )}
-
-              <button className="button button-primary login-submit" disabled={loading}>
-                {loading ? "Подождите…" : copy.submit}
-                <Icon name="arrow" />
-              </button>
-
-              <div className="auth-switch">
-                {mode === MODES.login && (
-                  <button className="auth-link" type="button" onClick={() => switchMode(MODES.register)}>
-                    Нет аккаунта? Создать
-                  </button>
-                )}
-                {mode === MODES.register && (
-                  <button className="auth-link" type="button" onClick={() => switchMode(MODES.login)}>
-                    Уже есть аккаунт? Войти
-                  </button>
-                )}
-                {(mode === MODES.forgot || mode === MODES.reset) && (
-                  <button className="auth-link" type="button" onClick={() => switchMode(MODES.login)}>
-                    Вернуться ко входу
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {mode === MODES.login && (
-            <div className="demo-note">
-              <span className="demo-note-icon">
-                <Icon name="info" size={16} />
-              </span>
-              <span>
-                <b>Локальный демо-вход</b>
-                <small>Логин: demo · пароль указан в файле .env</small>
-              </span>
-            </div>
-          )}
-        </form>
-        <div className="login-panel-bottom">
-          <Icon name="shield" size={16} />
-          Доступ к данным защищён индивидуальной сессией
-        </div>
-      </section>
+      <div className="login-side">
+        {view.mode === "register" ? (
+          <RegisterForm onRegistered={onRegistered} onMode={onMode} />
+        ) : view.mode === "reset" ? (
+          <ResetForm onMode={onMode} initialUsername={view.username} />
+        ) : (
+          <LoginForm
+            key={view.username + view.notice}
+            onLogin={onLogin}
+            onMode={onMode}
+            initialUsername={view.username}
+            notice={view.notice}
+          />
+        )}
+      </div>
     </main>
   );
 }

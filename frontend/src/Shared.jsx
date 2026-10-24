@@ -1,172 +1,287 @@
-import { Icon, RiskBadge } from "./Icons.jsx";
-import { money, riskClass } from "./format.js";
+import { AezaIcon } from "./AezaIcon.jsx";
+import { pageHref } from "./routes.js";
+import { Icon, RiskKey } from "./Icons.jsx";
+import { money, plural, timeLabel } from "./format.js";
 
-export function PageHeader({ title, description, eyebrow, action, onMenu }) {
+export function Topbar({ crumbs, live, theme, onTheme, onMenu }) {
   return (
-    <div className="page-header">
+    <div className="topbar">
       <button
-        className="mobile-menu-button icon-button"
+        className="icon-button menu-button"
         aria-label="Открыть меню"
         onClick={onMenu}
       >
-        <span className="hamburger" />
+        <Icon name="menu" size={18} />
       </button>
-      <div>
-        <h1>{title}</h1>
-        <p>{description}</p>
-      </div>
-      {action && <div className="page-header-action">{action}</div>}
+      <nav className="crumbs" aria-label="Путь">
+        {crumbs.map((crumb, index) => {
+          const last = index === crumbs.length - 1;
+          return (
+            <span key={crumb.label} style={{ display: "contents" }}>
+              {index > 0 && <span aria-hidden="true">/</span>}
+              {last ? (
+                <b>{crumb.label}</b>
+              ) : crumb.onClick ? (
+                <button onClick={crumb.onClick}>{crumb.label}</button>
+              ) : (
+                <span>{crumb.label}</span>
+              )}
+            </span>
+          );
+        })}
+      </nav>
+      <LiveStatus {...live} />
+      <button
+        className="icon-button theme-key"
+        onClick={onTheme}
+        aria-label={
+          theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"
+        }
+        title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+      >
+        <span key={theme} className="theme-icon">
+          <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+        </span>
+      </button>
     </div>
   );
 }
 
-export function MetricCard({ label, value, note, tone = "", icon, onClick }) {
-  const Tag = onClick ? "button" : "div";
+export function LiveStatus({ state, updatedAt }) {
+  const time = timeLabel(updatedAt);
+  const text =
+    state === "reconnecting"
+      ? `Нет связи, переподключаемся… Данные на ${time}`
+      : `Обновляется автоматически · ${time}`;
   return (
-    <Tag
-      className={`metric-card ${tone}${onClick ? " metric-card-clickable" : ""}`}
-      onClick={onClick}
-    >
-      <div className="metric-top">
-        <span>{label}</span>
-        {icon && (
-          <span className="metric-icon">
-            <Icon name={icon} size={18} />
-          </span>
-        )}
-      </div>
-      <strong>{value}</strong>
-      <small>{note}</small>
-    </Tag>
+    <span className="live" role="status" title={text}>
+      <span className={`dot${state === "reconnecting" ? " dot-medium" : ""}`} />
+      <span className="live-text">{text}</span>
+    </span>
   );
 }
 
-export function CustomerTable({
-  customers,
-  onSelect,
-  sortBy,
-  order,
-  onSort,
-  compact = false,
-  includeAll = false,
-}) {
-  const headers = includeAll
-    ? [
-        { key: "id", label: "ID" },
-        { key: "email", label: "Клиент" },
-        { key: "balance", label: "Баланс" },
-        { key: "total_replenished", label: "Пополнено" },
-        { key: "risk_score", label: "Оценка" },
-        { key: "potential_loss", label: "Сумма риска" },
-      ]
-    : [
-        { key: "id", label: "Клиент" },
-        { key: "balance", label: "Баланс" },
-        { key: "risk_score", label: "Оценка" },
-        { key: "potential_loss", label: "Сумма риска" },
-      ];
-  if (!customers.length)
-    return (
-      <div className="empty-state">
-        <span className="empty-icon">
-          <Icon name="search" size={22} />
-        </span>
-        <b>Ничего не найдено</b>
-        <span>Измените запрос или снимите фильтр — список обновится.</span>
-      </div>
-    );
+export function PageHead({ title, description, children }) {
   return (
-    <div className={`table-scroll${compact ? " table-scroll-compact" : ""}`}>
-      <table
-        className={`customer-table${includeAll ? " customer-table-all" : ""}`}
-      >
+    <div className="page-head">
+      <div className="page-head-text">
+        <h1 className="h1">{title}</h1>
+        {description && <p>{description}</p>}
+      </div>
+      {children && <div className="page-head-actions">{children}</div>}
+    </div>
+  );
+}
+
+export function CardHead({ icon, title, description, children }) {
+  return (
+    <div className="card-head">
+      {icon && <AezaIcon name={icon} size={44} />}
+      <div className="card-head-text">
+        <h2 className="h2">{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function Segments({ items, value, onChange, label }) {
+  return (
+    <div className="segments" role="group" aria-label={label}>
+      {items.map((item) => (
+        <button
+          key={item.value}
+          className={`segment${value === item.value ? " segment-active" : ""}`}
+          aria-pressed={value === item.value}
+          onClick={() => onChange(item.value)}
+        >
+          {item.label}
+          {item.count != null && <small>{item.count}</small>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function mainReason(customer) {
+  const reasons = (customer.reasons || []).filter(
+    (reason) => reason.code !== "no_active_signals",
+  );
+  if (!reasons.length)
+    return {
+      title: customer.reasons?.[0]?.title || "Признаков риска нет",
+      detail: customer.reasons?.[0]?.explanation || "",
+    };
+  const rest = reasons.length - 1;
+  const available =
+    (customer.balance_minor || 0) +
+    (customer.bonus_spend_enabled ? customer.bonus_balance_minor || 0 : 0);
+  const specific =
+    reasons[0].code === "insufficient_balance" && customer.due_revenue_minor
+      ? `Нужно ${money(customer.due_revenue_minor)}, доступно ${money(available)}`
+      : "";
+  const more = rest
+    ? `ещё ${rest} ${plural(rest, ["признак", "признака", "признаков"])}`
+    : "";
+  return {
+    title: reasons[0].title,
+    detail:
+      [specific, more].filter(Boolean).join(" · ") || reasons[0].explanation,
+  };
+}
+
+const columns = [
+  { key: "risk_score", label: "Риск" },
+  { key: "id", label: "ID" },
+  { key: "email", label: "Email" },
+  { key: "reason", label: "Главная причина" },
+  { key: "balance", label: "Баланс", num: true },
+  { key: "total_replenished", label: "Пополнено", num: true },
+  { key: "potential_loss", label: "Потери", num: true },
+];
+
+export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
+  return (
+    <div className="table-scroll">
+      <table className="ctable">
         <thead>
           <tr>
-            {headers.map((header) => (
-              <th key={header.key}>
-                <button
-                  className={`table-sort${sortBy === header.key ? " table-sort-active" : ""}`}
-                  onClick={() => onSort(header.key)}
+            {columns.map((column) => {
+              const active = sortBy === column.key;
+              return (
+                <th
+                  key={column.key}
+                  className={column.num ? "num" : undefined}
+                  aria-sort={
+                    active
+                      ? order === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
                 >
-                  {header.label}
-                  {sortBy === header.key && (
-                    <span>{order === "desc" ? "↓" : "↑"}</span>
+                  {column.key === "reason" ? (
+                    column.label
+                  ) : (
+                    <button
+                      className={`sort${active ? " sort-active" : ""}`}
+                      onClick={() => onSort(column.key)}
+                    >
+                      {column.label}
+                      <Icon
+                        name={
+                          active
+                            ? order === "asc"
+                              ? "sortAsc"
+                              : "sortDesc"
+                            : "sortNone"
+                        }
+                        size={14}
+                      />
+                    </button>
                   )}
-                </button>
-              </th>
-            ))}
-            <th>Статус</th>
+                </th>
+              );
+            })}
+            <th aria-label="Открыть" />
           </tr>
         </thead>
         <tbody>
-          {customers.map((customer) => (
-            <tr
-              key={customer.id}
-              onClick={() => onSelect(customer.id)}
-              tabIndex="0"
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
+          {customers.map((customer) => {
+            const reason = mainReason(customer);
+            return (
+              <tr
+                key={customer.id}
+                tabIndex="0"
+                onClick={(event) => {
+                  if (event.target.closest("a")) return;
                   onSelect(customer.id);
-                }
-              }}
-            >
-              {includeAll && <td className="id-cell">#{customer.id}</td>}
-              <td>
-                <span className="customer-email">
-                  {includeAll ? (
-                    customer.email
-                  ) : (
-                    <>
-                      <span className="customer-id">#{customer.id}</span>
-                      {customer.email}
-                    </>
-                  )}
-                </span>
-                <small className="customer-subline">
-                  {customer.service_count}{" "}
-                  {customer.service_count === 1 ? "услуга" : "услуг"}
-                  {customer.reasons?.[0]?.code !== "no_active_signals"
-                    ? ` · ${customer.reasons?.[0]?.title || "Без замечаний"}`
-                    : ""}
-                </small>
-              </td>
-              <td className="money-cell">
-                {money(customer.balance_minor)}
-                <small>на счёте</small>
-              </td>
-              {includeAll && (
-                <td className="money-cell">
-                  {money(customer.total_replenished_minor)}
-                  <small>за всё время</small>
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(customer.id);
+                  }
+                }}
+              >
+                <td>
+                  <RiskKey
+                    level={customer.risk_level}
+                    score={customer.risk_score}
+                  />
                 </td>
-              )}
-              <td>
-                {customer.risk_score == null ? (
-                  <span className="score-empty">—</span>
-                ) : (
-                  <span
-                    className={`score-value score-${riskClass(customer.risk_level)}`}
-                  >
-                    {customer.risk_score}
-                    <small>/ 100</small>
-                  </span>
-                )}
-              </td>
-              <td className="money-cell">
-                {money(customer.potential_loss_minor)}
-                <small>оценка риска</small>
-              </td>
-              <td>
-                <RiskBadge
-                  level={customer.risk_level}
-                  label={customer.risk_label}
-                />
-              </td>
-            </tr>
-          ))}
+                <td className="id">
+                  <a href={pageHref("customer", customer.id)} translate="no">
+                    {customer.id}
+                  </a>
+                </td>
+                <td className="email">{customer.email}</td>
+                <td>
+                  <div className="reason-cell">
+                    <span>{reason.title}</span>
+                    {reason.detail && <small>{reason.detail}</small>}
+                  </div>
+                </td>
+                <td className="num money">{money(customer.balance_minor)}</td>
+                <td className="num money">
+                  {money(customer.total_replenished_minor)}
+                </td>
+                <td className="num money strong">
+                  {customer.risk_score == null
+                    ? "—"
+                    : money(customer.potential_loss_minor)}
+                </td>
+                <td className="chev">
+                  <Icon name="right" size={18} />
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+export function SkeletonRows({ rows = 5 }) {
+  return (
+    <div aria-busy="true" aria-label="Загружаем">
+      {Array.from({ length: rows }, (_, index) => (
+        <div
+          key={index}
+          className="factor"
+          style={{ padding: "18px 20px", opacity: 1 - index * 0.15 }}
+        >
+          <span className="skeleton" style={{ width: 40, height: 40 }} />
+          <span className="skeleton" style={{ width: 80 }} />
+          <span className="skeleton" style={{ width: 180 }} />
+          <span className="skeleton" style={{ flex: 1, maxWidth: 360 }} />
+          <span
+            className="skeleton"
+            style={{ width: 90, marginLeft: "auto" }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function Empty({ image, title, children, action }) {
+  return (
+    <div className="empty">
+      {image && (
+        <img
+          src={image.src}
+          width={image.width}
+          height={image.height}
+          alt=""
+          loading="lazy"
+        />
+      )}
+      <h3 className="h2">{title}</h3>
+      {children && <p>{children}</p>}
+      {action}
     </div>
   );
 }
@@ -174,11 +289,11 @@ export function CustomerTable({
 export function Toast({ message, kind = "success", onClose }) {
   if (!message) return null;
   return (
-    <div className={`toast toast-${kind}`} role="status">
-      <span className="toast-icon">
-        <Icon name={kind === "error" ? "info" : "check"} size={16} />
-      </span>
-      {message}
+    <div className="toast" role={kind === "error" ? "alert" : "status"}>
+      <span className={`dot${kind === "error" ? " dot-high" : ""}`} />
+      <div>
+        <b>{message}</b>
+      </div>
       <button
         className="icon-button"
         onClick={onClose}

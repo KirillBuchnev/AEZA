@@ -1,58 +1,6 @@
-import { BrandLogo } from "./BrandLogo.jsx";
 import { riskClass, riskText } from "./format.js";
-import walletIcon from "./assets/icons/01-wallet.svg";
-import timeIcon from "./assets/icons/02-time.svg";
-import currenciesIcon from "./assets/icons/03-currencies.svg";
-import infoIcon from "./assets/icons/04-info.svg";
-import warningIcon from "./assets/icons/05-warning.svg";
-import statusHighIcon from "./assets/icons/06-status-high.svg";
-import statusMidIcon from "./assets/icons/07-status-mid.svg";
-import statusLowIcon from "./assets/icons/08-status-low.svg";
-import chartIcon from "./assets/icons/guide-bar-chart.png";
-import communityIcon from "./assets/icons/guide-community.png";
-import editIcon from "./assets/icons/guide-edit.png";
-import hourglassIcon from "./assets/icons/guide-hourglass.png";
-import shieldIcon from "./assets/icons/guide-shield-check.png";
-import shoppingBagIcon from "./assets/icons/guide-shopping-bag.png";
-
-// Brand icons: the generated set (SVG) and the guidebook icon page (PNG, black tile + cyan glyph).
-const BRAND_ICONS = {
-  wallet: walletIcon,
-  clock: timeIcon,
-  currencies: currenciesIcon,
-  info: infoIcon,
-  warning: warningIcon,
-  "status-high": statusHighIcon,
-  "status-mid": statusMidIcon,
-  "status-low": statusLowIcon,
-  chart: chartIcon,
-  users: communityIcon,
-  edit: editIcon,
-  hourglass: hourglassIcon,
-  shield: shieldIcon,
-  bag: shoppingBagIcon,
-};
-
-const STATUS_ICON = {
-  high: "status-high",
-  medium: "status-mid",
-  low: "status-low",
-  unscored: "warning",
-};
 
 export function Icon({ name, size = 18 }) {
-  if (BRAND_ICONS[name]) {
-    return (
-      <img
-        className="brand-icon"
-        src={BRAND_ICONS[name]}
-        width={size}
-        height={size}
-        alt=""
-        aria-hidden="true"
-      />
-    );
-  }
   const common = {
     width: size,
     height: size,
@@ -148,41 +96,67 @@ export function Icon({ name, size = 18 }) {
         <path d="M12 11v5m0-8h.01" />
       </>
     ),
-    key: (
-      <>
-        <circle cx="8" cy="15" r="4" />
-        <path d="m11 12 9-9m-3 3 2 2m-4-1 2 2" />
-      </>
-    ),
     refresh: (
       <>
         <path d="M20 7v5h-5M4 17v-5h5" />
         <path d="M5.6 9a7 7 0 0 1 11.9-2L20 12M4 12l2.5 5a7 7 0 0 0 11.9-2" />
       </>
     ),
+    right: <path d="m9 18 6-6-6-6" />,
+    sortNone: <path d="M8 10l4-4 4 4M8 14l4 4 4-4" />,
+    sortAsc: <path d="M12 18V6M7 11l5-5 5 5" />,
+    sortDesc: <path d="M12 6v12M7 13l5 5 5-5" />,
+    upload: <path d="M12 16V8M8.5 11.5 12 8l3.5 3.5M5 20h14" />,
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </>
+    ),
+    moon: <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />,
   };
   return <svg {...common}>{paths[name] || paths.info}</svg>;
 }
 
-export function Brand({ compact = false, inverse = false }) {
+export function Brand({ inverse = false }) {
   return (
-    <div
-      className={`brand${compact ? " brand-compact" : ""}`}
+    <span
+      className={`brand${inverse ? " brand-inverse" : ""}`}
       role="img"
-      aria-label="AEZA аналитика удержания"
+      aria-label="aéza"
+      translate="no"
     >
-      <BrandLogo inverse={inverse} folded={compact} />
-      {!compact && <span className="brand-caption">аналитика удержания</span>}
-    </div>
+      {["a", "é", "z", "a"].map((letter, index) => (
+        <span key={index} aria-hidden="true">
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function RiskKey({ level, score, large = false }) {
+  const value = riskClass(level);
+  return (
+    <span
+      className={`key key-${value}${large ? " key-large" : ""}`}
+      title={riskText[value]}
+      role="img"
+      aria-label={
+        score == null
+          ? "Нет оценки"
+          : `${riskText[value]} риск, ${Math.round(score)} из 100`
+      }
+    >
+      {score == null ? "—" : Math.round(score)}
+    </span>
   );
 }
 
 export function RiskBadge({ level, label }) {
-  const value = level || "unscored";
+  const value = riskClass(level);
   return (
-    <span className={`risk-badge risk-${riskClass(value)}`}>
-      <Icon name={STATUS_ICON[value]} size={16} />
-      {label || riskText[value]}
-    </span>
+    <span className={`badge badge-${value}`}>{label || riskText[value]}</span>
   );
 }
