@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
+import { AezaIcon, reasonIcon } from "./AezaIcon.jsx";
 import { RiskBadge, RiskKey } from "./Icons.jsx";
 import { CardHead, Empty, SkeletonRows } from "./Shared.jsx";
 import {
@@ -41,7 +42,7 @@ export function CustomerPage({ id, version, onToast }) {
     return (
       <section className="card">
         <Empty
-          image={mascotSurprised}
+          image={{ src: mascotSurprised, width: 300, height: 451 }}
           title="Не удалось загрузить клиента"
           action={
             <button
@@ -151,6 +152,7 @@ export function CustomerPage({ id, version, onToast }) {
       <div className="row-split">
         <section className="card">
           <CardHead
+            icon="info"
             title="Почему такой риск"
             description="Сумма баллов сработавших признаков, максимум 100. Баллы меняются в «Модели риска»."
           />
@@ -163,6 +165,10 @@ export function CustomerPage({ id, version, onToast }) {
             <div>
               {reasons.map((reason) => (
                 <div className="factor" key={reason.code}>
+                  <AezaIcon
+                    name={reasonIcon[reason.code] || "info"}
+                    size={36}
+                  />
                   <div className="factor-text">
                     <b>{reason.title}</b>
                     <small>{reason.explanation}</small>
@@ -195,6 +201,7 @@ export function CustomerPage({ id, version, onToast }) {
 
         <section className="card">
           <CardHead
+            icon="euro"
             title="Сколько можем потерять"
             description={`Ожидаемая потеря за ${horizon} дней, если ничего не делать`}
           />
@@ -239,6 +246,7 @@ export function CustomerPage({ id, version, onToast }) {
 
       <section className="card flush">
         <CardHead
+          icon="clock"
           title={`Услуги · ${customer.services.length}`}
           description="Статусы и сроки из текущего снимка"
         />
@@ -297,6 +305,7 @@ export function CustomerPage({ id, version, onToast }) {
 
       <section className="card flush">
         <CardHead
+          icon="wallet"
           title={`Транзакции · ${customer.transactions.length}`}
           description="Заказы и продления из снимка"
         />

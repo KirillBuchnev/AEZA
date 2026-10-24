@@ -1,3 +1,5 @@
+import { AezaIcon } from "./AezaIcon.jsx";
+import { pageHref } from "./routes.js";
 import { Icon, RiskKey } from "./Icons.jsx";
 import { money, plural, timeLabel } from "./format.js";
 
@@ -37,7 +39,9 @@ export function Topbar({ crumbs, live, theme, onTheme, onMenu }) {
         }
         title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
       >
-        <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+        <span key={theme} className="theme-icon">
+          <Icon name={theme === "dark" ? "sun" : "moon"} size={16} />
+        </span>
       </button>
     </div>
   );
@@ -69,9 +73,10 @@ export function PageHead({ title, description, children }) {
   );
 }
 
-export function CardHead({ title, description, children }) {
+export function CardHead({ icon, title, description, children }) {
   return (
     <div className="card-head">
+      {icon && <AezaIcon name={icon} size={44} />}
       <div className="card-head-text">
         <h2 className="h2">{title}</h2>
         {description && <p>{description}</p>}
@@ -180,7 +185,10 @@ export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
               <tr
                 key={customer.id}
                 tabIndex="0"
-                onClick={() => onSelect(customer.id)}
+                onClick={(event) => {
+                  if (event.target.closest("a")) return;
+                  onSelect(customer.id);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
@@ -194,7 +202,11 @@ export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
                     score={customer.risk_score}
                   />
                 </td>
-                <td className="id">{customer.id}</td>
+                <td className="id">
+                  <a href={pageHref("customer", customer.id)} translate="no">
+                    {customer.id}
+                  </a>
+                </td>
                 <td className="email">{customer.email}</td>
                 <td>
                   <div className="reason-cell">
@@ -249,7 +261,15 @@ export function SkeletonRows({ rows = 5 }) {
 export function Empty({ image, title, children, action }) {
   return (
     <div className="empty">
-      {image && <img src={image} alt="" />}
+      {image && (
+        <img
+          src={image.src}
+          width={image.width}
+          height={image.height}
+          alt=""
+          loading="lazy"
+        />
+      )}
       <h3 className="h2">{title}</h3>
       {children && <p>{children}</p>}
       {action}

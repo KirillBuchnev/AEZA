@@ -18,7 +18,7 @@ export function Login({ onLogin }) {
     } catch (requestError) {
       setError(
         requestError.status === 401
-          ? "Неверный логин или пароль."
+          ? "Неверный логин или пароль. Проверьте раскладку и Caps Lock."
           : requestError.message || "Не удалось войти. Попробуйте ещё раз.",
       );
     } finally {
@@ -49,7 +49,14 @@ export function Login({ onLogin }) {
           <i />
           <i />
         </div>
-        <img className="login-mascot" src={mascotLaptop} alt="" />
+        <img
+          className="login-mascot"
+          src={mascotLaptop}
+          width="760"
+          height="931"
+          alt=""
+          fetchPriority="high"
+        />
       </section>
       <form className="login-form" onSubmit={submit}>
         <header>
@@ -59,7 +66,10 @@ export function Login({ onLogin }) {
         <label className="field">
           <span>Логин</span>
           <input
+            name="username"
             autoComplete="username"
+            spellCheck={false}
+            autoCapitalize="none"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
             required
@@ -68,6 +78,7 @@ export function Login({ onLogin }) {
         <label className={`field${error ? " field-error" : ""}`}>
           <span>Пароль</span>
           <input
+            name="password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             value={password}

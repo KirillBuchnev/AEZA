@@ -98,6 +98,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
       <div className="row-split">
         <section className="card">
           <CardHead
+            icon="info"
             title="Текущий снимок"
             description={`${summary?.source_kind === "demo" ? "Демо-данные" : "Загружен через PUT /api/v1/source/snapshot"} · обновлён ${updatedAt ? new Date(updatedAt).toLocaleString("ru-RU") : "—"}`}
           />
@@ -162,6 +163,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
       <div className="row-split">
         <section className="card">
           <CardHead
+            icon="clock"
             title="Журнал обновлений"
             description="События этой сессии: что поменялось и когда панель пересчиталась"
           />

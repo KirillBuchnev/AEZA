@@ -125,6 +125,7 @@ export function Brand({ inverse = false }) {
       className={`brand${inverse ? " brand-inverse" : ""}`}
       role="img"
       aria-label="aéza"
+      translate="no"
     >
       {["a", "é", "z", "a"].map((letter, index) => (
         <span key={index} aria-hidden="true">
@@ -141,6 +142,12 @@ export function RiskKey({ level, score, large = false }) {
     <span
       className={`key key-${value}${large ? " key-large" : ""}`}
       title={riskText[value]}
+      role="img"
+      aria-label={
+        score == null
+          ? "Нет оценки"
+          : `${riskText[value]} риск, ${Math.round(score)} из 100`
+      }
     >
       {score == null ? "—" : Math.round(score)}
     </span>

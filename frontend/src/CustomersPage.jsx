@@ -45,7 +45,11 @@ export function CustomersPage({
               setPageNumber(1);
               setFilters({ ...filters, q: event.target.value });
             }}
-            placeholder="Поиск по ID или email"
+            type="search"
+            name="customer-search"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="Поиск по ID или email…"
             aria-label="Поиск по ID или email"
           />
         </label>

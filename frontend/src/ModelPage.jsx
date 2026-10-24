@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AezaIcon, reasonIcon } from "./AezaIcon.jsx";
 import { Icon } from "./Icons.jsx";
 import { CardHead, PageHead } from "./Shared.jsx";
 import { featureCodes, money, timeLabel } from "./format.js";
@@ -59,6 +60,14 @@ export function ModelPage({ settings, summary, onSave, saving }) {
   const [saveError, setSaveError] = useState("");
   const [lastChange, setLastChange] = useState(null);
   useEffect(() => setDraft(settings), [settings]);
+  const dirty =
+    Boolean(draft) && JSON.stringify(draft) !== JSON.stringify(settings);
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const warn = (event) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   if (!draft)
     return (
@@ -149,12 +158,14 @@ export function ModelPage({ settings, summary, onSave, saving }) {
         <section className="table-card">
           <div className="table-card-head">
             <CardHead
+              icon="info"
               title="Признаки и баллы"
               description="Risk-score клиента = сумма баллов сработавших признаков, от 0 до 100."
             />
           </div>
           {codes.map((code) => (
             <div className="coef" key={code}>
+              <AezaIcon name={reasonIcon[code] || "info"} size={40} />
               <div className="coef-text">
                 <b>{settings.features?.[code] || code}</b>
                 <small>{featureHints[code] || code}</small>
@@ -231,6 +242,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
 
           <section className="card">
             <CardHead
+              icon="error"
               title="Пороги уровней"
               description="Где заканчивается низкий риск и начинается высокий"
             />
@@ -301,6 +313,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
 
           <section className="card">
             <CardHead
+              icon="euro"
               title="Денежная оценка"
               description="Сколько потеряем, если клиент не продлит услуги"
             />

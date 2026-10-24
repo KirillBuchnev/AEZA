@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { api } from "./api.js";
 import { Brand } from "./Icons.jsx";
 import { CustomerPage } from "./CustomerPage.jsx";
@@ -9,6 +10,7 @@ import { Overview } from "./Overview.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { SourcePage } from "./SourcePage.jsx";
 import { SkeletonRows, Toast, Topbar } from "./Shared.jsx";
+import { pageHref, readHash } from "./routes.js";
 
 function toCsvCell(cell) {
   const value = String(cell);
@@ -39,8 +41,8 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [user, setUser] = useState(null);
-  const [page, setPage] = useState("overview");
-  const [customerId, setCustomerId] = useState("");
+  const [page, setPage] = useState(() => readHash().page);
+  const [customerId, setCustomerId] = useState(() => readHash().customerId);
   const [summary, setSummary] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -55,16 +57,19 @@ export default function App() {
   const [live, setLive] = useState({ state: "online", updatedAt: null });
   const [version, setVersion] = useState(0);
   const [updates, setUpdates] = useState([]);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => ({
     q: "",
-    risk_level: "",
+    risk_level: readHash().risk,
     sort_by: "risk_score",
     order: "desc",
-  });
+  }));
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#111113" : "#f4f4f4");
     try {
       window.localStorage.setItem("aeza-theme", theme);
     } catch {
@@ -90,6 +95,20 @@ export default function App() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => {
+      const route = readHash();
+      setPage(route.page);
+      setCustomerId(route.customerId);
+      // Уровень риска живёт в адресе списка клиентов; обзор всегда по всем.
+      if (route.page === "customers" || route.page === "overview")
+        setFilters((current) => ({ ...current, risk_level: route.risk }));
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
   }, []);
 
   useEffect(() => {
@@ -177,6 +196,48 @@ export default function App() {
     const timer = window.setTimeout(() => setToast(null), 4600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  // Новая тема раскрывается кругом от кнопки (View Transitions API).
+  // Без поддержки API или при «уменьшить движение» тема меняется сразу.
+  function toggleTheme(button) {
+    const next = theme === "dark" ? "light" : "dark";
+    const apply = () => {
+      flushSync(() => setTheme(next));
+      document.documentElement.dataset.theme = next;
+    };
+    const reduced = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    if (!document.startViewTransition || reduced) {
+      apply();
+      return;
+    }
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    const radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+    document
+      .startViewTransition(apply)
+      .ready.then(() => {
+        document.documentElement.animate(
+          {
+            clipPath: [
+              `circle(0px at ${x}px ${y}px)`,
+              `circle(${radius}px at ${x}px ${y}px)`,
+            ],
+          },
+          {
+            duration: 550,
+            easing: "cubic-bezier(0.65, 0, 0.35, 1)",
+            pseudoElement: "::view-transition-new(root)",
+          },
+        );
+      })
+      .catch(() => {});
+  }
 
   async function handleLogin(username, password) {
     const result = await api.login(username, password);
@@ -288,6 +349,7 @@ export default function App() {
     );
 
   function goTo(nextPage) {
+    window.history.pushState(null, "", pageHref(nextPage));
     setPage(nextPage);
     setActiveReason("");
     setPageNumber(1);
@@ -305,6 +367,11 @@ export default function App() {
   const navigate = {
     page: goTo,
     filter: (riskLevel) => {
+      window.history.pushState(
+        null,
+        "",
+        riskLevel ? `#/customers?risk=${riskLevel}` : "#/customers",
+      );
       setFilters((current) => ({ ...current, risk_level: riskLevel }));
       setPage("customers");
       setActiveReason("");
@@ -314,6 +381,8 @@ export default function App() {
   };
 
   function openCustomer(id) {
+    if (window.location.hash !== pageHref("customer", id))
+      window.history.pushState(null, "", pageHref("customer", id));
     setCustomerId(id);
     setPage("customer");
     window.scrollTo(0, 0);
@@ -329,6 +398,16 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <a
+        className="skip-link"
+        href="#/"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main")?.focus();
+        }}
+      >
+        Перейти к содержимому
+      </a>
       <Sidebar
         page={page}
         setPage={goTo}
@@ -338,15 +417,13 @@ export default function App() {
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
-      <main className="main">
+      <main className="main" id="main" tabIndex="-1">
         <div className="main-inner">
           <Topbar
             crumbs={crumbs}
             live={live}
             theme={theme}
-            onTheme={() =>
-              setTheme((current) => (current === "dark" ? "light" : "dark"))
-            }
+            onTheme={(event) => toggleTheme(event.currentTarget)}
             onMenu={() => setMobileOpen(true)}
           />
           {loading && !summary ? (

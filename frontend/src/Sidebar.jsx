@@ -1,3 +1,4 @@
+import { pageHref } from "./routes.js";
 import { Brand, Icon } from "./Icons.jsx";
 import mascotPeek from "./assets/mascot-peek.webp";
 
@@ -47,11 +48,15 @@ export function Sidebar({
               {index > 0 && <div className="nav-gap" />}
               <div className="nav-group">{group.label}</div>
               {group.items.map((item) => (
-                <button
+                <a
                   key={item.id}
+                  href={pageHref(item.id)}
                   className={`nav-item${activePage === item.id ? " nav-item-active" : ""}`}
                   aria-current={activePage === item.id ? "page" : undefined}
-                  onClick={() => {
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey)
+                      return;
+                    event.preventDefault();
                     setPage(item.id);
                     setMobileOpen(false);
                   }}
@@ -60,14 +65,14 @@ export function Sidebar({
                   {item.countKey && summary?.[item.countKey] != null && (
                     <small>{summary[item.countKey]}</small>
                   )}
-                </button>
+                </a>
               ))}
             </div>
           ))}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-mascot" aria-hidden="true">
-          <img src={mascotPeek} alt="" width="110" height="120" />
+          <img src={mascotPeek} alt="" width="110" height="91" />
         </div>
         <div className="sidebar-user">
           <span className="avatar">

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { AezaIcon } from "./AezaIcon.jsx";
 import { Icon } from "./Icons.jsx";
 import {
   CardHead,
@@ -100,7 +101,8 @@ export function Overview({
       <section className="hero" aria-label="Главное">
         <div className="hero-col">
           <span className="hero-q">
-            <i>1</i>Кому нужно внимание
+            <AezaIcon name="error" variant="keyBlue" size={34} />
+            Кому нужно внимание
           </span>
           <div className="hero-value">
             <span className="display">{high}</span>
@@ -118,7 +120,8 @@ export function Overview({
         </div>
         <div className="hero-col">
           <span className="hero-q">
-            <i>2</i>Почему растёт риск
+            <AezaIcon name="info" variant="keyBlue" size={34} />
+            Почему растёт риск
           </span>
           {reasons.length ? (
             reasons.map((reason) => (
@@ -151,7 +154,8 @@ export function Overview({
         </div>
         <div className="hero-col">
           <span className="hero-q">
-            <i>3</i>Сколько можем потерять
+            <AezaIcon name="euro" variant="keyBlue" size={34} />
+            Сколько можем потерять
           </span>
           <div className="hero-value">
             <span className="display">
@@ -176,6 +180,7 @@ export function Overview({
       <div className="row-split">
         <section className="card">
           <CardHead
+            icon="wallet"
             title="Где сосредоточены потери"
             description="Клиенты с наибольшей ожидаемой потерей: нехватка денег на продления × risk-score"
           />
@@ -207,6 +212,7 @@ export function Overview({
         </section>
         <section className="card">
           <CardHead
+            icon="error"
             title="Уровни риска"
             description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · потери по уровню`}
           />
@@ -241,7 +247,8 @@ export function Overview({
               </button>
             ))}
           </div>
-          <p className="small muted">
+          <p className="note small muted">
+            <AezaIcon name="info" variant="flat" size={22} />
             «Нет оценки» — у клиента нет активных услуг или дат окончания. Риск
             не считаем, чтобы не выдумывать.
           </p>
@@ -288,7 +295,11 @@ export function Overview({
           />
         ) : (
           <Empty
-            image={level === "high" ? mascotHappy : undefined}
+            image={
+              level === "high"
+                ? { src: mascotHappy, width: 260, height: 390 }
+                : undefined
+            }
             title={
               level === "high" ? "В высоком риске никого" : "Никого не нашли"
             }
