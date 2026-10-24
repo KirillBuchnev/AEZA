@@ -103,6 +103,7 @@ def _build_oidc_client() -> OidcClient | None:
         client_secret=config.oidc_client_secret,
         redirect_uri=config.oidc_redirect_uri,
         scopes=config.oidc_scopes,
+        internal_issuer=config.oidc_internal_issuer,
     )
 
 
@@ -442,8 +443,9 @@ def _oidc_user(issuer: str, claims: dict[str, Any]) -> dict[str, Any] | None:
     if username_error(username) or database.get_user(username) is not None:
         # Never link an SSO identity to an existing local account automatically.
         return None
-    first_name = str(claims.get("given_name") or "SSO").strip()[:60] or "SSO"
-    last_name = str(claims.get("family_name") or "SSO").strip()[:60] or "SSO"
+    # Identity providers differ: take the given name, then the display name, then the login.
+    first_name = str(claims.get("given_name") or claims.get("name") or username).strip()[:60] or username
+    last_name = str(claims.get("family_name") or "").strip()[:60]
     try:
         database.create_user(username, first_name, last_name, OIDC_ONLY_SECRET, OIDC_ONLY_SECRET)
     except sqlite3.IntegrityError:

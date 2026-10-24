@@ -248,3 +248,40 @@ def test_production_requires_https_identity_provider(monkeypatch):
     monkeypatch.setenv("AEZA_OIDC_REDIRECT_URI", REDIRECT_URI)
     with pytest.raises(ValueError, match="HTTPS"):
         load_config()
+
+
+def test_server_side_calls_use_the_internal_address(open_app, idp):
+    reached: list[str] = []
+    inner = idp.handler
+
+    def recording(request: httpx.Request) -> httpx.Response:
+        reached.append(request.url.host)
+        return inner(request)
+
+    internal = "https://idp-internal.example.test"
+    with open_app(**OIDC_ENV, AEZA_OIDC_AUTO_PROVISION="true", AEZA_OIDC_INTERNAL_ISSUER=internal) as (client, main):
+        main.oidc_client = OidcClient(
+            database=main.database,
+            issuer=ISSUER,
+            client_id=CLIENT_ID,
+            client_secret="client-secret-for-tests",
+            redirect_uri=REDIRECT_URI,
+            scopes="openid profile",
+            internal_issuer=internal,
+            http=httpx.Client(transport=httpx.MockTransport(recording)),
+        )
+        state = start_login(client, idp)
+        response = complete(client, state)
+        assert response.headers["location"] == "/"
+        assert set(reached) == {"idp-internal.example.test"}
+
+
+def test_provisioned_name_falls_back_to_the_display_name(open_app, idp):
+    idp.claim_overrides = {"given_name": "", "family_name": "", "name": "Анна"}
+    with open_app(**OIDC_ENV, AEZA_OIDC_AUTO_PROVISION="true") as (client, main):
+        install(main, idp)
+        state = start_login(client, idp)
+        assert complete(client, state).headers["location"] == "/"
+        me = client.get(ME).json()
+        assert me["first_name"] == "Анна"
+        assert me["full_name"] == "Анна"

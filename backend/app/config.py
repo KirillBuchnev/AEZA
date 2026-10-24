@@ -35,6 +35,7 @@ class AppConfig:
     oidc_scopes: str
     oidc_auto_provision: bool
     oidc_username_claim: str
+    oidc_internal_issuer: str
     seed: str
 
 
@@ -86,6 +87,7 @@ def load_config() -> AppConfig:
     oidc_scopes = os.getenv("AEZA_OIDC_SCOPES", "openid profile email").strip() or "openid profile email"
     oidc_auto_provision = _boolean("AEZA_OIDC_AUTO_PROVISION")
     oidc_username_claim = os.getenv("AEZA_OIDC_USERNAME_CLAIM", "preferred_username").strip() or "preferred_username"
+    oidc_internal_issuer = os.getenv("AEZA_OIDC_INTERNAL_ISSUER", "").strip().rstrip("/")
     if (oidc_issuer or oidc_client_id) and not (oidc_issuer and oidc_client_id and oidc_redirect_uri):
         raise ValueError(
             "AEZA_OIDC_ISSUER, AEZA_OIDC_CLIENT_ID and AEZA_OIDC_REDIRECT_URI must be set together."
@@ -152,5 +154,6 @@ def load_config() -> AppConfig:
         oidc_scopes=oidc_scopes,
         oidc_auto_provision=oidc_auto_provision,
         oidc_username_claim=oidc_username_claim,
+        oidc_internal_issuer=oidc_internal_issuer,
         seed=seed,
     )

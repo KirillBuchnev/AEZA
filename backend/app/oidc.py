@@ -50,10 +50,14 @@ class OidcClient:
         client_secret: str,
         redirect_uri: str,
         scopes: str,
+        internal_issuer: str = "",
         http: httpx.Client | None = None,
     ) -> None:
         self._database = database
         self._issuer = issuer.rstrip("/")
+        # Server-to-server calls may reach the provider under another address (for example inside
+        # a container network). The public address stays in the issuer and in browser redirects.
+        self._internal_issuer = internal_issuer.rstrip("/")
         self._client_id = client_id
         self._client_secret = client_secret
         self._redirect_uri = redirect_uri
@@ -103,7 +107,7 @@ class OidcClient:
         }
         if self._client_secret:
             form["client_secret"] = self._client_secret
-        token_response = self._post_json(metadata["token_endpoint"], form)
+        token_response = self._post_json(self._server_url(metadata["token_endpoint"]), form)
         id_token = token_response.get("id_token")
         if not isinstance(id_token, str):
             raise OidcError("token response has no id_token")
@@ -148,7 +152,7 @@ class OidcClient:
         fresh = self._jwks is not None and time.monotonic() - self._jwks_at < JWKS_TTL_SECONDS
         if refresh or not fresh:
             metadata = self._discover()
-            self._jwks = self._get_json(metadata["jwks_uri"])
+            self._jwks = self._get_json(self._server_url(metadata["jwks_uri"]))
             self._jwks_at = time.monotonic()
         return self._jwks
 
@@ -156,7 +160,7 @@ class OidcClient:
         fresh = self._metadata is not None and time.monotonic() - self._metadata_at < DISCOVERY_TTL_SECONDS
         if fresh:
             return self._metadata
-        metadata = self._get_json(f"{self._issuer}/.well-known/openid-configuration")
+        metadata = self._get_json(self._server_url(f"{self._issuer}/.well-known/openid-configuration"))
         if metadata.get("issuer") != self._issuer:
             raise OidcError("discovery document issuer does not match AEZA_OIDC_ISSUER")
         for field in ("authorization_endpoint", "token_endpoint", "jwks_uri"):
@@ -165,6 +169,11 @@ class OidcClient:
         self._metadata = metadata
         self._metadata_at = time.monotonic()
         return metadata
+
+    def _server_url(self, url: str) -> str:
+        if self._internal_issuer and url.startswith(self._issuer + "/"):
+            return self._internal_issuer + url[len(self._issuer):]
+        return url
 
     def _get_json(self, url: str) -> dict[str, Any]:
         try:
