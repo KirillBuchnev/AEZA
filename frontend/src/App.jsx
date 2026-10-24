@@ -144,8 +144,12 @@ export default function App() {
     try {
       const saved = await api.saveSettings({
         prediction_horizon_days: Number(draft.prediction_horizon_days),
+        urgency_days: Number(draft.urgency_days),
+        grace_days: Number(draft.grace_days),
         high_risk_min: Number(draft.high_risk_min),
         medium_risk_min: Number(draft.medium_risk_min),
+        customer_high_risk_min: Number(draft.customer_high_risk_min),
+        customer_medium_risk_min: Number(draft.customer_medium_risk_min),
         weights: draft.weights,
       });
       setSettings(saved);
@@ -187,7 +191,7 @@ export default function App() {
       "Баланс EUR",
       "Оценка риска",
       "Уровень риска",
-      "Сумма риска EUR",
+      "Взвешенные продления по сценарию EUR",
       "Причина",
     ];
     const rows = customers.map((customer) => [

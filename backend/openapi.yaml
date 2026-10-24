@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: AEZA Retention Risk API
   version: 1.0.0
-  description: API аналитики риска непродления услуг и потенциальной выручки.
+  description: API экспертного индекса риска непродления услуг и сценарных оценок продлений.
 servers:
   - url: http://localhost:8000
 security:
@@ -98,7 +98,7 @@ paths:
       summary: Сводка риска и денежной оценки
       responses:
         '200':
-          description: Счётчики рисков и сумма потенциальной потери в евроцентах
+          description: Счётчики рисков и сценарная денежная оценка продлений в евроцентах, не ожидаемая потеря
         '401':
           $ref: '#/components/responses/Unauthorized'
   /api/v1/model/settings:
@@ -197,11 +197,18 @@ components:
       type: object
       properties:
         prediction_horizon_days: { type: integer, minimum: 1, maximum: 365 }
+        urgency_days: { type: integer, minimum: 1, maximum: 30 }
+        grace_days: { type: integer, minimum: 1, maximum: 14 }
         high_risk_min: { type: integer, minimum: 1, maximum: 100 }
         medium_risk_min: { type: integer, minimum: 0, maximum: 99 }
+        customer_high_risk_min: { type: integer, minimum: 1, maximum: 20000 }
+        customer_medium_risk_min: { type: integer, minimum: 0, maximum: 19999 }
         weights:
           type: object
           additionalProperties: { type: integer, minimum: 0, maximum: 100 }
+          description: >-
+            payment_distress, manual_renewal, renewal_urgency, grace_period_progress.
+            Это относительные веса экспертного индекса, не обученные вероятности.
     SnapshotUpload:
       type: object
       required: [customers]

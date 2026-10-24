@@ -43,9 +43,9 @@ export function ReasonList({ customers, activeReason, onSelect }) {
           <span className={`reason-marker reason-marker-${reason.code}`}>
             <Icon
               name={
-                reason.code === "insufficient_balance"
+                reason.code === "payment_distress"
                   ? "wallet"
-                  : reason.code === "prolong_wait"
+                  : reason.code === "grace_period_progress"
                     ? "clock"
                     : "pulse"
               }
@@ -98,7 +98,7 @@ export function ExposureBars({ customers }) {
         ))
       ) : (
         <div className="chart-empty">
-          Пока нет клиентов с рассчитанной суммой риска.
+          Пока нет клиентов с рассчитанными взвешенными продлениями.
         </div>
       )}
     </div>
@@ -173,9 +173,9 @@ export function Overview({
           onClick={() => onNavigate.filter("high")}
         />
         <MetricCard
-          label="Выручка под риском"
+          label="Взвешенные продления"
           value={money(summary?.potential_loss_minor)}
-          note={`За ${summary?.prediction_horizon_days || 30} дней · оценка`}
+          note={`За ${summary?.prediction_horizon_days || 30} дней · сценарный индикатор`}
           icon="wallet"
           tone="metric-highlight"
         />
@@ -253,14 +253,13 @@ export function Overview({
         <div className="panel-heading exposure-heading">
           <div>
             <span className="section-index">03 / ДЕНЕЖНЫЙ ЭФФЕКТ</span>
-            <h2>Где сосредоточена сумма риска</h2>
+            <h2>Где сосредоточены взвешенные продления</h2>
             <p>
-              Потенциальная потеря учитывает недостаток средств и оценку
-              клиента.
+              Стоимость запланированных продлений умножается на индекс риска каждой услуги.
             </p>
           </div>
           <div className="exposure-total">
-            <small>Общая оценка</small>
+            <small>Сценарный индикатор</small>
             <b>{money(summary?.potential_loss_minor)}</b>
           </div>
         </div>

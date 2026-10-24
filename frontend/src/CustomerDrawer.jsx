@@ -77,11 +77,11 @@ export function CustomerDrawer({ id, onClose }) {
             </div>
             <div className="drawer-score">
               <div>
-                <span>Оценка непродления</span>
+                <span>Индекс риска аккаунта</span>
                 <b>
                   {customer.risk_score == null
                     ? "—"
-                    : `${customer.risk_score} / 100`}
+                    : `${customer.risk_score} баллов`}
                 </b>
               </div>
               <RiskBadge
@@ -95,7 +95,7 @@ export function CustomerDrawer({ id, onClose }) {
                 <b>{money(customer.balance_minor)}</b>
               </div>
               <div>
-                <span>Сумма риска</span>
+                <span>Взвешенные продления</span>
                 <b className="drawer-loss">
                   {money(customer.potential_loss_minor)}
                 </b>
@@ -124,9 +124,9 @@ export function CustomerDrawer({ id, onClose }) {
                   <span className={`signal-icon signal-${reason.code}`}>
                     <Icon
                       name={
-                        reason.code === "insufficient_balance"
+                        reason.code === "payment_distress"
                           ? "wallet"
-                          : reason.code === "prolong_wait"
+                          : reason.code === "grace_period_progress"
                             ? "clock"
                             : "pulse"
                       }
@@ -168,6 +168,7 @@ export function CustomerDrawer({ id, onClose }) {
                       <small>
                         {serviceStatus[service.status] || service.status}
                       </small>
+                      {service.risk_score != null && <small>{service.risk_score} баллов · {service.risk_level === "high" ? "высокий" : service.risk_level === "medium" ? "средний" : "низкий"} риск</small>}
                     </div>
                   </div>
                 ))
@@ -225,20 +226,24 @@ export function CustomerDrawer({ id, onClose }) {
                 <b>{money(customer.uncovered_revenue_minor)}</b>
               </div>
               <div>
-                <span>Оценка риска</span>
+                <span>Индекс риска аккаунта</span>
                 <b>
                   {customer.risk_score == null
                     ? "Нет оценки"
-                    : `${customer.risk_score}%`}
+                    : `${customer.risk_score} баллов`}
                 </b>
               </div>
               <div className="calculation-result">
-                <span>Потенциальная потеря</span>
+                <span>Взвешенные продления по сценарию</span>
                 <b>{money(customer.potential_loss_minor)}</b>
+              </div>
+              <div>
+                <span>Из них без покрытия текущим балансом</span>
+                <b>{money(customer.uncovered_potential_loss_minor)}</b>
               </div>
             </section>
             <div className="drawer-bottom-note">
-              Расчёт сделан по текущему снимку данных и горизонту{" "}
+              Денежные суммы — сценарные индикаторы, не вероятность потери и не прогноз фактической выручки. Расчёт сделан по текущему снимку данных и горизонту{" "}
               {customer.calculation.horizon_days} дней.
             </div>
           </>

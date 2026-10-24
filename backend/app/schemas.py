@@ -113,7 +113,7 @@ class CustomerSnapshot(BaseModel):
         le=MAX_MONEY_MINOR,
         validation_alias=AliasChoices("total_replenished_minor", "totalReplenished"),
     )
-    services: list[ServiceSnapshot] = Field(default_factory=list, max_length=100)
+    services: list[ServiceSnapshot] = Field(default_factory=list, max_length=200)
     transactions: list[TransactionSnapshot] = Field(default_factory=list, max_length=250)
 
     @field_validator("id", mode="before")
@@ -139,16 +139,21 @@ class ModelSettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prediction_horizon_days: int | None = Field(default=None, ge=1, le=365)
+    urgency_days: int | None = Field(default=None, ge=1, le=30)
+    grace_days: int | None = Field(default=None, ge=1, le=14)
     high_risk_min: int | None = Field(default=None, ge=1, le=100)
     medium_risk_min: int | None = Field(default=None, ge=0, le=99)
+    customer_high_risk_min: int | None = Field(default=None, ge=1, le=20_000)
+    customer_medium_risk_min: int | None = Field(default=None, ge=0, le=19_999)
     weights: dict[str, int] | None = Field(default=None, max_length=4)
 
 
 class RiskReason(BaseModel):
     code: str
     title: str
-    points: int
+    points: float
     explanation: str
+    service_ids: list[str] = Field(default_factory=list)
 
 
 class CustomerListItem(BaseModel):
@@ -160,12 +165,16 @@ class CustomerListItem(BaseModel):
     bonus_spend_enabled: bool
     total_replenished_minor: int
     service_count: int
-    risk_score: int | None
+    risk_score: float | None
     risk_level: str | None
     risk_label: str
     reasons: list[RiskReason]
     due_revenue_minor: int
     potential_loss_minor: int
+    max_service_score: float | None = None
+    at_risk_services_count: int = 0
+    medium_or_high_services_count: int = 0
+    uncovered_potential_loss_minor: int = 0
 
 
 class CustomerListResponse(BaseModel):
@@ -185,6 +194,12 @@ class ServiceDetail(BaseModel):
     payment_term: str | None
     status: str
     expires_at: datetime | None
+    risk_score: float | None = None
+    risk_level: str | None = None
+    assessment_status: str | None = None
+    factors: list[dict[str, Any]] = Field(default_factory=list)
+    scheduled_minor: int | None = None
+    uncovered_minor: int | None = None
 
 
 class TransactionDetail(BaseModel):
@@ -201,8 +216,10 @@ class CustomerCalculation(BaseModel):
     due_revenue_minor: int
     available_balance_minor: int
     uncovered_revenue_minor: int
-    risk_score_percent: int | None
+    risk_score_index: float | None
     potential_loss_minor: int
+    uncovered_potential_loss_minor: int = 0
+    estimate_kind: str = "expert_weighted_renewal_scenario_not_expected_loss"
 
 
 class CustomerDetail(CustomerListItem):
@@ -227,8 +244,12 @@ class LoginResponse(BaseModel):
 
 class ModelSettingsResponse(BaseModel):
     prediction_horizon_days: int
+    urgency_days: int
+    grace_days: int
     high_risk_min: int
     medium_risk_min: int
+    customer_high_risk_min: int
+    customer_medium_risk_min: int
     weights: dict[str, int]
     features: dict[str, str]
     recalculated: bool | None = None
@@ -240,6 +261,7 @@ class AnalyticsSummary(BaseModel):
     assessed_total: int
     risk_counts: dict[str, int]
     potential_loss_minor: int
+    uncovered_potential_loss_minor: int = 0
     currency: str
     prediction_horizon_days: int
     source_kind: str

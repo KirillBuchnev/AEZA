@@ -58,13 +58,13 @@ export function CustomerTable({
         { key: "balance", label: "Баланс" },
         { key: "total_replenished", label: "Пополнено" },
         { key: "risk_score", label: "Оценка" },
-        { key: "potential_loss", label: "Сумма риска" },
+        { key: "potential_loss", label: "Взвешенные продления" },
       ]
     : [
         { key: "id", label: "Клиент" },
         { key: "balance", label: "Баланс" },
         { key: "risk_score", label: "Оценка" },
-        { key: "potential_loss", label: "Сумма риска" },
+        { key: "potential_loss", label: "Взвешенные продления" },
       ];
   if (!customers.length)
     return (
@@ -150,13 +150,13 @@ export function CustomerTable({
                     className={`score-value score-${riskClass(customer.risk_level)}`}
                   >
                     {customer.risk_score}
-                    <small>/ 100</small>
+                    <small> баллов</small>
                   </span>
                 )}
               </td>
               <td className="money-cell">
                 {money(customer.potential_loss_minor)}
-                <small>оценка риска</small>
+                <small>сценарная оценка</small>
               </td>
               <td>
                 <RiskBadge

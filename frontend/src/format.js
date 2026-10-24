@@ -21,8 +21,8 @@ export const riskText = {
 };
 export const riskClass = (level) => level || "unscored";
 export const featureOrder = [
-  "prolong_wait",
-  "autoprolong_disabled",
-  "insufficient_balance",
-  "failed_prolong_payment",
+  "payment_distress",
+  "manual_renewal",
+  "renewal_urgency",
+  "grace_period_progress",
 ];

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import sqlite3
+from copy import deepcopy
 from typing import Any, Iterator
 
 from .risk import DEFAULT_MODEL_SETTINGS, demo_snapshot
@@ -110,8 +111,19 @@ class Database:
                 "SELECT value FROM app_state WHERE key = 'model_settings'"
             ).fetchone()
             if row is None:
-                return DEFAULT_MODEL_SETTINGS.copy()
-            return json.loads(row["value"])
+                return deepcopy(DEFAULT_MODEL_SETTINGS)
+            stored = json.loads(row["value"])
+            settings = {**DEFAULT_MODEL_SETTINGS, **stored}
+            stored_weights = stored.get("weights", {}) if isinstance(stored, dict) else {}
+            if set(stored_weights) != set(DEFAULT_MODEL_SETTINGS["weights"]):
+                # The previous UI used unrelated binary flags; never reinterpret those
+                # old weights as the new service-level expert factors.
+                settings["weights"] = dict(DEFAULT_MODEL_SETTINGS["weights"])
+                settings["high_risk_min"] = DEFAULT_MODEL_SETTINGS["high_risk_min"]
+                settings["medium_risk_min"] = DEFAULT_MODEL_SETTINGS["medium_risk_min"]
+            else:
+                settings["weights"] = {**DEFAULT_MODEL_SETTINGS["weights"], **stored_weights}
+            return settings
 
     def save_model_settings(self, settings: dict[str, Any]) -> None:
         with self.connection() as connection:

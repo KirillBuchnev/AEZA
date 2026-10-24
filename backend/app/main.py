@@ -119,10 +119,10 @@ events = EventBroker()
 SESSION_COOKIE = "aeza_session"
 session_cookie = APIKeyCookie(name=SESSION_COOKIE, scheme_name="sessionCookie", auto_error=False)
 FEATURES = {
-    "prolong_wait": "Услуга ожидает оплаты",
-    "autoprolong_disabled": "Автопродление выключено",
-    "insufficient_balance": "Не хватает средств",
-    "failed_prolong_payment": "Не прошла оплата продления",
+    "payment_distress": "Дефицит средств на продления",
+    "manual_renewal": "Нужно ручное продление",
+    "renewal_urgency": "Близкий срок продления",
+    "grace_period_progress": "Прогресс льготного периода",
 }
 
 
@@ -179,6 +179,10 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "reasons": customer["reasons"],
         "due_revenue_minor": customer["due_revenue_minor"],
         "potential_loss_minor": customer["potential_loss_minor"],
+        "max_service_score": customer["max_service_score"],
+        "at_risk_services_count": customer["at_risk_services_count"],
+        "medium_or_high_services_count": customer["medium_or_high_services_count"],
+        "uncovered_potential_loss_minor": customer["uncovered_potential_loss_minor"],
     }
 
 
@@ -195,6 +199,7 @@ def _summary() -> dict[str, Any]:
         "assessed_total": len(customers) - counts["unscored"],
         "risk_counts": counts,
         "potential_loss_minor": sum(customer["potential_loss_minor"] for customer in customers),
+        "uncovered_potential_loss_minor": sum(customer["uncovered_potential_loss_minor"] for customer in customers),
         "currency": "EUR",
         "prediction_horizon_days": model["prediction_horizon_days"],
         "source_kind": source.get("source_kind", "demo"),
@@ -363,6 +368,10 @@ async def patch_model_settings(
     current.update(changes)
     if current["high_risk_min"] <= current["medium_risk_min"]:
         raise HTTPException(status_code=422, detail="Порог высокого риска должен быть выше среднего.")
+    if current["customer_high_risk_min"] <= current["customer_medium_risk_min"]:
+        raise HTTPException(status_code=422, detail="Порог высокого риска аккаунта должен быть выше среднего.")
+    if sum(current["weights"].values()) <= 0:
+        raise HTTPException(status_code=422, detail="Сумма весов должна быть больше нуля.")
 
     database.save_model_settings(current)
     await events.publish({"type": "model_settings_changed", "changed_at": datetime.now(timezone.utc).isoformat()})
@@ -459,10 +468,14 @@ def prometheus_metrics(request: Request) -> PlainTextResponse:
     for level, count in result["risk_counts"].items():
         lines.append(f'aeza_customers_total{{risk_level="{level}"}} {count}')
     amount_eur = result["potential_loss_minor"] / 100
+    uncovered_amount_eur = result["uncovered_potential_loss_minor"] / 100
     lines.extend([
-        "# HELP aeza_revenue_at_risk_eur Estimated uncovered renewal revenue weighted by risk.",
-        "# TYPE aeza_revenue_at_risk_eur gauge",
-        f"aeza_revenue_at_risk_eur {amount_eur:.2f}",
+        "# HELP aeza_weighted_renewals_eur Scenario-weighted scheduled renewals; not expected loss.",
+        "# TYPE aeza_weighted_renewals_eur gauge",
+        f"aeza_weighted_renewals_eur {amount_eur:.2f}",
+        "# HELP aeza_uncovered_weighted_renewals_eur Scenario-weighted renewals not covered by current balance.",
+        "# TYPE aeza_uncovered_weighted_renewals_eur gauge",
+        f"aeza_uncovered_weighted_renewals_eur {uncovered_amount_eur:.2f}",
         "# HELP aeza_customers_assessed_total Number of customers with a calculated score.",
         "# TYPE aeza_customers_assessed_total gauge",
         f"aeza_customers_assessed_total {result['assessed_total']}",

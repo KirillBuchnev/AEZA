@@ -22,8 +22,8 @@ export function ModelPage({ settings, onSave, saving }) {
       },
     }));
   async function save() {
-    if (draft.high_risk_min <= draft.medium_risk_min) {
-      setSaveError("Высокий порог должен быть выше среднего.");
+    if (draft.high_risk_min <= draft.medium_risk_min || draft.customer_high_risk_min <= draft.customer_medium_risk_min) {
+      setSaveError("Порог высокого риска должен быть выше среднего и для услуги, и для аккаунта.");
       return;
     }
     setSaveError("");
@@ -53,11 +53,15 @@ export function ModelPage({ settings, onSave, saving }) {
             <div>
               <span className="section-index">01 / ПЕРИОД ПРОГНОЗА</span>
               <h2>Когда искать риск</h2>
-              <p>Учитываем услуги, срок которых скоро заканчивается.</p>
+              <p>Считаем регулярные продления и степень приближения срока.</p>
             </div>
             <span className="heading-icon">
               <Icon name="clock" />
             </span>
+          </div>
+          <div className="threshold-grid">
+            <label className="threshold-field"><span>Окно срочности</span><div className="threshold-input"><input type="number" min="1" max="30" value={draft.urgency_days} onChange={(e) => setDraft({...draft, urgency_days: Number(e.target.value)})}/><span>дней</span></div></label>
+            <label className="threshold-field"><span>Льготный период prolong_wait</span><div className="threshold-input"><input type="number" min="1" max="14" value={draft.grace_days} onChange={(e) => setDraft({...draft, grace_days: Number(e.target.value)})}/><span>дней</span></div></label>
           </div>
           <div className="horizon-control">
             <div>
@@ -114,7 +118,7 @@ export function ModelPage({ settings, onSave, saving }) {
             <div>
               <span className="section-index">02 / СИЛА ПРИЗНАКОВ</span>
               <h2>Что влияет на оценку</h2>
-              <p>Баллы активных причин складываются, максимум — 100.</p>
+              <p>Вес задаёт относительный вклад признака; оценка каждой услуги нормируется в диапазон 0–100.</p>
             </div>
           </div>
           <div className="weight-list">
@@ -123,9 +127,9 @@ export function ModelPage({ settings, onSave, saving }) {
                 <span className={`reason-marker reason-marker-${code}`}>
                   <Icon
                     name={
-                      code === "insufficient_balance"
+                      code === "payment_distress"
                         ? "wallet"
-                        : code === "prolong_wait"
+                        : code === "grace_period_progress"
                           ? "clock"
                           : "pulse"
                     }
@@ -134,15 +138,12 @@ export function ModelPage({ settings, onSave, saving }) {
                 </span>
                 <span className="weight-copy">
                   <b>{settings.features?.[code] || code}</b>
-                  <small>
-                    {code === "prolong_wait"
-                      ? "Услуга уже ждёт оплаты после окончания срока."
-                      : code === "autoprolong_disabled"
-                        ? "Скорое продление без автоматического списания."
-                        : code === "insufficient_balance"
-                          ? "На ближайшие продления может не хватить средств."
-                          : "В снимке есть отклонённый платёж за продление."}
-                  </small>
+                  <small>{({
+                    payment_distress: "Доля платежа, которую общий доступный баланс не покрывает, с поправкой на срочность.",
+                    manual_renewal: "Автопродление выключено; вклад растёт при приближении срока.",
+                    renewal_urgency: "Срок близок и требует ручного действия или денег на балансе не хватает.",
+                    grace_period_progress: "Доля настроенного срока ожидания оплаты, которая уже прошла.",
+                  })[code]}</small>
                 </span>
                 <input
                   className="weight-range"
@@ -172,7 +173,7 @@ export function ModelPage({ settings, onSave, saving }) {
               <div>
                 <span className="section-index">03 / УРОВНИ РИСКА</span>
                 <h2>Границы оценки</h2>
-                <p>Отметки определяют цвет и уровень клиента.</p>
+                <p>Пороги услуги и аккаунта настраиваются отдельно. Риск аккаунта — сумма оценок его услуг.</p>
               </div>
             </div>
             <div className="threshold-grid">
@@ -218,6 +219,11 @@ export function ModelPage({ settings, onSave, saving }) {
                   <span>баллов</span>
                 </div>
               </label>
+            </div>
+            <h3>Пороги аккаунта (сумма оценок услуг)</h3>
+            <div className="threshold-grid">
+              <label className="threshold-field"><span><i className="threshold-dot threshold-dot-medium" />Средний риск с</span><div className="threshold-input"><input type="number" min="0" max="19999" value={draft.customer_medium_risk_min} onChange={(e) => setDraft({...draft, customer_medium_risk_min: Number(e.target.value)})}/><span>баллов</span></div></label>
+              <label className="threshold-field"><span><i className="threshold-dot threshold-dot-high" />Высокий риск с</span><div className="threshold-input"><input type="number" min="1" max="20000" value={draft.customer_high_risk_min} onChange={(e) => setDraft({...draft, customer_high_risk_min: Number(e.target.value)})}/><span>баллов</span></div></label>
             </div>
             <div className="threshold-preview">
               <span className="threshold-scale">
@@ -294,7 +300,7 @@ export function ModelPage({ settings, onSave, saving }) {
           <div className="example-score">
             <span>Пример клиента</span>
             <b>
-              <strong>55</strong> / 100
+              <strong>55</strong> / 100 за услугу
             </b>
             <div className="example-meter">
               <i />
@@ -302,15 +308,14 @@ export function ModelPage({ settings, onSave, saving }) {
             <RiskBadge level="medium" />
           </div>
           <div className="formula-card">
-            <b>Потенциальная потеря</b>
-            <span>Недостаток на продления × оценка риска</span>
+            <b>Сценарная денежная оценка</b>
+            <span>Плановые продления × индекс риска услуги</span>
             <code>€100 × 55% = €55</code>
           </div>
           <div className="model-disclaimer">
             <Icon name="info" size={15} />
             <span>
-              Нет активных услуг или дат окончания — клиент останется без
-              оценки.
+              Это экспертный индекс, не обученная вероятность ухода. Нет подходящих услуг или корректной даты — услуга не оценивается.
             </span>
           </div>
         </aside>
