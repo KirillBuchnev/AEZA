@@ -962,7 +962,7 @@ button.kv-row:hover > span:nth-child(2) {
 
 .exposure-row {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 110px;
+  grid-template-columns: 220px minmax(0, 1fr) 120px;
   align-items: center;
   gap: 16px;
   border: 0;
@@ -995,7 +995,20 @@ button.kv-row:hover > span:nth-child(2) {
   text-align: right;
 }
 
-.exposure-row:hover span {
+/* Expected loss in bold, the maximum for the same services under it. */
+.exposure-value {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.exposure-value small {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.exposure-row:hover > span:first-child {
   text-decoration: underline;
 }
 
@@ -1137,6 +1150,23 @@ button.kv-row:hover > span:nth-child(2) {
 
 .ctable .money {
   white-space: nowrap;
+}
+
+/* Expected loss on top, the maximum for the same services under it. */
+.money-pair {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.money-pair b {
+  font-weight: 600;
+}
+
+.money-pair small {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 /* Below 1440 px the table fits its card: no fixed minimum width, and the reason column truncates first. */

@@ -205,6 +205,8 @@ SORT_FIELDS = {
     "near_term_loss": "near_term_loss_minor",
     "service_count": "service_count",
 }
+# Money sorts put customers without an assessment last, as the table shows a dash for them.
+MONEY_SORTS = {"potential_loss", "revenue_at_risk", "near_term_loss"}
 
 
 def _token_hash(token: str) -> str:
@@ -310,25 +312,36 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
 def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
     counts = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     loss_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
+    expected_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     reason_counts = {factor["code"]: 0 for factor in FACTORS}
     for customer in customers:
         level = customer["risk_level"] or "unscored"
         counts[level] += 1
         loss_by_level[level] += customer["potential_loss_minor"]
+        expected_by_level[level] += customer["revenue_at_risk_minor"]
         for code in {reason["code"] for reason in customer["reasons"]} & set(reason_counts):
             reason_counts[code] += 1
+    # The largest contributors to the expected loss: one big service must not vanish inside the total.
     exposed = sorted(
-        (customer for customer in customers if customer["potential_loss_minor"] > 0),
-        key=lambda customer: customer["potential_loss_minor"],
+        (customer for customer in customers if customer["revenue_at_risk_minor"] > 0),
+        key=lambda customer: (customer["revenue_at_risk_minor"], customer["id"]),
         reverse=True,
     )[:5]
     return {
         "reason_counts": reason_counts,
         "potential_loss_by_level_minor": loss_by_level,
+        "revenue_at_risk_by_level_minor": expected_by_level,
         "top_exposure": [
-            {"id": customer["id"], "email": customer["email"], "potential_loss_minor": customer["potential_loss_minor"]}
+            {
+                "id": customer["id"],
+                "email": customer["email"],
+                "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
+                "near_term_loss_minor": customer["near_term_loss_minor"],
+                "potential_loss_minor": customer["potential_loss_minor"],
+            }
             for customer in exposed
         ],
+        "exposed_services": sum(customer["exposed_services"] for customer in customers),
         "customers_total": len(customers),
         "assessed_total": len(customers) - counts["unscored"],
         "risk_counts": counts,
@@ -427,6 +440,9 @@ def _sort_key(sort_by: str, field: str) -> Callable[[dict[str, Any]], Any]:
             return (1, 0, identifier.casefold())
         if isinstance(value, str):
             return (value.casefold(), customer["id"])
+        if sort_by in MONEY_SORTS:
+            # Equal money: the riskier account first.
+            return (value, customer["risk_score"] or 0, customer["id"])
         return (value, customer["id"])
 
     return key
@@ -727,7 +743,7 @@ def list_customers(
     sort_by: Literal[
         "id", "email", "balance", "total_replenished", "monthly_cost", "due_revenue",
         "risk_score", "max_service_score", "high_count", "potential_loss", "revenue_at_risk", "near_term_loss", "service_count",
-    ] = "risk_score",
+    ] = "revenue_at_risk",
     order: Literal["asc", "desc"] = "desc",
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -751,8 +767,11 @@ def list_customers(
 
     field = SORT_FIELDS[sort_by]
     # Customers without a value (unscored) always go last, in both directions.
-    present = [customer for customer in items if customer[field] is not None]
-    missing = [customer for customer in items if customer[field] is None]
+    def has_value(customer: dict[str, Any]) -> bool:
+        return customer[field] is not None and (sort_by not in MONEY_SORTS or customer["risk_level"] is not None)
+
+    present = [customer for customer in items if has_value(customer)]
+    missing = [customer for customer in items if not has_value(customer)]
     present.sort(key=_sort_key(sort_by, field), reverse=order == "desc")
     ordered = [_customer_list_item(customer) for customer in present + missing]
     return {
@@ -1064,13 +1083,13 @@ def prometheus_metrics(request: Request) -> PlainTextResponse:
     for level, count in summary["risk_counts"].items():
         lines.append(f'aeza_customers_total{{risk_level="{level}"}} {count}')
     lines.extend([
-        "# HELP aeza_potential_loss_eur Expected loss on uncovered renewals, weighted by the risk index.",
+        "# HELP aeza_potential_loss_eur The part of the expected loss that comes from a missing balance (shortfall x index / 100).",
         "# TYPE aeza_potential_loss_eur gauge",
         f"aeza_potential_loss_eur {summary['potential_loss_minor'] / 100:.2f}",
-        "# HELP aeza_revenue_at_risk_eur Renewal value weighted by the risk index.",
+        "# HELP aeza_revenue_at_risk_eur Expected loss: price x risk index / 100 over services with some risk ahead.",
         "# TYPE aeza_revenue_at_risk_eur gauge",
         f"aeza_revenue_at_risk_eur {summary['revenue_at_risk_minor'] / 100:.2f}",
-        "# HELP aeza_near_term_loss_eur Full price of renewals at medium or high risk inside the 7-day action window.",
+        "# HELP aeza_near_term_loss_eur Maximum loss: the full price of the same services as the expected loss.",
         "# TYPE aeza_near_term_loss_eur gauge",
         f"aeza_near_term_loss_eur {summary['near_term_loss_minor'] / 100:.2f}",
         "# HELP aeza_monthly_cost_eur Monthly cost of eligible services.",

@@ -132,15 +132,46 @@ export function mainReason(customer) {
 }
 
 const columns = [
-  { key: "risk_score", label: "Риск" },
+  {
+    key: "risk_score",
+    label: "Риск",
+    hint: "Индекс аккаунта: оценка шанса, что хотя бы одна услуга не продлится",
+  },
   { key: "id", label: "ID" },
   { key: "email", label: "Email" },
   { key: "reason", label: "Главная причина" },
   { key: "balance", label: "Баланс", num: true },
   { key: "monthly_cost", label: "В месяц", num: true },
   { key: "total_replenished", label: "Пополнено", num: true },
-  { key: "potential_loss", label: "Потери", num: true },
+  {
+    key: "revenue_at_risk",
+    label: "Ожидаемо",
+    num: true,
+    hint: "Ожидаемая потеря: цена услуги × индекс риска. Под суммой — максимум по тем же услугам. Очередь идёт по этой колонке",
+  },
 ];
+
+// Ожидаемая потеря крупно, под ней максимум по тем же услугам. Нет оценки или нет риска впереди — прочерк.
+function ExpectedLoss({ customer }) {
+  if (customer.risk_score == null)
+    return (
+      <span className="muted" title="Нет оценки риска, суммы не считаем">
+        —
+      </span>
+    );
+  if (!customer.revenue_at_risk_minor)
+    return (
+      <span className="muted" title="Впереди нет услуг с признаками риска">
+        —
+      </span>
+    );
+  return (
+    <div className="money-pair">
+      <b>{money(customer.revenue_at_risk_minor)}</b>
+      <small>из {money(customer.near_term_loss_minor)}</small>
+    </div>
+  );
+}
 
 export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
   return (
@@ -168,6 +199,7 @@ export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
                     <button
                       className={`sort${active ? " sort-active" : ""}`}
                       onClick={() => onSort(column.key)}
+                      title={column.hint}
                     >
                       {column.label}
                       <Icon
@@ -231,10 +263,8 @@ export function CustomerTable({ customers, sortBy, order, onSort, onSelect }) {
                 <td className="num money">
                   {money(customer.total_replenished_minor)}
                 </td>
-                <td className="num money strong">
-                  {customer.risk_score == null
-                    ? "—"
-                    : money(customer.potential_loss_minor)}
+                <td className="num money">
+                  <ExpectedLoss customer={customer} />
                 </td>
                 <td className="chev">
                   <Icon name="right" size={18} />

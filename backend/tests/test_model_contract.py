@@ -109,16 +109,62 @@ class MentorControlCasesTest(unittest.TestCase):
 
 
 class AccountAggregationTest(unittest.TestCase):
-    def test_account_index_is_the_sum_of_service_indices(self) -> None:
+    def test_account_index_is_the_chance_that_at_least_one_service_fails(self) -> None:
         result = evaluated(
             service(service_id="s-1", expires_in_days=3 / 24, auto_prolong=False),
             service(service_id="s-2", expires_in_days=3 / 24, auto_prolong=False),
             balance=20_000,
         )
-        self.assertEqual(result["account_risk_sum"], 116.0)
-        self.assertEqual(result["risk_score"], 116.0)
+        self.assertEqual(result["account_risk_sum"], 116.0)  # the plain sum stays as a reference
+        self.assertEqual(result["risk_score"], 82.4)  # 1 - (1 - 0.58) ** 2
+        self.assertEqual(result["calculation"]["risk_score_index"], 82.4)
         self.assertEqual(result["max_service_score"], 58.0)
         self.assertEqual(result["high_count"], 2)
+
+    def test_account_index_of_one_service_equals_the_service_index(self) -> None:
+        result = evaluated(service(expires_in_days=3 / 24, auto_prolong=False), balance=20_000)
+        self.assertEqual(result["risk_score"], result["services"][0]["risk_score"])
+
+    def test_account_index_never_leaves_the_scale(self) -> None:
+        services = [
+            service(service_id=f"s-{index}", price=1_000, expires_in_days=3 / 24, auto_prolong=False)
+            for index in range(30)
+        ]
+        result = evaluated(*services, balance=100_000)
+        self.assertLessEqual(result["risk_score"], 100.0)
+        self.assertGreater(result["risk_score"], 99.0)
+
+    def test_account_reasons_add_up_to_the_account_index(self) -> None:
+        result = evaluated(
+            service(service_id="s-1", expires_in_days=3 / 24, auto_prolong=False),
+            service(service_id="s-2", expires_in_days=3 / 24, auto_prolong=True),
+            balance=0,
+        )
+        points = sum(reason["points"] for reason in result["reasons"])
+        self.assertEqual(round(points, 1), result["risk_score"])
+
+    def test_displayed_points_add_up_exactly_to_every_index(self) -> None:
+        # Each point is rounded to one decimal; the rounding must not leave 0.1 between the parts and the index.
+        cases = [
+            ([service(price=500, expires_in_days=2.75)], 300),
+            ([service(price=10_000, expires_in_days=3.24)], 1_000),
+            (
+                [
+                    service(service_id="s-1", price=900, expires_in_days=3.58),
+                    service(service_id="s-2", price=500, auto_prolong=False, expires_in_days=4.04),
+                    service(service_id="s-3", price=4_000, auto_prolong=False, expires_in_days=2.81),
+                ],
+                1_000,
+            ),
+        ]
+        for services, balance in cases:
+            result = evaluated(*services, balance=balance)
+            self.assertEqual(round(sum(reason["points"] for reason in result["reasons"]), 1), result["risk_score"])
+            for item in result["services"]:
+                self.assertEqual(
+                    round(sum(reason["points"] for reason in item["reasons"]), 1),
+                    item["risk_score"],
+                )
 
     def test_account_with_missing_expiry_is_unscored_but_services_keep_scores(self) -> None:
         result = evaluated(
@@ -215,7 +261,9 @@ class MoneyAndForecastTest(unittest.TestCase):
 
 
 class NearTermLossTest(unittest.TestCase):
-    """Possible losses in the 7-day action window: full price of renewals at medium or high risk."""
+    """The pair on one sample: services with some risk and the decision still ahead.
+
+    Expected loss (revenue at risk) is price x index / 100, the maximum (near-term loss) is the full price."""
 
     def test_high_renewal_inside_window_counts_at_full_price(self) -> None:
         result = evaluated(service(auto_prolong=False, expires_in_days=3 / 24), balance=10_000)
@@ -228,11 +276,11 @@ class NearTermLossTest(unittest.TestCase):
         self.assertEqual(result["services"][0]["risk_level"], "medium")
         self.assertEqual(result["near_term_loss_minor"], 10_000)
 
-    def test_low_renewal_is_excluded_though_it_is_at_risk_money(self) -> None:
+    def test_low_renewal_is_in_the_sample_but_barely_in_the_expected_loss(self) -> None:
         result = evaluated(service(auto_prolong=True, expires_in_days=3), balance=9_000)
         self.assertEqual(result["services"][0]["risk_level"], "low")
-        self.assertGreater(result["revenue_at_risk_minor"], 0)
-        self.assertEqual(result["near_term_loss_minor"], 0)
+        self.assertEqual(result["near_term_loss_minor"], 10_000)  # some risk: the full price is the maximum
+        self.assertEqual(result["revenue_at_risk_minor"], 1_250)  # index 12.5 of the price
 
     def test_renewal_outside_the_action_window_is_not_near_term(self) -> None:
         result = evaluated(service(auto_prolong=False, expires_in_days=20), balance=0)
@@ -252,6 +300,32 @@ class NearTermLossTest(unittest.TestCase):
         self.assertEqual(result["near_term_loss_minor"], 10_000)
         self.assertEqual(result["calculation"]["near_term_loss_minor"], 10_000)
         self.assertEqual(sum(s["near_term_loss_minor"] for s in result["services"]), 10_000)
+
+    def test_balance_part_never_exceeds_expected_and_expected_never_exceeds_maximum(self) -> None:
+        for result in (
+            evaluated(service(auto_prolong=False, expires_in_days=3 / 24), balance=0),
+            evaluated(service(auto_prolong=True, expires_in_days=3), balance=9_000),
+            evaluated(service(status="prolong_wait", expires_in_days=-1), balance=0),
+            evaluated(service(service_id="a", expires_in_days=1), service(service_id="b", expires_in_days=20), balance=5_000),
+        ):
+            self.assertLessEqual(result["potential_loss_minor"], result["revenue_at_risk_minor"])
+            self.assertLessEqual(result["revenue_at_risk_minor"], result["near_term_loss_minor"])
+
+    def test_waiting_service_past_its_grace_is_left_out_of_the_money(self) -> None:
+        stale = evaluated(service(status="prolong_wait", auto_prolong=False, expires_in_days=-30), balance=0)
+        self.assertGreater(stale["risk_score"], 0)  # the risk itself is still shown
+        self.assertEqual(stale["revenue_at_risk_minor"], 0)
+        self.assertEqual(stale["near_term_loss_minor"], 0)
+        self.assertEqual(stale["potential_loss_minor"], 0)
+        self.assertEqual(stale["exposed_services"], 0)
+
+    def test_exposed_services_counts_the_services_of_the_sample(self) -> None:
+        result = evaluated(
+            service(service_id="a", auto_prolong=False, expires_in_days=3 / 24),
+            service(service_id="b", expires_in_days=20),
+            balance=10_000,
+        )
+        self.assertEqual(result["exposed_services"], 1)
 
 
 class ModelSettingsTest(unittest.TestCase):
@@ -280,6 +354,14 @@ class ModelSettingsTest(unittest.TestCase):
         self.assertEqual(migrated["weights"]["renewal_urgency"], 15)
         self.assertNotIn("failed_prolong_payment", migrated["weights"])
 
+    def test_account_thresholds_of_older_rows_are_clamped_to_the_index_scale(self) -> None:
+        # While the account index was a sum of service indices its thresholds could exceed 100.
+        migrated = merge_model_settings({"account_high_risk_min": 150, "account_medium_risk_min": 120})
+        self.assertEqual(migrated["account_high_risk_min"], 100)
+        self.assertEqual(migrated["account_medium_risk_min"], 99)
+        in_range = merge_model_settings({"account_high_risk_min": 70, "account_medium_risk_min": 40})
+        self.assertEqual((in_range["account_high_risk_min"], in_range["account_medium_risk_min"]), (70, 40))
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -287,7 +369,7 @@ if __name__ == "__main__":
 
 class AccountThresholdsTest(unittest.TestCase):
     def test_account_level_uses_its_own_thresholds(self) -> None:
-        model = merge_model_settings({**DEFAULT_MODEL_SETTINGS, "account_high_risk_min": 150, "account_medium_risk_min": 100})
+        model = merge_model_settings({**DEFAULT_MODEL_SETTINGS, "account_high_risk_min": 90, "account_medium_risk_min": 70})
         result = evaluate_customer(
             customer(
                 balance=20_000,
@@ -299,7 +381,7 @@ class AccountThresholdsTest(unittest.TestCase):
             model,
             NOW,
         )
-        self.assertEqual(result["risk_score"], 116.0)
+        self.assertEqual(result["risk_score"], 82.4)
         self.assertEqual(result["risk_level"], "medium")
         self.assertEqual([item["risk_level"] for item in result["services"]], ["high", "high"])
 

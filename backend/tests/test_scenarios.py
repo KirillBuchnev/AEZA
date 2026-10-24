@@ -15,14 +15,14 @@ SUMMARY = "/api/v1/analytics/summary"
 CUSTOMERS = "/api/v1/customers"
 SNAPSHOT = "/api/v1/source/snapshot"
 
-# level, recommended action, near-term loss and potential loss in euro cents
+# level, recommended action, maximum (near-term loss) and balance part (potential loss) in euro cents
 EXPECTED = {
     "S01": ("high", "manual_reminder", 900, 0),
     "S02": ("medium", "top_up", 1500, 406),
     "S03": ("high", "top_up", 6000, 3330),
-    "S04": ("low", "check_payment", 0, 0),
+    "S04": ("low", "check_payment", 1200, 0),
     "S05": ("high", "top_up", 2500, 1008),
-    "S06": ("low", "manual_reminder", 0, 0),
+    "S06": ("low", "manual_reminder", 72_000, 0),
     "S07": ("low", "none", 0, 0),
     "S08": ("medium", "top_up", 1200, 416),
     "S09": ("medium", "top_up", 12, 3),
@@ -74,6 +74,13 @@ def test_shortfall_of_a_large_account_lands_on_the_last_due_service():
     assert scores[:2] == [0.0, 0.0]
     assert scores[2] > 50
     assert evaluated()["S05"]["uncovered_revenue_minor"] == 2000
+    # The other two services carry no risk, so the account index is the index of the third one.
+    assert evaluated()["S05"]["risk_score"] == scores[2]
+
+
+def test_in_every_scenario_the_balance_part_is_within_the_expected_loss_within_the_maximum():
+    for scenario_id, result in evaluated().items():
+        assert result["potential_loss_minor"] <= result["revenue_at_risk_minor"] <= result["near_term_loss_minor"], scenario_id
 
 
 def test_a_big_annual_renewal_is_low_risk_but_carries_the_most_money_at_risk():
@@ -115,8 +122,13 @@ def test_showcase_seed_keeps_the_case_accounts_and_adds_the_scenarios(open_app):
         for customer in case:
             assert items[str(customer["id"])]["balance_minor"] == customer["balance"]
         assert summary["potential_loss_minor"] > 0
-        assert summary["near_term_loss_minor"] > 0
+        assert summary["near_term_loss_minor"] >= summary["revenue_at_risk_minor"] >= summary["potential_loss_minor"]
+        assert summary["exposed_services"] > 0
         assert items["S03"]["risk_level"] == "high"
+        # The default queue goes by the expected loss: the big annual renewal leads, though its risk is low.
+        queue = client.get(CUSTOMERS).json()
+        assert queue["sort_by"] == "revenue_at_risk"
+        assert [item["id"] for item in queue["items"][:2]] == ["S06", "S03"]
 
 
 def test_showcase_is_rebuilt_on_restart_but_an_uploaded_snapshot_is_kept(open_app):

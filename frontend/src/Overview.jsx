@@ -58,7 +58,8 @@ export function Overview({
   const reasons = useMemo(() => topReasons(summary), [summary]);
   const maxReason = Math.max(1, ...reasons.map((reason) => reason.count));
 
-  const lossByLevel = summary?.potential_loss_by_level_minor || {};
+  const expectedByLevel = summary?.revenue_at_risk_by_level_minor || {};
+  const exposedServices = summary?.exposed_services ?? 0;
 
   const exposure = useMemo(
     () => (summary?.top_exposure || []).slice(0, 6),
@@ -66,7 +67,7 @@ export function Overview({
   );
   const maxExposure = Math.max(
     1,
-    ...exposure.map((customer) => customer.potential_loss_minor),
+    ...exposure.map((customer) => customer.revenue_at_risk_minor),
   );
 
   const filtered = customers.filter(
@@ -166,21 +167,23 @@ export function Overview({
           </span>
           <div className="hero-value">
             <span className="display">
-              {moneyShort(summary?.potential_loss_minor)}
+              {moneyShort(summary?.revenue_at_risk_minor)}
             </span>
             <span className="h1">€</span>
           </div>
           <span className="hero-note">
-            на ближайшие 7 дней · с учётом цены услуг, балансов и риска
+            ожидаемо за ближайшие 7 дней · по {exposedServices}{" "}
+            {plural(exposedServices, ["услуге", "услугам", "услугам"])} с
+            признаками риска
           </span>
           <dl className="hero-money">
             <div>
-              <dt>Продления под риском</dt>
-              <dd>{money(summary?.revenue_at_risk_minor)}</dd>
+              <dt>Максимум, если не продлятся все</dt>
+              <dd>{money(summary?.near_term_loss_minor)}</dd>
             </div>
             <div>
-              <dt>Возможные ближайшие потери</dt>
-              <dd>{money(summary?.near_term_loss_minor)}</dd>
+              <dt>Из ожидаемого: не хватает средств</dt>
+              <dd>{money(summary?.potential_loss_minor)}</dd>
             </div>
           </dl>
           <button className="link" onClick={() => onNavigate.page("model")}>
@@ -199,7 +202,7 @@ export function Overview({
           <CardHead
             icon="wallet"
             title="Где сосредоточены потери"
-            description="Клиенты с наибольшей ожидаемой потерей: нехватка денег на продления × risk-score"
+            description="Клиенты с наибольшей ожидаемой потерей: цена услуг × индекс риска. Справа — максимум по тем же услугам"
           />
           {exposure.length ? (
             <div className="exposure">
@@ -208,22 +211,26 @@ export function Overview({
                   key={customer.id}
                   className="exposure-row"
                   onClick={() => onSelectCustomer(customer.id)}
+                  title={`Ожидаемо ${money(customer.revenue_at_risk_minor)}, максимум ${money(customer.near_term_loss_minor)}, из ожидаемого не хватает средств на ${money(customer.potential_loss_minor)}`}
                 >
                   <span>{customer.email}</span>
                   <span className="exposure-track">
                     <i
                       style={{
-                        width: `${Math.max(3, (customer.potential_loss_minor / maxExposure) * 100)}%`,
+                        width: `${Math.max(3, (customer.revenue_at_risk_minor / maxExposure) * 100)}%`,
                       }}
                     />
                   </span>
-                  <b>{money(customer.potential_loss_minor)}</b>
+                  <span className="exposure-value">
+                    <b>{money(customer.revenue_at_risk_minor)}</b>
+                    <small>из {money(customer.near_term_loss_minor)}</small>
+                  </span>
                 </button>
               ))}
             </div>
           ) : (
             <Empty title="Потерь не ожидается">
-              Балансов хватает на все продления в горизонте.
+              Ни у одной услуги в ближайшие 7 дней нет признаков непродления.
             </Empty>
           )}
         </section>
@@ -231,7 +238,7 @@ export function Overview({
           <CardHead
             icon="error"
             title="Уровни риска"
-            description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · потери по уровню`}
+            description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · ожидаемая потеря по уровню`}
           />
           <div className="levels-bar" aria-hidden="true">
             {levels.map((key) =>
@@ -260,7 +267,7 @@ export function Overview({
                 />
                 <span>{riskText[key]}</span>
                 <b>{counts[key] ?? 0}</b>
-                <em>{key === "unscored" ? "—" : money(lossByLevel[key])}</em>
+                <em>{key === "unscored" ? "—" : money(expectedByLevel[key])}</em>
               </button>
             ))}
           </div>
@@ -278,9 +285,9 @@ export function Overview({
             title={
               activeReasonTitle
                 ? `Причина: ${activeReasonTitle}`
-                : "Топ клиентов под риском"
+                : "Очередь клиентов"
             }
-            description="Нажмите на заголовок колонки, чтобы отсортировать"
+            description="Сверху те, с кого ожидаем потерять больше всего. Нажмите на заголовок колонки, чтобы отсортировать"
           >
             {activeReason && (
               <button className="link" onClick={() => setActiveReason("")}>

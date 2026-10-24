@@ -172,11 +172,11 @@ class ModelSettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prediction_horizon_days: int | None = Field(default=None, ge=1, le=365)
-    # Account indices are sums of service indices, so the thresholds may exceed 100.
+    # The account index is 0-100 like the service index, so both pairs of thresholds share one scale.
     high_risk_min: int | None = Field(default=None, ge=1, le=100)
     medium_risk_min: int | None = Field(default=None, ge=0, le=99)
-    account_high_risk_min: int | None = Field(default=None, ge=1, le=1_000)
-    account_medium_risk_min: int | None = Field(default=None, ge=0, le=999)
+    account_high_risk_min: int | None = Field(default=None, ge=1, le=100)
+    account_medium_risk_min: int | None = Field(default=None, ge=0, le=99)
     weights: dict[str, int] | None = Field(default=None, max_length=4)
 
 
@@ -374,6 +374,8 @@ class DataQualityReport(BaseModel):
 class ExposureItem(BaseModel):
     id: str
     email: str
+    revenue_at_risk_minor: int
+    near_term_loss_minor: int
     potential_loss_minor: int
 
 
@@ -383,7 +385,9 @@ class AnalyticsSummary(BaseModel):
     risk_counts: dict[str, int]
     reason_counts: dict[str, int]
     potential_loss_by_level_minor: dict[str, int]
+    revenue_at_risk_by_level_minor: dict[str, int]
     top_exposure: list[ExposureItem]
+    exposed_services: int
     potential_loss_minor: int
     revenue_at_risk_minor: int
     near_term_loss_minor: int

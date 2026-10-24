@@ -24,6 +24,10 @@
             "title": "Customers Total",
             "type": "integer"
           },
+          "exposed_services": {
+            "title": "Exposed Services",
+            "type": "integer"
+          },
           "monthly_cost_minor": {
             "title": "Monthly Cost Minor",
             "type": "integer"
@@ -52,6 +56,13 @@
               "type": "integer"
             },
             "title": "Reason Counts",
+            "type": "object"
+          },
+          "revenue_at_risk_by_level_minor": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Revenue At Risk By Level Minor",
             "type": "object"
           },
           "revenue_at_risk_minor": {
@@ -106,7 +117,9 @@
           "risk_counts",
           "reason_counts",
           "potential_loss_by_level_minor",
+          "revenue_at_risk_by_level_minor",
           "top_exposure",
+          "exposed_services",
           "potential_loss_minor",
           "revenue_at_risk_minor",
           "near_term_loss_minor",
@@ -865,14 +878,24 @@
             "title": "Id",
             "type": "string"
           },
+          "near_term_loss_minor": {
+            "title": "Near Term Loss Minor",
+            "type": "integer"
+          },
           "potential_loss_minor": {
             "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "revenue_at_risk_minor": {
+            "title": "Revenue At Risk Minor",
             "type": "integer"
           }
         },
         "required": [
           "id",
           "email",
+          "revenue_at_risk_minor",
+          "near_term_loss_minor",
           "potential_loss_minor"
         ],
         "title": "ExposureItem",
@@ -966,7 +989,7 @@
           "account_high_risk_min": {
             "anyOf": [
               {
-                "maximum": 1000.0,
+                "maximum": 100.0,
                 "minimum": 1.0,
                 "type": "integer"
               },
@@ -979,7 +1002,7 @@
           "account_medium_risk_min": {
             "anyOf": [
               {
-                "maximum": 999.0,
+                "maximum": 99.0,
                 "minimum": 0.0,
                 "type": "integer"
               },
@@ -2679,7 +2702,7 @@
             "name": "sort_by",
             "required": false,
             "schema": {
-              "default": "risk_score",
+              "default": "revenue_at_risk",
               "enum": [
                 "id",
                 "email",

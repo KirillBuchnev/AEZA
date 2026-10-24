@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from math import ceil
+from math import ceil, floor
 from typing import Any
 
 
@@ -61,8 +61,8 @@ DEFAULT_MODEL_SETTINGS: dict[str, Any] = {
     "prediction_horizon_days": 30,
     "high_risk_min": 50,
     "medium_risk_min": 30,
-    # The account index is a sum of service indices and grows with the number of
-    # services, so its levels are edited separately from the service levels.
+    # The account index is the chance that at least one service does not renew. It grows with the
+    # number of risky services, so its levels are edited separately from the service levels.
     "account_high_risk_min": 50,
     "account_medium_risk_min": 30,
     "weights": dict(DEFAULT_WEIGHTS),
@@ -89,12 +89,13 @@ def merge_model_settings(settings: dict[str, Any] | None) -> dict[str, Any]:
         ),
         "high_risk_min": int(current.get("high_risk_min", DEFAULT_MODEL_SETTINGS["high_risk_min"])),
         "medium_risk_min": int(current.get("medium_risk_min", DEFAULT_MODEL_SETTINGS["medium_risk_min"])),
-        "account_high_risk_min": int(
+        # Rows written while the account index was a sum may hold thresholds above the 0-100 scale.
+        "account_high_risk_min": min(100, max(1, int(
             current.get("account_high_risk_min", DEFAULT_MODEL_SETTINGS["account_high_risk_min"])
-        ),
-        "account_medium_risk_min": int(
+        ))),
+        "account_medium_risk_min": min(99, max(0, int(
             current.get("account_medium_risk_min", DEFAULT_MODEL_SETTINGS["account_medium_risk_min"])
-        ),
+        ))),
         "weights": weights,
     }
 
@@ -126,6 +127,20 @@ def _points(value: float) -> float:
     """One decimal, as in the control values of the brief, without float noise."""
     rounded = round(value, 1)
     return 0.0 if abs(rounded) < 0.05 else rounded
+
+
+def _share_out(parts: list[float], total: float) -> list[float]:
+    """Round the parts to one decimal so that they add up to the total exactly (largest remainder)."""
+    weight = sum(parts)
+    if weight <= 0:
+        return [0.0 for _ in parts]
+    tenths = [part * total / weight * 10 for part in parts]
+    floors = [floor(value + 1e-9) for value in tenths]
+    missing = round(total * 10) - sum(floors)
+    by_remainder = sorted(range(len(parts)), key=lambda position: tenths[position] - floors[position], reverse=True)
+    for position in by_remainder[: max(0, missing)]:
+        floors[position] += 1
+    return [value / 10 for value in floors]
 
 
 def euro(amount_minor: int) -> str:
@@ -373,10 +388,10 @@ def _evaluate_service(
 
     reasons: list[dict[str, Any]] = []
     if score is not None:
-        for factor in FACTORS:
+        active = [factor for factor in FACTORS if contributions[factor["code"]] > 0]
+        shares = _share_out([contributions[factor["code"]] for factor in active], score)
+        for factor, share in zip(active, shares):
             code = factor["code"]
-            if contributions[code] <= 0:
-                continue
             explanation, evidence = _explain(
                 code,
                 price=price,
@@ -391,7 +406,7 @@ def _evaluate_service(
             reasons.append({
                 "code": code,
                 "title": factor["title"],
-                "points": _points(contributions[code] / divisor * 100),
+                "points": share,
                 "explanation": explanation,
                 "evidence": evidence,
             })
@@ -432,6 +447,10 @@ def _evaluate_service(
         grace_remaining=grace_remaining,
     )
     level = _risk_level(score, model)
+    # One sample for every money figure: there is some risk and the decision is still ahead. A service
+    # waiting past its 5-day grace should already be deleted: that is a data problem, so its money is not counted.
+    beyond_grace = is_waiting and grace_remaining == 0
+    exposed = score is not None and score > 0 and not beyond_grace
     return {
         **service,
         "risk_score": score,
@@ -445,16 +464,28 @@ def _evaluate_service(
         "due_revenue_minor": price if due else 0,
         "available_balance_minor": price - shortfall if due else 0,
         "uncovered_revenue_minor": shortfall,
-        "potential_loss_minor": round(shortfall * score / 100) if score is not None else 0,
-        "revenue_at_risk_minor": round(price * score / 100) if score is not None else 0,
-        # Unweighted: the full price of a renewal that falls inside the action window and is at medium or high risk.
-        "near_term_loss_minor": price if urgency > 0 and level in {"high", "medium"} else 0,
+        "exposed": exposed,
+        # Expected loss: price x index / 100. Maximum: the full price of the same services.
+        "revenue_at_risk_minor": round(price * score / 100) if exposed else 0,
+        "near_term_loss_minor": price if exposed else 0,
+        # The part of the expected loss that comes from a missing balance.
+        "potential_loss_minor": round(shortfall * score / 100) if exposed else 0,
         "monthly_cost_minor": _monthly_cost(price, service.get("payment_term")),
         "grace_remaining_days": grace_remaining,
     }
 
 
-def _account_reasons(assessed: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _account_index(assessed: list[dict[str, Any]]) -> float:
+    """Chance, as an index, that at least one service does not renew: 1 - product of (1 - index / 100)."""
+    survive = 1.0
+    for service in assessed:
+        survive *= 1 - service["risk_score"] / 100
+    return round((1 - survive) * 100, 1)
+
+
+def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None) -> list[dict[str, Any]]:
+    """Reasons of the account. Without a total the factor points are plain sums; with the account
+    index they are scaled to add up to it exactly."""
     totals: dict[str, dict[str, Any]] = {}
     for service in assessed:
         for reason in service["reasons"]:
@@ -471,16 +502,17 @@ def _account_reasons(assessed: list[dict[str, Any]]) -> list[dict[str, Any]]:
         "renewal_urgency": f"Срок продления в пределах {ACTION_HORIZON_DAYS} дней.",
         "prolong_wait": "Услуги ожидают оплаты в grace-периоде.",
     }
+    present = [factor for factor in FACTORS if factor["code"] in totals]
+    sums = [totals[factor["code"]]["points"] for factor in present]
+    shares = _share_out(sums, total) if total is not None else [_points(value) for value in sums]
     reasons: list[dict[str, Any]] = []
-    for factor in FACTORS:
-        entry = totals.get(factor["code"])
-        if entry is None:
-            continue
+    for factor, share in zip(present, shares):
+        entry = totals[factor["code"]]
         text = explanations[factor["code"]].replace("{shortfall}", euro(entry["shortfall_minor"]))
         reasons.append({
             "code": factor["code"],
             "title": factor["title"],
-            "points": _points(entry["points"]),
+            "points": share,
             "explanation": f"{text} Затронуто услуг: {entry['services']}.",
             "evidence": {"services": entry["services"], "shortfall_minor": entry["shortfall_minor"]},
         })
@@ -528,10 +560,12 @@ def evaluate_customer(
     assessed = [service for service in service_results if service["risk_score"] is not None]
     unscored = [service for service in service_results if service["risk_score"] is None]
     complete = bool(service_results) and not unscored
-    # The account index is the sum of service indices, as agreed with the mentor.
-    # Its level comes from the same thresholds as the service level.
-    account_sum = round(sum(service["risk_score"] for service in assessed), 1) if complete else None
-    level = _account_level(account_sum, model)
+    # The account index is the chance that at least one service does not renew. For one service it equals
+    # the service index and, unlike a sum, it never leaves 0-100. The plain sum stays as a reference.
+    raw_sum = sum(service["risk_score"] for service in assessed)
+    account_sum = round(raw_sum, 1) if complete else None
+    account_index = _account_index(assessed) if complete else None
+    level = _account_level(account_index, model)
     divisor = model_divisor(model)
     max_score = max((service["risk_score"] for service in assessed), default=None)
     high_count = sum(service["risk_level"] == "high" for service in assessed)
@@ -539,8 +573,9 @@ def evaluate_customer(
     revenue_at_risk = sum(service["revenue_at_risk_minor"] for service in service_results)
     near_term_loss = sum(service["near_term_loss_minor"] for service in service_results)
     monthly_cost = sum(service["monthly_cost_minor"] for service in service_results)
+    exposed_services = sum(service["exposed"] for service in service_results)
 
-    reasons = _account_reasons(assessed)
+    reasons = _account_reasons(assessed, account_index)
     if not service_results:
         reasons.insert(0, _insufficient("Нет активных или ожидающих продления услуг для оценки."))
     elif unscored:
@@ -597,7 +632,7 @@ def evaluate_customer(
     return {
         **customer,
         "services": service_results,
-        "risk_score": account_sum,
+        "risk_score": account_index,
         "risk_level": level,
         "risk_label": _risk_label(level),
         "reasons": reasons,
@@ -611,6 +646,7 @@ def evaluate_customer(
         "near_term_loss_minor": near_term_loss,
         "monthly_cost_minor": monthly_cost,
         "account_risk_sum": account_sum,
+        "exposed_services": exposed_services,
         "max_service_score": max_score,
         "high_count": high_count,
         "unscored_services_count": len(unscored),
@@ -623,7 +659,7 @@ def evaluate_customer(
             "due_revenue_minor": due_revenue,
             "available_balance_minor": available_balance,
             "uncovered_revenue_minor": uncovered_total,
-            "risk_score_index": account_sum,
+            "risk_score_index": account_index,
             "account_risk_sum": account_sum,
             "max_service_score": max_score,
             "high_count": high_count,
@@ -675,7 +711,7 @@ def outflow_forecast(
                     continue
                 waiting_services += 1
                 waiting_expected += expected
-                waiting_loss += service["potential_loss_minor"]
+                waiting_loss += service["revenue_at_risk_minor"]
                 decided = grace_end
             else:
                 decided = expires_at
@@ -694,7 +730,7 @@ def outflow_forecast(
             bucket["services_waiting"] += waiting
             bucket["services_at_risk"] += service["risk_level"] in {"high", "medium"}
             bucket["expected_non_renewals"] += expected
-            bucket["expected_loss_minor"] += service["potential_loss_minor"]
+            bucket["expected_loss_minor"] += service["revenue_at_risk_minor"]
 
     ordered = [buckets[key] for key in sorted(buckets)]
     for bucket in ordered:

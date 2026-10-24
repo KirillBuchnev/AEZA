@@ -187,6 +187,16 @@ def test_model_changes_bump_calculation_version_and_are_validated(open_app):
         assert zero.status_code == 422
 
 
+def test_account_thresholds_stay_on_the_zero_to_hundred_index_scale(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        assert client.patch(SETTINGS, json={"account_high_risk_min": 101}).status_code == 422
+        assert client.patch(SETTINGS, json={"account_medium_risk_min": 100}).status_code == 422
+        edge = client.patch(SETTINGS, json={"account_high_risk_min": 100, "account_medium_risk_min": 99})
+        assert edge.status_code == 200
+        assert (edge.json()["account_high_risk_min"], edge.json()["account_medium_risk_min"]) == (100, 99)
+
+
 def test_customer_detail_argues_reasons_and_pins_the_snapshot(open_app):
     with open_app() as (client, _):
         sign_in(client)
@@ -234,6 +244,58 @@ def test_upgrade_keeps_custom_weights_and_thresholds(open_app, database_url):
         assert settings["prediction_horizon_days"] == 45
         assert settings["weights"]["autoprolong_disabled"] == 50
         assert "failed_prolong_payment" not in settings["weights"]
+
+
+def test_summary_pairs_expected_loss_and_maximum_on_one_sample(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=10_000)], balance=0),  # index 93.8
+            customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),  # no risk, not due
+        )
+        summary = client.get("/api/v1/analytics/summary").json()
+        assert summary["exposed_services"] == 1
+        assert summary["near_term_loss_minor"] == 10_000  # maximum: the full price of the services with risk
+        assert summary["revenue_at_risk_minor"] == 9_380  # expected: price x index / 100
+        assert summary["potential_loss_minor"] == 9_380  # the part caused by the missing balance
+        assert summary["revenue_at_risk_by_level_minor"]["high"] == 9_380
+        top = summary["top_exposure"]
+        assert [item["id"] for item in top] == ["1"]
+        assert top[0]["revenue_at_risk_minor"] == 9_380
+        assert top[0]["near_term_loss_minor"] == 10_000
+
+
+def test_default_queue_goes_by_the_expected_loss_and_unscored_stay_last(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=1_000)], balance=5_000),  # high risk, small money
+            customer("2", [service("b", expires_in_days=5, auto=False, price=50_000)], balance=100_000),  # low risk, big money
+            customer("3", [service("c", expires_in_days=None)], balance=0),  # no expiry: unscored
+        )
+        payload = client.get(CUSTOMERS).json()
+        assert payload["sort_by"] == "revenue_at_risk"
+        assert [item["id"] for item in payload["items"]] == ["2", "1", "3"]
+        ascending = client.get(CUSTOMERS, params={"order": "asc"}).json()
+        assert [item["id"] for item in ascending["items"]] == ["1", "2", "3"]
+
+
+def test_account_risk_is_the_chance_that_at_least_one_service_fails(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [
+                service("a", expires_in_days=3 / 24, auto=False, price=1_000),
+                service("b", expires_in_days=3 / 24, auto=False, price=1_000),
+            ], balance=10_000),
+        )
+        item = client.get(CUSTOMERS).json()["items"][0]
+        assert item["risk_score"] == 82.4  # 1 - (1 - 0.58) ** 2, not the sum 116
+        assert item["account_risk_sum"] == 116.0
+        assert item["risk_level"] == "high"
 
 
 def test_summary_splits_potential_loss_by_level(open_app):

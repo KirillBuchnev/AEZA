@@ -68,7 +68,7 @@ export default function App() {
   const [filters, setFilters] = useState(() => ({
     q: "",
     risk_level: readHash().risk,
-    sort_by: "risk_score",
+    sort_by: "revenue_at_risk",
     order: "desc",
   }));
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -337,10 +337,15 @@ export default function App() {
         "Пополнено EUR",
         "Индекс аккаунта",
         "Уровень риска",
-        "Потери EUR",
+        "Ожидаемо EUR",
+        "Максимум EUR",
+        "Из ожидаемого: не хватает средств EUR",
         "Причина",
         "Действие",
       ];
+      // Без оценки риска сумму не считаем: ячейка пустая, а не ноль.
+      const euro = (customer, minor) =>
+        customer.risk_score == null ? "" : (minor / 100).toFixed(2);
       const rows = all.map((customer) => [
         customer.id,
         customer.email,
@@ -348,7 +353,9 @@ export default function App() {
         (customer.total_replenished_minor / 100).toFixed(2),
         customer.risk_score ?? "",
         customer.risk_label,
-        customer.risk_level ? (customer.potential_loss_minor / 100).toFixed(2) : "",
+        euro(customer, customer.revenue_at_risk_minor),
+        euro(customer, customer.near_term_loss_minor),
+        euro(customer, customer.potential_loss_minor),
         customer.reasons?.[0]?.title || "",
         customer.recommended_action?.text || "",
       ]);
@@ -405,7 +412,7 @@ export default function App() {
         ...current,
         q: "",
         risk_level: "",
-        sort_by: "risk_score",
+        sort_by: "revenue_at_risk",
         order: "desc",
       }));
     window.scrollTo(0, 0);
