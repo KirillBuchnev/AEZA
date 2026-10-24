@@ -299,9 +299,12 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
 
 def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[str, Any]) -> dict[str, Any]:
     counts = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
+    loss_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     reason_counts = {factor["code"]: 0 for factor in FACTORS}
     for customer in customers:
-        counts[customer["risk_level"] or "unscored"] += 1
+        level = customer["risk_level"] or "unscored"
+        counts[level] += 1
+        loss_by_level[level] += customer["potential_loss_minor"]
         for code in {reason["code"] for reason in customer["reasons"]} & set(reason_counts):
             reason_counts[code] += 1
     exposed = sorted(
@@ -311,6 +314,7 @@ def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[
     )[:5]
     return {
         "reason_counts": reason_counts,
+        "potential_loss_by_level_minor": loss_by_level,
         "top_exposure": [
             {"id": customer["id"], "email": customer["email"], "potential_loss_minor": customer["potential_loss_minor"]}
             for customer in exposed

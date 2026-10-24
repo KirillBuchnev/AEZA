@@ -384,6 +384,7 @@ class AnalyticsSummary(BaseModel):
     assessed_total: int
     risk_counts: dict[str, int]
     reason_counts: dict[str, int]
+    potential_loss_by_level_minor: dict[str, int]
     top_exposure: list[ExposureItem]
     potential_loss_minor: int
     revenue_at_risk_minor: int

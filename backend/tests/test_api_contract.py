@@ -211,3 +211,17 @@ def test_upgrade_keeps_custom_weights_and_thresholds(open_app, tmp_path):
         assert settings["prediction_horizon_days"] == 45
         assert settings["weights"]["autoprolong_disabled"] == 50
         assert "failed_prolong_payment" not in settings["weights"]
+
+
+def test_summary_splits_potential_loss_by_level(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=10_000)], balance=0),
+            customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),
+        )
+        summary = client.get("/api/v1/analytics/summary").json()
+        assert summary["potential_loss_by_level_minor"]["high"] == 9_380  # index 93.8 on a 10 000 shortfall
+        assert summary["potential_loss_by_level_minor"]["low"] == 0
+        assert summary["potential_loss_minor"] == summary["potential_loss_by_level_minor"]["high"]
