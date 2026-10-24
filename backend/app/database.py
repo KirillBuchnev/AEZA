@@ -4,8 +4,9 @@ import json
 from pathlib import Path
 import sqlite3
 from typing import Any, Iterator
+import uuid
 
-from .risk import DEFAULT_MODEL_SETTINGS, MODEL_VERSION, demo_snapshot, merge_model_settings
+from .risk import DEFAULT_MODEL_SETTINGS, MODEL_VERSION, as_utc, demo_snapshot, merge_model_settings
 
 
 class Database:
@@ -90,6 +91,30 @@ class Database:
                     expires_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS snapshot_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    observed_at TEXT NOT NULL,
+                    snapshot_id TEXT NOT NULL,
+                    customer_id TEXT NOT NULL,
+                    service_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    from_status TEXT,
+                    to_status TEXT,
+                    price_minor INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS oidc_identities (
+                    issuer TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+                    PRIMARY KEY (issuer, subject)
+                );
+                CREATE TABLE IF NOT EXISTS oidc_transactions (
+                    state_hash TEXT PRIMARY KEY,
+                    nonce TEXT NOT NULL,
+                    code_verifier TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_snapshot_events_observed ON snapshot_events(observed_at);
                 CREATE INDEX IF NOT EXISTS idx_services_customer ON services(customer_id);
                 CREATE INDEX IF NOT EXISTS idx_transactions_customer ON transactions(customer_id);
                 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
@@ -106,12 +131,8 @@ class Database:
             else:
                 stored_settings = json.loads(settings_row["value"])
                 if stored_settings.get("version", 1) < MODEL_VERSION:
-                    migrated = merge_model_settings({
-                        "prediction_horizon_days": stored_settings.get(
-                            "prediction_horizon_days",
-                            DEFAULT_MODEL_SETTINGS["prediction_horizon_days"],
-                        ),
-                    })
+                    # Keep the custom weights and thresholds of the previous version.
+                    migrated = merge_model_settings(stored_settings)
                     connection.execute(
                         "UPDATE app_state SET value = ? WHERE key = 'model_settings'",
                         (json.dumps(migrated, ensure_ascii=False),),
@@ -119,6 +140,10 @@ class Database:
             connection.execute(
                 "INSERT OR IGNORE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
                 (datetime.now(timezone.utc).isoformat(),),
+            )
+            connection.execute(
+                "INSERT OR IGNORE INTO app_state(key, value) VALUES ('snapshot_id', ?)",
+                (str(uuid.uuid4()),),
             )
             source_kind = connection.execute(
                 "SELECT value FROM app_state WHERE key = 'source_kind'"
@@ -289,16 +314,163 @@ class Database:
             ).fetchall()
             return {row["key"]: row["value"] for row in rows}
 
-    def replace_snapshot(self, customers: list[dict[str, Any]]) -> None:
+    def snapshot_meta(self) -> dict[str, str | None]:
         with self.connection() as connection:
+            rows = connection.execute(
+                "SELECT key, value FROM app_state WHERE key IN ('source_kind', 'source_updated_at', 'snapshot_id')"
+            ).fetchall()
+        values = {row["key"]: row["value"] for row in rows}
+        return {
+            "snapshot_id": values.get("snapshot_id"),
+            "source_kind": values.get("source_kind", "demo"),
+            "source_updated_at": values.get("source_updated_at"),
+        }
+
+    def replace_snapshot(self, customers: list[dict[str, Any]]) -> dict[str, Any]:
+        observed_at = datetime.now(timezone.utc).isoformat()
+        snapshot_id = str(uuid.uuid4())
+        with self.connection() as connection:
+            previous_kind = connection.execute(
+                "SELECT value FROM app_state WHERE key = 'source_kind'"
+            ).fetchone()
+            events: list[tuple[Any, ...]] = []
+            # The demo source is not a real history: the first uploaded snapshot starts the journal.
+            if previous_kind is not None and previous_kind["value"] == "uploaded":
+                events = self._transition_events(connection, customers, observed_at, snapshot_id)
             self._replace_snapshot(connection, customers)
+            connection.executemany(
+                """
+                INSERT INTO snapshot_events (
+                    observed_at, snapshot_id, customer_id, service_id,
+                    event_type, from_status, to_status, price_minor
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                events,
+            )
             connection.execute(
                 "INSERT OR REPLACE INTO app_state(key, value) VALUES ('source_kind', 'uploaded')"
             )
             connection.execute(
                 "INSERT OR REPLACE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
-                (datetime.now(timezone.utc).isoformat(),),
+                (observed_at,),
             )
+            connection.execute(
+                "INSERT OR REPLACE INTO app_state(key, value) VALUES ('snapshot_id', ?)",
+                (snapshot_id,),
+            )
+        return {"snapshot_id": snapshot_id, "observed_at": observed_at, "events_recorded": len(events)}
+
+    @staticmethod
+    def _transition_events(
+        connection: sqlite3.Connection,
+        customers: list[dict[str, Any]],
+        observed_at: str,
+        snapshot_id: str,
+    ) -> list[tuple[Any, ...]]:
+        """Compare the stored services with the incoming snapshot and record facts that happened."""
+        previous = {
+            row["id"]: row
+            for row in connection.execute(
+                "SELECT id, customer_id, status, expires_at, price_minor FROM services"
+            ).fetchall()
+        }
+        incoming: dict[str, dict[str, Any]] = {}
+        for customer in customers:
+            customer_id = str(customer["id"])
+            for index, service in enumerate(customer["services"], start=1):
+                service_id = str(service["id"] or f"{customer_id}-service-{index}")
+                incoming[service_id] = service
+
+        events: list[tuple[Any, ...]] = []
+        for service_id, old in previous.items():
+            if old["status"] not in {"active", "suspended", "prolong_wait"}:
+                continue
+            new = incoming.get(service_id)
+            if new is None:
+                event, to_status = "removed", None
+            else:
+                to_status = new["status"]
+                if to_status == "deleted":
+                    event = "deleted"
+                elif to_status == "blocked":
+                    event = "blocked"
+                elif old["status"] == "prolong_wait" and to_status in {"active", "suspended"}:
+                    event = "renewed"
+                elif old["status"] != "prolong_wait" and to_status == "prolong_wait":
+                    event = "entered_wait"
+                elif (
+                    old["expires_at"]
+                    and new["expires_at"]
+                    and as_utc(new["expires_at"]) > as_utc(old["expires_at"])
+                ):
+                    event = "renewed"
+                else:
+                    continue
+            events.append((
+                observed_at,
+                snapshot_id,
+                old["customer_id"],
+                service_id,
+                event,
+                old["status"],
+                to_status,
+                old["price_minor"],
+            ))
+        return events
+
+    def outflow_facts(self, since: str) -> dict[str, Any]:
+        with self.connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT substr(observed_at, 1, 10) AS day, event_type,
+                       COUNT(*) AS services, COALESCE(SUM(price_minor), 0) AS amount_minor
+                FROM snapshot_events
+                WHERE observed_at >= ?
+                GROUP BY day, event_type
+                ORDER BY day
+                """,
+                (since,),
+            ).fetchall()
+            snapshots = connection.execute(
+                "SELECT COUNT(DISTINCT snapshot_id) FROM snapshot_events WHERE observed_at >= ?",
+                (since,),
+            ).fetchone()[0]
+        return {"rows": [dict(row) for row in rows], "snapshots": snapshots}
+
+    def oidc_identity(self, issuer: str, subject: str) -> str | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                "SELECT username FROM oidc_identities WHERE issuer = ? AND subject = ?",
+                (issuer, subject),
+            ).fetchone()
+        return row["username"] if row else None
+
+    def link_oidc_identity(self, issuer: str, subject: str, username: str) -> None:
+        with self.connection() as connection:
+            connection.execute(
+                "INSERT OR REPLACE INTO oidc_identities(issuer, subject, username) VALUES (?, ?, ?)",
+                (issuer, subject, username),
+            )
+
+    def create_oidc_transaction(self, state_hash: str, nonce: str, code_verifier: str, expires_at: str) -> None:
+        with self.connection() as connection:
+            connection.execute("DELETE FROM oidc_transactions WHERE expires_at <= ?", (datetime.now(timezone.utc).isoformat(),))
+            connection.execute(
+                "INSERT INTO oidc_transactions(state_hash, nonce, code_verifier, expires_at) VALUES (?, ?, ?, ?)",
+                (state_hash, nonce, code_verifier, expires_at),
+            )
+
+    def consume_oidc_transaction(self, state_hash: str) -> dict[str, str] | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                """
+                DELETE FROM oidc_transactions
+                WHERE state_hash = ? AND expires_at > ?
+                RETURNING nonce, code_verifier
+                """,
+                (state_hash, datetime.now(timezone.utc).isoformat()),
+            ).fetchone()
+        return dict(row) if row else None
 
     @staticmethod
     def _replace_snapshot(connection: sqlite3.Connection, customers: list[dict[str, Any]]) -> None:

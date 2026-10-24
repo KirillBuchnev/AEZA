@@ -28,6 +28,13 @@ class AppConfig:
     admin_first_name: str
     admin_last_name: str
     registration_enabled: bool
+    oidc_issuer: str
+    oidc_client_id: str
+    oidc_client_secret: str
+    oidc_redirect_uri: str
+    oidc_scopes: str
+    oidc_auto_provision: bool
+    oidc_username_claim: str
 
 
 def load_config() -> AppConfig:
@@ -67,6 +74,22 @@ def load_config() -> AppConfig:
     session_days = int(os.getenv("AEZA_SESSION_DAYS", "7"))
     if not 1 <= session_days <= 30:
         raise ValueError("AEZA_SESSION_DAYS must be between 1 and 30.")
+
+    oidc_issuer = os.getenv("AEZA_OIDC_ISSUER", "").strip().rstrip("/")
+    oidc_client_id = os.getenv("AEZA_OIDC_CLIENT_ID", "").strip()
+    oidc_client_secret = os.getenv("AEZA_OIDC_CLIENT_SECRET", "").strip()
+    oidc_redirect_uri = os.getenv("AEZA_OIDC_REDIRECT_URI", "").strip()
+    oidc_scopes = os.getenv("AEZA_OIDC_SCOPES", "openid profile email").strip() or "openid profile email"
+    oidc_auto_provision = _boolean("AEZA_OIDC_AUTO_PROVISION")
+    oidc_username_claim = os.getenv("AEZA_OIDC_USERNAME_CLAIM", "preferred_username").strip() or "preferred_username"
+    if (oidc_issuer or oidc_client_id) and not (oidc_issuer and oidc_client_id and oidc_redirect_uri):
+        raise ValueError(
+            "AEZA_OIDC_ISSUER, AEZA_OIDC_CLIENT_ID and AEZA_OIDC_REDIRECT_URI must be set together."
+        )
+    if oidc_issuer and urlsplit(oidc_issuer).scheme not in {"https", "http"}:
+        raise ValueError("AEZA_OIDC_ISSUER must be an http(s) URL.")
+    if environment == "production" and oidc_issuer and urlsplit(oidc_issuer).scheme != "https":
+        raise ValueError("Production requires an HTTPS AEZA_OIDC_ISSUER.")
 
     if environment == "production":
         if username.lower() in {"admin", "demo"} or len(password) < 16 or password in {"local-demo-change-this-password", "demo-local-only-change-me"}:
@@ -118,4 +141,11 @@ def load_config() -> AppConfig:
         admin_first_name=os.getenv("AEZA_ADMIN_FIRST_NAME", "Демо").strip() or "Демо",
         admin_last_name=os.getenv("AEZA_ADMIN_LAST_NAME", "Аналитик").strip() or "Аналитик",
         registration_enabled=_boolean("AEZA_REGISTRATION_ENABLED", default=environment != "production"),
+        oidc_issuer=oidc_issuer,
+        oidc_client_id=oidc_client_id,
+        oidc_client_secret=oidc_client_secret,
+        oidc_redirect_uri=oidc_redirect_uri,
+        oidc_scopes=oidc_scopes,
+        oidc_auto_provision=oidc_auto_provision,
+        oidc_username_claim=oidc_username_claim,
     )
