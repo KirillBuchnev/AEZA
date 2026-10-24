@@ -102,35 +102,54 @@ export function Icon({ name, size = 18 }) {
         <path d="M5.6 9a7 7 0 0 1 11.9-2L20 12M4 12l2.5 5a7 7 0 0 0 11.9-2" />
       </>
     ),
+    right: <path d="m9 18 6-6-6-6" />,
+    sortNone: <path d="M8 10l4-4 4 4M8 14l4 4 4-4" />,
+    sortAsc: <path d="M12 18V6M7 11l5-5 5 5" />,
+    sortDesc: <path d="M12 6v12M7 13l5 5 5-5" />,
+    upload: <path d="M12 16V8M8.5 11.5 12 8l3.5 3.5M5 20h14" />,
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </>
+    ),
+    moon: <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />,
   };
   return <svg {...common}>{paths[name] || paths.info}</svg>;
 }
 
-export function Brand({ compact = false }) {
+export function Brand({ inverse = false }) {
   return (
-    <div
-      className={`brand${compact ? " brand-compact" : ""}`}
-      aria-label="AEZA аналитика удержания"
+    <span
+      className={`brand${inverse ? " brand-inverse" : ""}`}
+      role="img"
+      aria-label="aéza"
     >
-      <div className="brand-mark">
-        A<span className="brand-cut" />
-      </div>
-      {!compact && (
-        <div className="brand-copy">
-          <span className="brand-name">aéza</span>
-          <span className="brand-caption">аналитика удержания</span>
-        </div>
-      )}
-    </div>
+      {["a", "é", "z", "a"].map((letter, index) => (
+        <span key={index} aria-hidden="true">
+          {letter}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function RiskKey({ level, score, large = false }) {
+  const value = riskClass(level);
+  return (
+    <span
+      className={`key key-${value}${large ? " key-large" : ""}`}
+      title={riskText[value]}
+    >
+      {score == null ? "—" : Math.round(score)}
+    </span>
   );
 }
 
 export function RiskBadge({ level, label }) {
-  const value = level || "unscored";
+  const value = riskClass(level);
   return (
-    <span className={`risk-badge risk-${riskClass(value)}`}>
-      <span className="risk-dot" />
-      {label || riskText[value]}
-    </span>
+    <span className={`badge badge-${value}`}>{label || riskText[value]}</span>
   );
 }

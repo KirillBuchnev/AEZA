@@ -1,18 +1,33 @@
 import { Brand, Icon } from "./Icons.jsx";
+import mascotPeek from "./assets/mascot-peek.webp";
+
+const groups = [
+  {
+    label: "Анализ",
+    items: [
+      { id: "overview", label: "Обзор" },
+      { id: "customers", label: "Клиенты", countKey: "customers_total" },
+    ],
+  },
+  {
+    label: "Управление",
+    items: [
+      { id: "model", label: "Модель риска" },
+      { id: "source", label: "Источник данных" },
+    ],
+  },
+];
 
 export function Sidebar({
   page,
   setPage,
   user,
+  summary,
   onLogout,
   mobileOpen,
   setMobileOpen,
 }) {
-  const items = [
-    { id: "overview", label: "Обзор", icon: "grid" },
-    { id: "customers", label: "Клиенты", icon: "users" },
-    { id: "model", label: "Модель риска", icon: "sliders" },
-  ];
+  const activePage = page === "customer" ? "customers" : page;
   return (
     <>
       {mobileOpen && (
@@ -23,66 +38,53 @@ export function Sidebar({
         />
       )}
       <aside className={`sidebar${mobileOpen ? " sidebar-open" : ""}`}>
-        <div className="sidebar-brand">
-          <Brand />
+        <div className="sidebar-logo">
+          <Brand inverse />
         </div>
-        <div className="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
-        <nav className="main-nav" aria-label="Основная навигация">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item${page === item.id ? " nav-item-active" : ""}`}
-              onClick={() => {
-                setPage(item.id);
-                setMobileOpen(false);
-              }}
-            >
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-              {page === item.id && <span className="nav-active-mark" />}
-            </button>
+        <nav aria-label="Основная навигация">
+          {groups.map((group, index) => (
+            <div key={group.label}>
+              {index > 0 && <div className="nav-gap" />}
+              <div className="nav-group">{group.label}</div>
+              {group.items.map((item) => (
+                <button
+                  key={item.id}
+                  className={`nav-item${activePage === item.id ? " nav-item-active" : ""}`}
+                  aria-current={activePage === item.id ? "page" : undefined}
+                  onClick={() => {
+                    setPage(item.id);
+                    setMobileOpen(false);
+                  }}
+                >
+                  <span>{item.label}</span>
+                  {item.countKey && summary?.[item.countKey] != null && (
+                    <small>{summary[item.countKey]}</small>
+                  )}
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
-        <div className="sidebar-divider" />
-        <div className="sidebar-tip">
-          <span className="tip-kicker">КАК ЭТО РАБОТАЕТ</span>
-          <p>
-            Риск помогает заметить, кому может понадобиться помощь до продления.
-          </p>
-          <button
-            onClick={() => {
-              setPage("model");
-              setMobileOpen(false);
-            }}
-          >
-            Настроить оценку <Icon name="arrow" size={15} />
-          </button>
+        <div className="sidebar-spacer" />
+        <div className="sidebar-mascot" aria-hidden="true">
+          <img src={mascotPeek} alt="" width="110" height="120" />
         </div>
-        <div className="sidebar-bottom">
-          <div className="demo-status">
-            <span className="status-indicator" />
-            <span>
-              <b>Демо-данные</b>
-              <small>Пример клиентского снимка</small>
-            </span>
-          </div>
-          <div className="sidebar-user">
-            <span className="avatar">
-              {(user?.username || "A").slice(0, 1).toUpperCase()}
-            </span>
-            <span className="user-copy">
-              <b>{user?.username || "Аналитик"}</b>
-              <small>Аналитик</small>
-            </span>
-            <button
-              className="icon-button logout-button"
-              aria-label="Выйти"
-              title="Выйти"
-              onClick={onLogout}
-            >
-              <Icon name="logout" size={17} />
-            </button>
-          </div>
+        <div className="sidebar-user">
+          <span className="avatar">
+            {(user?.username || "A").slice(0, 1).toUpperCase()}
+          </span>
+          <span className="sidebar-user-text">
+            <b>{user?.username || "Аналитик"}</b>
+            <small>Маркетинг</small>
+          </span>
+          <button
+            className="icon-button"
+            aria-label="Выйти"
+            title="Выйти"
+            onClick={onLogout}
+          >
+            <Icon name="logout" size={18} />
+          </button>
         </div>
       </aside>
     </>

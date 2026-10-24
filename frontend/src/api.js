@@ -11,10 +11,14 @@ async function request(path, options = {}) {
   if (response.status === 204) return null;
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    const detail = payload?.detail;
+    const firstIssue = Array.isArray(detail) ? detail[0] : null;
     const message =
-      typeof payload?.detail === "string"
-        ? payload.detail
-        : `Не удалось выполнить запрос (${response.status}).`;
+      typeof detail === "string"
+        ? detail
+        : firstIssue?.msg
+          ? `${(firstIssue.loc || []).slice(1).join(".") || "Данные"}: ${firstIssue.msg}.`
+          : `Не удалось выполнить запрос (${response.status}).`;
     const error = new Error(message);
     error.status = response.status;
     throw error;
@@ -46,4 +50,15 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(settings),
     }),
+  uploadSnapshot: (snapshot) =>
+    request("/api/v1/source/snapshot", {
+      method: "PUT",
+      body: JSON.stringify(snapshot),
+    }),
+  metrics: async () => {
+    const response = await fetch("/metrics", { credentials: "include" });
+    if (!response.ok)
+      throw new Error(`Метрики недоступны (${response.status}).`);
+    return response.text();
+  },
 };

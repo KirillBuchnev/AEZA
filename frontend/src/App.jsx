@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import { Brand } from "./Icons.jsx";
-import { CustomerDrawer } from "./CustomerDrawer.jsx";
+import { CustomerPage } from "./CustomerPage.jsx";
 import { CustomersPage } from "./CustomersPage.jsx";
 import { Login } from "./Login.jsx";
 import { ModelPage } from "./ModelPage.jsx";
 import { Overview } from "./Overview.jsx";
 import { Sidebar } from "./Sidebar.jsx";
-import { Toast } from "./Shared.jsx";
+import { SourcePage } from "./SourcePage.jsx";
+import { SkeletonRows, Toast, Topbar } from "./Shared.jsx";
 
 function toCsvCell(cell) {
   const value = String(cell);
@@ -15,22 +16,45 @@ function toCsvCell(cell) {
   return `"${safeValue.replaceAll('"', '""')}"`;
 }
 
+function initialTheme() {
+  try {
+    const saved = window.localStorage.getItem("aeza-theme");
+    if (saved === "light" || saved === "dark") return saved;
+  } catch {
+    /* Хранилище может быть недоступно — берём системную тему. */
+  }
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+}
+
+const pageTitles = {
+  overview: [{ label: "Обзор" }],
+  customers: [{ label: "Клиенты" }],
+  model: [{ label: "Управление" }, { label: "Модель риска" }],
+  source: [{ label: "Управление" }, { label: "Источник данных" }],
+};
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("overview");
+  const [customerId, setCustomerId] = useState("");
   const [summary, setSummary] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [total, setTotal] = useState(0);
   const [settings, setSettings] = useState(null);
-  const [drawerId, setDrawerId] = useState("");
   const [activeReason, setActiveReason] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [theme, setTheme] = useState(initialTheme);
+  const [live, setLive] = useState({ state: "online", updatedAt: null });
+  const [version, setVersion] = useState(0);
+  const [updates, setUpdates] = useState([]);
   const [filters, setFilters] = useState({
     q: "",
     risk_level: "",
@@ -38,6 +62,15 @@ export default function App() {
     order: "desc",
   });
   const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("aeza-theme", theme);
+    } catch {
+      /* Тема просто не запомнится между сессиями. */
+    }
+  }, [theme]);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +117,10 @@ export default function App() {
       setCustomers(nextCustomers.items);
       setTotal(nextCustomers.total);
       setSettings(nextSettings);
+      setLive((current) => ({
+        ...current,
+        updatedAt: nextSummary.calculated_at,
+      }));
     } catch (error) {
       if (error.status === 401) {
         setAuthenticated(false);
@@ -107,9 +144,31 @@ export default function App() {
   useEffect(() => {
     if (!authenticated) return undefined;
     const stream = new EventSource("/api/v1/events");
-    stream.addEventListener("data_changed", () => {
+    stream.addEventListener("connected", () =>
+      setLive((current) => ({ ...current, state: "online" })),
+    );
+    stream.addEventListener("data_changed", (event) => {
+      let payload = {};
+      try {
+        payload = JSON.parse(event.data);
+      } catch {
+        /* Событие без тела всё равно означает «данные изменились». */
+      }
+      setUpdates((current) =>
+        [
+          {
+            id: `${Date.now()}-${current.length}`,
+            type: payload.type,
+            at: payload.changed_at || new Date().toISOString(),
+          },
+          ...current,
+        ].slice(0, 8),
+      );
+      setVersion((value) => value + 1);
       refreshData();
     });
+    stream.onerror = () =>
+      setLive((current) => ({ ...current, state: "reconnecting" }));
     return () => stream.close();
   }, [authenticated, refreshData]);
 
@@ -136,46 +195,37 @@ export default function App() {
     setCustomers([]);
     setSettings(null);
     setUser(null);
+    setUpdates([]);
     setPage("overview");
   }
 
-  async function handleSaveSettings(draft) {
+  async function handleSaveSettings(payload) {
     setSaving(true);
     try {
-      const saved = await api.saveSettings({
-        prediction_horizon_days: Number(draft.prediction_horizon_days),
-        high_risk_min: Number(draft.high_risk_min),
-        medium_risk_min: Number(draft.medium_risk_min),
-        weights: draft.weights,
-      });
+      const saved = await api.saveSettings(payload);
       setSettings(saved);
       await refreshData();
       setToast({
         kind: "success",
-        message: "Настройки сохранены. Оценки клиентов пересчитаны.",
+        message: "Сохранено. Рейтинг и деньги пересчитаны.",
       });
-    } catch (error) {
-      throw error;
     } finally {
       setSaving(false);
     }
   }
 
   function handleSort(key) {
-    const sortMap = {
-      balance: "balance",
-      risk_score: "risk_score",
-      potential_loss: "potential_loss",
-      id: "id",
-    };
-    const nextSort = sortMap[key] || key;
     setFilters((current) => ({
       ...current,
-      sort_by: nextSort,
+      sort_by: key,
       order:
-        current.sort_by === nextSort && current.order === "desc"
-          ? "asc"
-          : "desc",
+        current.sort_by === key
+          ? current.order === "desc"
+            ? "asc"
+            : "desc"
+          : key === "id" || key === "email"
+            ? "asc"
+            : "desc",
     }));
     setPageNumber(1);
   }
@@ -185,15 +235,17 @@ export default function App() {
       "ID",
       "Email",
       "Баланс EUR",
+      "Пополнено EUR",
       "Оценка риска",
       "Уровень риска",
-      "Сумма риска EUR",
+      "Потери EUR",
       "Причина",
     ];
     const rows = customers.map((customer) => [
       customer.id,
       customer.email,
       (customer.balance_minor / 100).toFixed(2),
+      (customer.total_replenished_minor / 100).toFixed(2),
       customer.risk_score ?? "",
       customer.risk_label,
       (customer.potential_loss_minor / 100).toFixed(2),
@@ -204,7 +256,7 @@ export default function App() {
       .join("\r\n");
     const link = document.createElement("a");
     const downloadUrl = URL.createObjectURL(
-      new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }),
+      new Blob(["﻿", csv], { type: "text/csv;charset=utf-8" }),
     );
     link.href = downloadUrl;
     link.download = "aeza-risk-clients.csv";
@@ -218,10 +270,9 @@ export default function App() {
 
   if (checkingSession)
     return (
-      <div className="app-loading">
+      <div className="boot">
         <Brand />
-        <span className="spinner" />
-        <p>Открываем рабочее пространство…</p>
+        <span className="skeleton" style={{ width: 160 }} />
       </div>
     );
   if (!authenticated)
@@ -236,51 +287,72 @@ export default function App() {
       </>
     );
 
+  function goTo(nextPage) {
+    setPage(nextPage);
+    setActiveReason("");
+    setPageNumber(1);
+    if (nextPage === "overview")
+      setFilters((current) => ({
+        ...current,
+        q: "",
+        risk_level: "",
+        sort_by: "risk_score",
+        order: "desc",
+      }));
+    window.scrollTo(0, 0);
+  }
+
   const navigate = {
-    page: (nextPage) => {
-      setPage(nextPage);
-      setActiveReason("");
-      setPageNumber(1);
-    },
-    menu: () => setMobileOpen(true),
+    page: goTo,
     filter: (riskLevel) => {
       setFilters((current) => ({ ...current, risk_level: riskLevel }));
       setPage("customers");
       setActiveReason("");
       setPageNumber(1);
+      window.scrollTo(0, 0);
     },
   };
-  const isLoadingOnly = loading && !summary;
+
+  function openCustomer(id) {
+    setCustomerId(id);
+    setPage("customer");
+    window.scrollTo(0, 0);
+  }
+
+  const crumbs =
+    page === "customer"
+      ? [
+          { label: "Клиенты", onClick: () => goTo("customers") },
+          { label: customerId },
+        ]
+      : pageTitles[page];
 
   return (
     <div className="app-shell">
       <Sidebar
         page={page}
-        setPage={(nextPage) => {
-          setPage(nextPage);
-          if (nextPage === "overview") {
-            setFilters((current) => ({
-              ...current,
-              q: "",
-              risk_level: "",
-              sort_by: "risk_score",
-              order: "desc",
-            }));
-            setActiveReason("");
-          }
-        }}
+        setPage={goTo}
         user={user}
+        summary={summary}
         onLogout={handleLogout}
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
       />
-      <main className="main-content">
-        <div className="main-content-inner">
-          {isLoadingOnly ? (
-            <div className="panel loading-card">
-              <span className="spinner" />
-              Загружаем рабочие данные…
-            </div>
+      <main className="main">
+        <div className="main-inner">
+          <Topbar
+            crumbs={crumbs}
+            live={live}
+            theme={theme}
+            onTheme={() =>
+              setTheme((current) => (current === "dark" ? "light" : "dark"))
+            }
+            onMenu={() => setMobileOpen(true)}
+          />
+          {loading && !summary ? (
+            <section className="table-card">
+              <SkeletonRows />
+            </section>
           ) : (
             <>
               {page === "overview" && (
@@ -289,7 +361,7 @@ export default function App() {
                   customers={customers}
                   activeReason={activeReason}
                   setActiveReason={setActiveReason}
-                  onSelectCustomer={setDrawerId}
+                  onSelectCustomer={openCustomer}
                   onNavigate={navigate}
                   sortBy={filters.sort_by}
                   order={filters.order}
@@ -301,45 +373,44 @@ export default function App() {
                 <CustomersPage
                   customers={customers}
                   total={total}
+                  summary={summary}
                   filters={filters}
                   setFilters={setFilters}
-                  onSelectCustomer={setDrawerId}
-                  onNavigate={navigate}
+                  loading={loading}
+                  onSelectCustomer={openCustomer}
                   onSort={handleSort}
+                  onExport={exportCsv}
                   pageNumber={pageNumber}
                   setPageNumber={setPageNumber}
+                />
+              )}
+              {page === "customer" && (
+                <CustomerPage
+                  id={customerId}
+                  version={version}
+                  onToast={setToast}
                 />
               )}
               {page === "model" && (
                 <ModelPage
                   settings={settings}
+                  summary={summary}
                   onSave={handleSaveSettings}
                   saving={saving}
                 />
               )}
+              {page === "source" && (
+                <SourcePage
+                  summary={summary}
+                  updates={updates}
+                  version={version}
+                  onToast={setToast}
+                />
+              )}
             </>
           )}
-          <footer className="app-footer">
-            <span>
-              <Brand compact />
-              <span>ПАНЕЛЬ АНАЛИТИКИ УДЕРЖАНИЯ</span>
-            </span>
-            <span className="footer-live">
-              <i />
-              Данные обновлены{" "}
-              {summary?.calculated_at
-                ? new Intl.DateTimeFormat("ru-RU", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }).format(new Date(summary.calculated_at))
-                : "—"}
-            </span>
-          </footer>
         </div>
       </main>
-      {drawerId && (
-        <CustomerDrawer id={drawerId} onClose={() => setDrawerId("")} />
-      )}
       <Toast
         message={toast?.message}
         kind={toast?.kind}
