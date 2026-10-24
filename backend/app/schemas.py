@@ -154,6 +154,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(min_length=1, max_length=120)
     first_name: str = Field(min_length=1, max_length=120)
     last_name: str = Field(min_length=1, max_length=120)
+    middle_name: str | None = Field(default=None, max_length=120)
     password: str = Field(min_length=1, max_length=256)
     password_confirm: str = Field(min_length=1, max_length=256)
     codeword: str = Field(min_length=1, max_length=256)
@@ -328,6 +329,8 @@ class UserResponse(BaseModel):
     username: str
     first_name: str
     last_name: str
+    middle_name: str | None = None
+    full_name: str
     role: str
 
 

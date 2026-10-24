@@ -86,6 +86,8 @@ def test_register_creates_profile_and_signs_in(open_app):
             "username": "ivan.p",
             "first_name": "Иван",
             "last_name": "Петров",
+            "middle_name": None,
+            "full_name": "Петров Иван",
             "role": "analyst",
         }
 
@@ -110,7 +112,7 @@ def test_register_rejects_taken_username_in_any_case(open_app):
         ({"codeword": "ab"}, "от 6 до 64"),
         ({"codeword": "123456"}, "слишком простое"),
         ({"codeword": PASSWORD}, "не должно совпадать с паролем"),
-        ({"username": "ab"}, "Логин должен быть от 3 до 40"),
+        ({"username": "ab"}, "Логин должен быть от 3 до 64"),
         ({"first_name": "   "}, "Укажите имя и фамилию"),
     ],
 )
@@ -324,3 +326,12 @@ def test_production_refuses_database_with_published_demo_password(open_app):
     with pytest.raises(RuntimeError, match="published demo password"):
         with open_app(**production):
             pass
+
+
+def test_register_accepts_middle_name_and_returns_full_name(open_app):
+    with open_app() as (client, _):
+        response = register(client, middle_name="Сергеевич")
+        assert response.status_code == 201
+        user = client.get("/api/v1/auth/me").json()
+        assert user["middle_name"] == "Сергеевич"
+        assert user["full_name"] == "Петров Иван Сергеевич"

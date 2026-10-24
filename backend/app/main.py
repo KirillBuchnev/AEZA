@@ -551,10 +551,13 @@ def logout(request: Request, response: Response) -> Response:
 
 
 def _profile(user: dict[str, Any]) -> dict[str, Any]:
+    middle_name = user.get("middle_name") or None
     return {
         "username": user["username"],
         "first_name": user["first_name"],
         "last_name": user["last_name"],
+        "middle_name": middle_name,
+        "full_name": " ".join(part for part in (user["last_name"], user["first_name"], middle_name) if part),
         "role": user["role"],
     }
 
@@ -587,10 +590,11 @@ def register(body: RegisterRequest, request: Request, response: Response) -> dic
     username = normalize_username(body.username)
     first_name = body.first_name.strip()
     last_name = body.last_name.strip()
+    middle_name = (body.middle_name or "").strip() or None
     if not first_name or not last_name:
         raise HTTPException(status_code=422, detail="Укажите имя и фамилию.")
-    if len(first_name) > 60 or len(last_name) > 60:
-        raise HTTPException(status_code=422, detail="Имя и фамилия должны быть не длиннее 60 символов.")
+    if len(first_name) > 60 or len(last_name) > 60 or len(middle_name or "") > 60:
+        raise HTTPException(status_code=422, detail="Имя, фамилия и отчество должны быть не длиннее 60 символов.")
     error = username_error(username)
     if error:
         raise HTTPException(status_code=422, detail=error)
@@ -611,6 +615,7 @@ def register(body: RegisterRequest, request: Request, response: Response) -> dic
             last_name,
             hash_secret(body.password),
             hash_secret(normalize_codeword(body.codeword)),
+            middle_name=middle_name,
         )
     except sqlite3.IntegrityError:
         raise HTTPException(status_code=409, detail="Логин уже занят.")

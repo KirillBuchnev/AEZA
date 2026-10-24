@@ -10,7 +10,7 @@ SCRYPT_P = 1
 SCRYPT_DKLEN = 32
 SCRYPT_MAXMEM = 64 * 1024 * 1024  # N=2**15, r=8 needs 32 MiB plus overhead; the default limit is exactly 32 MiB
 
-USERNAME_PATTERN = re.compile(r"[A-Za-z0-9._@-]{3,40}")
+USERNAME_PATTERN = re.compile(r"[A-Za-z0-9._@-]{3,64}")
 PASSWORD_MIN_LENGTH = 10
 PASSWORD_MAX_LENGTH = 128
 CODEWORD_MIN_LENGTH = 6
@@ -29,7 +29,7 @@ def normalize_codeword(value: str) -> str:
 
 def username_error(username: str) -> str | None:
     if not USERNAME_PATTERN.fullmatch(username):
-        return "Логин должен быть от 3 до 40 символов: латинские буквы, цифры, точка, дефис, подчёркивание или @."
+        return "Логин должен быть от 3 до 64 символов: латинские буквы, цифры, точка, дефис, подчёркивание или @."
     return None
 
 

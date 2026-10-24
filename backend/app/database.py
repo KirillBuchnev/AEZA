@@ -120,6 +120,9 @@ class Database:
                 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
                 """
             )
+            user_columns = {row["name"] for row in connection.execute("PRAGMA table_info(users)")}
+            if "middle_name" not in user_columns:
+                connection.execute("ALTER TABLE users ADD COLUMN middle_name TEXT")
             settings_row = connection.execute(
                 "SELECT value FROM app_state WHERE key = 'model_settings'"
             ).fetchone()
@@ -195,7 +198,7 @@ class Database:
         with self.connection() as connection:
             row = connection.execute(
                 """
-                SELECT username, first_name, last_name, password_hash, codeword_hash, role
+                SELECT username, first_name, last_name, middle_name, password_hash, codeword_hash, role
                 FROM users WHERE username = ?
                 """,
                 (username,),
@@ -214,19 +217,21 @@ class Database:
         last_name: str,
         password_hash: str,
         codeword_hash: str,
+        middle_name: str | None = None,
     ) -> None:
         with self.connection() as connection:
             connection.execute(
                 """
                 INSERT INTO users (
-                    username, first_name, last_name, password_hash,
+                    username, first_name, last_name, middle_name, password_hash,
                     codeword_hash, role, created_at
-                ) VALUES (?, ?, ?, ?, ?, 'analyst', ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, 'analyst', ?)
                 """,
                 (
                     username,
                     first_name,
                     last_name,
+                    middle_name,
                     password_hash,
                     codeword_hash,
                     datetime.now(timezone.utc).isoformat(),
