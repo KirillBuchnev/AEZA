@@ -35,6 +35,7 @@ class AppConfig:
     oidc_scopes: str
     oidc_auto_provision: bool
     oidc_username_claim: str
+    seed: str
 
 
 def load_config() -> AppConfig:
@@ -71,6 +72,9 @@ def load_config() -> AppConfig:
         except ValueError as error:
             raise ValueError("AEZA_TRUSTED_PROXY_IPS must contain valid IP addresses.") from error
     docs_enabled = _boolean("AEZA_DOCS_ENABLED", default=environment != "production")
+    seed = os.getenv("AEZA_SEED", "case").strip().lower() or "case"
+    if seed not in {"case", "demo", "empty"}:
+        raise ValueError("AEZA_SEED must be case, demo or empty.")
     session_days = int(os.getenv("AEZA_SESSION_DAYS", "7"))
     if not 1 <= session_days <= 30:
         raise ValueError("AEZA_SESSION_DAYS must be between 1 and 30.")
@@ -148,4 +152,5 @@ def load_config() -> AppConfig:
         oidc_scopes=oidc_scopes,
         oidc_auto_provision=oidc_auto_provision,
         oidc_username_claim=oidc_username_claim,
+        seed=seed,
     )

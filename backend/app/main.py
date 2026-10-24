@@ -14,10 +14,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, StreamingResponse
 from fastapi.security import APIKeyCookie
 
+from .exports import export
+
 from .config import load_config
 from .database import Database
 from .oidc import OidcClient, OidcError
 from .risk import DEFAULT_WEIGHTS, FACTORS, MODEL_VERSION, control_cases, evaluate_customer, model_divisor, outflow_forecast
+from .seeds import seed_customers
 from .schemas import (
     AnalyticsSummary,
     AuthMethodsResponse,
@@ -74,7 +77,11 @@ OIDC_ONLY_SECRET = "oidc-only-account"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    database.initialize(admin_profile=_admin_profile())
+    database.initialize(
+        admin_profile=_admin_profile(),
+        seed_customers=seed_customers(config.seed),
+        seed_name=config.seed,
+    )
     if config.environment == "production":
         # Any account, including rows left by a development run, must not keep a published demo password.
         for user in database.list_users():
@@ -908,6 +915,64 @@ async def event_stream(_: str = Depends(require_session)) -> StreamingResponse:
         stream(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# Tables that hold secrets or internal state are deliberately absent: sessions, users,
+# login attempts, password resets and settings are never exported.
+EXPORT_FIELDS = {
+    "customers": ["id", "email", "balance_minor", "withdraw_balance_minor", "bonus_balance_minor", "bonus_spend_enabled", "total_replenished_minor"],
+    "services": ["id", "customer_id", "name", "price_minor", "auto_prolong", "payment_term", "status", "expires_at"],
+    "transactions": ["id", "customer_id", "service_id", "status", "type", "amount_minor", "created_at"],
+    "risk": ["id", "email", "risk_score", "risk_level", "potential_loss_minor", "revenue_at_risk_minor", "monthly_cost_minor", "unscored_services_count", "data_issues_count", "recommended_action_code", "recommended_action_text"],
+    "outflow": ["observed_at", "snapshot_id", "customer_id", "service_id", "event_type", "from_status", "to_status", "price_minor"],
+}
+
+
+def _export_rows(entity: str) -> list[dict[str, Any]]:
+    if entity == "risk":
+        customers, _model, _meta = _score_all()
+        return [
+            {
+                "id": customer["id"],
+                "email": customer["email"],
+                "risk_score": customer["risk_score"],
+                "risk_level": customer["risk_level"],
+                "potential_loss_minor": customer["potential_loss_minor"],
+                "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
+                "monthly_cost_minor": customer["monthly_cost_minor"],
+                "unscored_services_count": customer["unscored_services_count"],
+                "data_issues_count": len(customer["data_quality"]),
+                "recommended_action_code": customer["recommended_action"]["code"],
+                "recommended_action_text": customer["recommended_action"]["text"],
+            }
+            for customer in customers
+        ]
+    if entity == "outflow":
+        return database.journal_rows()
+    raw = database.customer_rows()
+    if entity == "customers":
+        return raw
+    if entity == "services":
+        return [{**service, "customer_id": customer["id"]} for customer in raw for service in customer["services"]]
+    return [{**transaction, "customer_id": customer["id"]} for customer in raw for transaction in customer["transactions"]]
+
+
+@app.get("/api/v1/export/{entity}", tags=["export"], summary="Выгрузка данных в CSV, XLSX или XML")
+def export_data(
+    entity: str,
+    fmt: Literal["csv", "xlsx", "xml"] = Query(default="csv", alias="format"),
+    _: str = Depends(require_session),
+) -> Response:
+    fields = EXPORT_FIELDS.get(entity)
+    if fields is None:
+        raise HTTPException(status_code=404, detail=f"Неизвестная выгрузка: {entity}. Доступно: {', '.join(EXPORT_FIELDS)}.")
+    rows = [{field: row.get(field) for field in fields} for row in _export_rows(entity)]
+    data, media_type, filename = export(rows, fields, fmt, f"aeza-{entity}")
+    return Response(
+        content=data,
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
     )
 
 

@@ -29,7 +29,12 @@ class Database:
         finally:
             connection.close()
 
-    def initialize(self, admin_profile: dict[str, str] | None = None) -> None:
+    def initialize(
+        self,
+        admin_profile: dict[str, str] | None = None,
+        seed_customers: list[dict[str, Any]] | None = None,
+        seed_name: str = "empty",
+    ) -> None:
         with self.connection() as connection:
             connection.executescript(
                 """
@@ -153,11 +158,14 @@ class Database:
             ).fetchone()
             if source_kind is None:
                 customer_count = connection.execute("SELECT COUNT(*) FROM customers").fetchone()[0]
-                if customer_count == 0:
-                    self._replace_snapshot(connection, demo_snapshot())
+                if customer_count == 0 and seed_customers is not None:
+                    self._replace_snapshot(connection, seed_customers)
+                    source_name = seed_name
+                else:
+                    source_name = "empty" if customer_count == 0 else "uploaded"
                 connection.execute(
                     "INSERT INTO app_state(key, value) VALUES ('source_kind', ?)",
-                    ("demo" if customer_count == 0 else "uploaded",),
+                    (source_name,),
                 )
                 connection.execute(
                     "INSERT OR REPLACE INTO app_state(key, value) VALUES ('source_updated_at', ?)",
@@ -422,6 +430,17 @@ class Database:
                 old["price_minor"],
             ))
         return events
+
+    def journal_rows(self) -> list[dict[str, Any]]:
+        with self.connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT observed_at, snapshot_id, customer_id, service_id, event_type,
+                       from_status, to_status, price_minor
+                FROM snapshot_events ORDER BY id
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
 
     def outflow_facts(self, since: str) -> dict[str, Any]:
         with self.connection() as connection:

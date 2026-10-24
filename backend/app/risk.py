@@ -7,8 +7,16 @@ MODEL_VERSION = 3
 ACTION_HORIZON_DAYS = 7
 GRACE_PERIOD_DAYS = 5
 ELIGIBLE_STATUSES = {"active", "suspended", "prolong_wait"}
-# Months covered by one payment. Used only to turn a service price into a monthly cost.
-PAYMENT_TERM_MONTHS = {"month": 1, "quarter": 3, "half_year": 6, "year": 12}
+# Months covered by one payment, for the case terms: hour and week are fractions of a month (30-day month).
+PAYMENT_TERM_MONTHS = {
+    "hour": 1 / 720,
+    "week": 7 / 30,
+    "month": 1,
+    "quarter_year": 3,
+    "quarter": 3,
+    "half_year": 6,
+    "year": 12,
+}
 # Starting expert coefficients agreed with the mentor. They make the control cases
 # of the brief land in the expected levels. They were not fitted to outcomes.
 DEFAULT_WEIGHTS: dict[str, int] = {
