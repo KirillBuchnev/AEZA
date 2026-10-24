@@ -7,6 +7,9 @@ MODEL_VERSION = 3
 ACTION_HORIZON_DAYS = 7
 GRACE_PERIOD_DAYS = 5
 ELIGIBLE_STATUSES = {"active", "suspended", "prolong_wait"}
+KNOWN_SERVICE_STATUSES = {"active", "suspended", "prolong_wait", "deleted", "blocked"}
+KNOWN_TRANSACTION_STATUSES = {"performed", "not_performed"}
+KNOWN_TRANSACTION_TYPES = {"prolong", "order"}
 # Months covered by one payment, for the case terms: hour and week are fractions of a month (30-day month).
 PAYMENT_TERM_MONTHS = {
     "hour": 1 / 720,
@@ -553,6 +556,27 @@ def evaluate_customer(
                 "code": "unknown_payment_term",
                 "service_id": str(service["id"]),
                 "message": f"Срок оплаты «{term}» не распознан: услуга считается ежемесячной.",
+            })
+        expires_at = as_utc(service["expires_at"])
+        if service["status"] == "prolong_wait" and expires_at and now - expires_at > timedelta(days=GRACE_PERIOD_DAYS):
+            data_quality.append({
+                "code": "grace_expired",
+                "service_id": str(service["id"]),
+                "message": "Ожидание оплаты дольше 5 дней: по правилам услуга должна перейти в deleted. Проверьте статус в источнике.",
+            })
+    for service in customer["services"]:
+        if service["status"] not in KNOWN_SERVICE_STATUSES:
+            data_quality.append({
+                "code": "unknown_status",
+                "service_id": str(service["id"]),
+                "message": f"Статус «{service['status']}» не входит в справочник: услуга не участвует в расчёте.",
+            })
+    for transaction in customer["transactions"]:
+        if transaction.get("status") not in KNOWN_TRANSACTION_STATUSES or transaction.get("type") not in KNOWN_TRANSACTION_TYPES:
+            data_quality.append({
+                "code": "unknown_transaction",
+                "service_id": transaction.get("service_id"),
+                "message": "Транзакция с неизвестным статусом или типом не учитывается в признаках.",
             })
 
     if not service_results:

@@ -19,7 +19,7 @@ from .exports import export
 from .config import load_config
 from .database import Database
 from .oidc import OidcClient, OidcError
-from .risk import DEFAULT_WEIGHTS, FACTORS, MODEL_VERSION, control_cases, evaluate_customer, model_divisor, outflow_forecast
+from .risk import DEFAULT_WEIGHTS, FACTORS, MODEL_VERSION, as_utc, control_cases, evaluate_customer, model_divisor, outflow_forecast
 from .seeds import seed_customers
 from .schemas import (
     AnalyticsSummary,
@@ -793,6 +793,47 @@ def analytics_summary(_: str = Depends(require_session)) -> dict[str, Any]:
     return _summary(customers, model, meta)
 
 
+def _snapshot_facts(raw_customers: list[dict[str, Any]], now: datetime, days: int) -> dict[str, Any]:
+    """Historical deletions read from snapshot statuses. A deleted service has no deletion date
+    in the source, so its expiry date stands in for it: the figures are an estimate."""
+    start = now.date() - timedelta(days=days)
+    by_day = {
+        (start + timedelta(days=offset)).isoformat(): {
+            "date": (start + timedelta(days=offset)).isoformat(),
+            "removed": 0,
+            "deleted": 0,
+            "blocked": 0,
+            "renewed": 0,
+            "entered_wait": 0,
+            "deleted_amount_minor": 0,
+        }
+        for offset in range(days + 1)
+    }
+    for customer in raw_customers:
+        for service in customer["services"]:
+            if service["status"] != "deleted" or not service["expires_at"]:
+                continue
+            bucket = by_day.get(as_utc(service["expires_at"]).date().isoformat())
+            if bucket is None:
+                continue
+            bucket["deleted"] += 1
+            bucket["deleted_amount_minor"] += service["price_minor"]
+    days_list = list(by_day.values())
+    totals = {
+        key: sum(day[key] for day in days_list)
+        for key in ("removed", "deleted", "blocked", "renewed", "entered_wait", "deleted_amount_minor")
+    }
+    return {
+        "source": "snapshot_estimate",
+        "estimated": True,
+        "from_date": start.isoformat(),
+        "to_date": now.date().isoformat(),
+        "snapshots_observed": 0,
+        "days": days_list,
+        "totals": totals,
+    }
+
+
 @app.get("/api/v1/analytics/outflow", tags=["analytics"], summary="Отток: факты журнала и прогноз непродлений", response_model=OutflowResponse)
 def analytics_outflow(
     days: int = Query(default=30, ge=7, le=365),
@@ -800,13 +841,25 @@ def analytics_outflow(
 ) -> dict[str, Any]:
     customers, model, meta = _score_all()
     now = meta["as_of"]
-    facts = database.outflow_facts((now - timedelta(days=days)).isoformat())
+    journal = database.outflow_facts((now - timedelta(days=days)).isoformat())
+    if journal["snapshots"] == 0:
+        # No transitions between uploads yet: show the estimate from the statuses instead.
+        facts = _snapshot_facts(database.customer_rows(), now, days)
+    else:
+        facts = {**_facts_payload(journal, days, now), "estimated": False}
+    at_risk = {"total": 0, "high": 0, "medium": 0}
+    for customer in customers:
+        for service in customer["services"]:
+            if service["risk_level"] in {"high", "medium"}:
+                at_risk[service["risk_level"]] += 1
+                at_risk["total"] += 1
     return {
         "as_of": now,
         "snapshot_id": meta["snapshot_id"],
         "calculation_version": meta["calculation_version"],
-        "facts": _facts_payload(facts, days, now),
+        "facts": facts,
         "forecast": outflow_forecast(customers, now, model["prediction_horizon_days"]),
+        "services_at_risk": at_risk,
     }
 
 

@@ -50,6 +50,7 @@ export default function App() {
   const [customerId, setCustomerId] = useState(() => readHash().customerId);
   const [summary, setSummary] = useState(null);
   const [outflow, setOutflow] = useState(null);
+  const [outflowDays, setOutflowDays] = useState(30);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [customers, setCustomers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -130,7 +131,7 @@ export default function App() {
       const onCustomers = page === "customers";
       const [nextSummary, nextOutflow, nextCustomers, nextSettings] = await Promise.all([
         api.summary(),
-        api.outflow(30),
+        api.outflow(outflowDays),
         api.customers({
           q: debouncedQuery,
           risk_level: filters.risk_level,
@@ -162,6 +163,7 @@ export default function App() {
   }, [
     authenticated,
     activeReason,
+    outflowDays,
     debouncedQuery,
     filters.risk_level,
     filters.sort_by,
@@ -482,6 +484,8 @@ export default function App() {
                 <Overview
                   summary={summary}
                   outflow={outflow}
+                  outflowDays={outflowDays}
+                  setOutflowDays={setOutflowDays}
                   customers={customers}
                   activeReason={activeReason}
                   setActiveReason={setActiveReason}

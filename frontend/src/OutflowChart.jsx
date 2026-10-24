@@ -22,7 +22,13 @@ function shortDate(isoDate) {
   return `${day}.${month}`;
 }
 
-export function OutflowChart({ outflow }) {
+const PERIODS = [
+  { days: 30, label: "30 дней" },
+  { days: 90, label: "90 дней" },
+  { days: 365, label: "Год" },
+];
+
+export function OutflowChart({ outflow, days = 30, onDays }) {
   const facts = outflow?.facts;
   const forecast = outflow?.forecast;
 
@@ -64,26 +70,52 @@ export function OutflowChart({ outflow }) {
   const yFor = (value) => PAD.top + plotHeight * (1 - value / model.top);
   const xFor = (index) => PAD.left + index * step;
   const todayIndex = model.days.indexOf(model.today);
+  // Keep about eight date labels on the axis whatever the period is.
+  const labelStep = Math.max(7, Math.ceil(model.days.length / 8));
   const factTotal = facts.totals.deleted + facts.totals.removed + facts.totals.blocked;
   const expected = forecast.totals.expected_non_renewals;
   const hasFacts = facts.snapshots_observed > 0 || factTotal > 0;
+  const estimated = Boolean(facts.estimated);
+  const atRisk = outflow?.services_at_risk || { total: 0, high: 0, medium: 0 };
 
   const label = `Факт: ${factTotal} услуг удалено, пропало или заблокировано за ${facts.days.length - 1} дн. Прогноз: ${expected} ожидаемых непродлений в ближайшие ${forecast.horizon_days} дн. Услуг в риске: ${forecast.totals.services_at_risk}.`;
 
   return (
     <div className="outflow">
+      <div className="outflow-periods" role="group" aria-label="Период фактов">
+        {PERIODS.map((period) => (
+          <button
+            key={period.days}
+            type="button"
+            className={`outflow-period${days === period.days ? " outflow-period-active" : ""}`}
+            aria-pressed={days === period.days}
+            onClick={() => onDays?.(period.days)}
+          >
+            {period.label}
+          </button>
+        ))}
+      </div>
       <div className="outflow-summary">
         <div className="outflow-chip outflow-chip-fact">
-          <span>Факт за период</span>
+          <span>Факт за период{estimated ? " (оценка)" : ""}</span>
           <b>{factTotal}</b>
           <small>
-            удалено {facts.totals.deleted}, пропало {facts.totals.removed}, блок {facts.totals.blocked}
+            {estimated
+              ? `удалено ${facts.totals.deleted} по дате окончания срока, по статусам снимка`
+              : `удалено ${facts.totals.deleted}, пропало ${facts.totals.removed}, блок ${facts.totals.blocked}`}
           </small>
         </div>
         <div className="outflow-chip outflow-chip-forecast">
           <span>Прогноз на {forecast.horizon_days} дн.</span>
           <b>{expected}</b>
           <small>ожидаемых непродлений (индекс / 100)</small>
+        </div>
+        <div className="outflow-chip">
+          <span>Услуг в риске сейчас</span>
+          <b>{atRisk.total}</b>
+          <small>
+            высоких {atRisk.high}, средних {atRisk.medium}
+          </small>
         </div>
         <div className="outflow-chip">
           <span>Ждут оплаты сейчас</span>
@@ -166,7 +198,7 @@ export function OutflowChart({ outflow }) {
           </g>
         )}
         {model.days.map((date, index) =>
-          index % 7 === 0 ? (
+          index % labelStep === 0 ? (
             <text
               key={date}
               className="outflow-tick"
@@ -182,20 +214,22 @@ export function OutflowChart({ outflow }) {
       <div className="outflow-legend">
         <span>
           <i className="legend-fact" />
-          Факт: удалено, пропало или заблокировано, по дате снимка
+          {estimated
+            ? "Факт (оценка): удалено, по дате окончания срока"
+            : "Факт: удалено, пропало или заблокировано, по дате снимка"}
         </span>
         <span>
           <i className="legend-forecast" />
           Прогноз: ожидаемые непродления, по дате окончания
         </span>
       </div>
-      {!hasFacts && (
+      {(!hasFacts || estimated) && (
         <div className="calculation-note">
           <Icon name="info" size={15} />
           <span>
-            Журнал фактов пуст. Он заполняется, когда загружается следующий
-            снимок: тогда видно, какие услуги продлились, удалились или
-            заблокировались. Сейчас показан только прогноз.
+            {estimated
+              ? "Факты оценены по статусам текущего снимка: удалённую услугу относим к дате окончания срока. Журнал переходов заполнится, когда загрузится следующий снимок."
+              : "Журнал переходов пуст: он заполняется, когда загружается следующий снимок, и показывает, какие услуги продлились, удалились или заблокировались. Сейчас показан только прогноз."}
           </span>
         </div>
       )}

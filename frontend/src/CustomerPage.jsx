@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api } from "./api.js";
 import { AezaIcon, reasonIcon } from "./AezaIcon.jsx";
 import { RiskBadge, RiskKey } from "./Icons.jsx";
@@ -11,6 +11,38 @@ import {
   serviceStatusText,
 } from "./format.js";
 import mascotSurprised from "./assets/mascot-surprised.webp";
+
+const points = (value) => (Math.round(value * 10) / 10).toString().replace(".", ",");
+
+// Explanation under a service: its own reasons with numbers, the money at stake and the next step.
+function ServiceDetail({ service }) {
+  const reasons = service.reasons || [];
+  const lossShare = service.risk_score == null ? null : Math.round(service.risk_score * 10) / 10;
+  return (
+    <div className="service-detail">
+      {reasons.length > 0 && (
+        <ul className="service-reasons">
+          {reasons.map((reason) => (
+            <li key={reason.code}>
+              <b>{reason.title}</b>
+              {reason.points > 0 && <span className="factor-pts"> +{points(reason.points)}</span>}
+              <span> — {reason.explanation}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {service.potential_loss_minor > 0 && (
+        <p className="service-loss">
+          Потеря по услуге: {money(service.potential_loss_minor)} = недостаток{" "}
+          {money(service.uncovered_revenue_minor)} × индекс {lossShare} / 100
+        </p>
+      )}
+      <p className="service-action">
+        <b>Действие:</b> {service.recommended_action?.text || "—"}
+      </p>
+    </div>
+  );
+}
 
 const transactionStatus = {
   performed: "Выполнена",
@@ -286,7 +318,8 @@ export function CustomerPage({ id, version, onToast }) {
               </thead>
               <tbody>
                 {customer.services.map((service) => (
-                  <tr key={service.id}>
+                  <Fragment key={service.id}>
+                  <tr>
                     <td>
                       <b>{service.name}</b>
                     </td>
@@ -314,12 +347,38 @@ export function CustomerPage({ id, version, onToast }) {
                       </td>
                     )}
                   </tr>
+                  <tr className="service-detail-row">
+                    <td colSpan={showServiceRisk ? 7 : 6}>
+                      <ServiceDetail service={service} />
+                    </td>
+                  </tr>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
           <Empty title="Услуг нет">В снимке нет услуг этого клиента.</Empty>
+        )}
+      </section>
+
+      <section className="card flush">
+        <CardHead
+          icon="info"
+          title="Качество данных"
+          description="Что мешает точной оценке и что проверить в источнике"
+        />
+        {customer.data_quality?.length ? (
+          <ul className="data-issues">
+            {customer.data_quality.map((issue, index) => (
+              <li key={`${issue.code}-${issue.service_id}-${index}`}>
+                <b>{issue.service_id ? `Услуга ${issue.service_id}` : "Клиент"}</b>
+                <span> — {issue.message}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Empty title="Замечаний нет">Данные по клиенту заполнены полностью.</Empty>
         )}
       </section>
 

@@ -2465,7 +2465,7 @@ a.button {
 /* Outflow chart: facts are solid, the forecast is hatched, a dashed line marks "today". */
 .outflow-section { margin: 24px 0 8px; }
 .outflow { display: grid; gap: 14px; }
-.outflow-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.outflow-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .outflow-chip {
   display: grid;
   gap: 2px;
@@ -2506,3 +2506,26 @@ a.button {
   font-size: 14px;
 }
 .control-row b { font-weight: 700; }
+
+/* Customer card: reasons and next step under each service, data-quality list. */
+.service-detail-row > td { padding-top: 0; }
+.service-detail { display: grid; gap: 6px; padding: 4px 0 14px 4px; font-size: 14px; }
+.service-reasons { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.service-reasons .factor-pts { font-variant-numeric: tabular-nums; font-weight: 700; }
+.service-loss, .service-action { margin: 0; }
+.data-issues { margin: 0; padding: 0 20px 18px; display: grid; gap: 8px; font-size: 14px; }
+
+/* Outflow chart: period switch. */
+.outflow-periods { display: flex; flex-wrap: wrap; gap: 8px; }
+.outflow-period {
+  padding: 6px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.outflow-period-active { background: var(--text-primary); color: var(--bg-page); border-color: var(--text-primary); }
+.outflow-period:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }

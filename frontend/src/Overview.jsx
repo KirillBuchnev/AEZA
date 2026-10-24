@@ -39,6 +39,8 @@ function topReasons(summary) {
 export function Overview({
   summary,
   outflow,
+  outflowDays = 30,
+  setOutflowDays,
   customers,
   activeReason,
   setActiveReason,
@@ -100,7 +102,7 @@ export function Overview({
           title="Отток: факты и прогноз"
           description="Слева — что уже произошло по снимкам, справа — ожидаемые непродления по дням окончания. Линия «сегодня» разделяет их."
         />
-        <OutflowChart outflow={outflow} />
+        <OutflowChart outflow={outflow} days={outflowDays} onDays={setOutflowDays} />
       </section>
 
       <section className="hero" aria-label="Главное">

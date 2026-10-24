@@ -17,24 +17,6 @@ def _normalize_optional_identifier(value: Any) -> str | None:
     return None if value is None else _normalize_identifier(value)
 
 
-class ServiceStatus(str, Enum):
-    active = "active"
-    suspended = "suspended"
-    prolong_wait = "prolong_wait"
-    deleted = "deleted"
-    blocked = "blocked"
-
-
-class TransactionStatus(str, Enum):
-    performed = "performed"
-    not_performed = "not_performed"
-
-
-class TransactionType(str, Enum):
-    prolong = "prolong"
-    order = "order"
-
-
 class ServiceSnapshot(BaseModel):
     model_config = ConfigDict(populate_by_name=True, use_enum_values=True, extra="ignore")
 
@@ -49,7 +31,9 @@ class ServiceSnapshot(BaseModel):
         max_length=120,
         validation_alias=AliasChoices("payment_term", "paymentTerm"),
     )
-    status: ServiceStatus
+    # Known values: active, suspended, prolong_wait, deleted, blocked. Unknown values are kept
+    # and reported in data_quality instead of rejecting the whole snapshot.
+    status: str = Field(min_length=1, max_length=40)
     expires_at: datetime | None = Field(
         default=None,
         validation_alias=AliasChoices("expires_at", "expiresAt"),
@@ -71,8 +55,9 @@ class TransactionSnapshot(BaseModel):
         max_length=120,
         validation_alias=AliasChoices("service_id", "serviceId"),
     )
-    status: TransactionStatus
-    type: TransactionType
+    # Known values: performed, not_performed / prolong, order. Unknown values are reported, not rejected.
+    status: str = Field(min_length=1, max_length=40)
+    type: str = Field(min_length=1, max_length=40)
     amount_minor: int = Field(ge=0, le=MAX_MONEY_MINOR, validation_alias=AliasChoices("amount_minor", "amount"))
     created_at: datetime | None = Field(
         default=None,
@@ -429,6 +414,7 @@ class OutflowFactDay(BaseModel):
 
 class OutflowFacts(BaseModel):
     source: str
+    estimated: bool = False
     from_date: str
     to_date: str
     snapshots_observed: int
@@ -459,10 +445,17 @@ class OutflowForecast(BaseModel):
     totals: dict[str, float]
 
 
+class ServicesAtRisk(BaseModel):
+    total: int
+    high: int
+    medium: int
+
+
 class OutflowResponse(BaseModel):
     as_of: datetime
     snapshot_id: str | None
     calculation_version: str
     facts: OutflowFacts
     forecast: OutflowForecast
+    services_at_risk: ServicesAtRisk
 
