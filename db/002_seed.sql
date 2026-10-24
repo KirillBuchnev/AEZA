@@ -1,6 +1,6 @@
 -- Generated from data.json. Run only on empty fixture tables.
-
-BEGIN;
+-- BEGIN/COMMIT removed for driver-managed transactions (source.py): wrap in your own transaction,
+-- or run atomically via `psql -1 -f`.
 
 LOCK TABLE public.accounts, public.services, public.transactions IN EXCLUSIVE MODE;
 
@@ -1343,5 +1343,3 @@ SELECT "id", "amount", "status", "performedAt", "createdAt", "type", "serviceId"
 ]$fixture_transactions$::jsonb);
 
 SELECT setval(pg_get_serial_sequence('public.transactions', 'id'), (SELECT max(id) FROM public.transactions), true);
-
-COMMIT;
