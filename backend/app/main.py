@@ -351,6 +351,8 @@ def _model_response(model: dict[str, Any], **extra: Any) -> dict[str, Any]:
         "prediction_horizon_days": model["prediction_horizon_days"],
         "high_risk_min": model["high_risk_min"],
         "medium_risk_min": model["medium_risk_min"],
+        "account_high_risk_min": model["account_high_risk_min"],
+        "account_medium_risk_min": model["account_medium_risk_min"],
         "weights": dict(model["weights"]),
         "normalizer": model_divisor(model),
         "features": [
@@ -821,6 +823,8 @@ async def patch_model_settings(
     current.update(changes)
     if current["high_risk_min"] <= current["medium_risk_min"]:
         raise HTTPException(status_code=422, detail="Порог высокого риска должен быть выше среднего.")
+    if current["account_high_risk_min"] <= current["account_medium_risk_min"]:
+        raise HTTPException(status_code=422, detail="Порог высокого риска аккаунта должен быть выше среднего.")
 
     current["revision"] = int(current.get("revision", 1)) + 1
     database.save_model_settings(current)

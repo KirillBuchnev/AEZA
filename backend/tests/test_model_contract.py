@@ -220,3 +220,22 @@ class ModelSettingsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AccountThresholdsTest(unittest.TestCase):
+    def test_account_level_uses_its_own_thresholds(self) -> None:
+        model = merge_model_settings({**DEFAULT_MODEL_SETTINGS, "account_high_risk_min": 150, "account_medium_risk_min": 100})
+        result = evaluate_customer(
+            customer(
+                balance=20_000,
+                services=[
+                    service(service_id="s-1", expires_in_days=3 / 24, auto_prolong=False),
+                    service(service_id="s-2", expires_in_days=3 / 24, auto_prolong=False),
+                ],
+            ),
+            model,
+            NOW,
+        )
+        self.assertEqual(result["risk_score"], 116.0)
+        self.assertEqual(result["risk_level"], "medium")
+        self.assertEqual([item["risk_level"] for item in result["services"]], ["high", "high"])

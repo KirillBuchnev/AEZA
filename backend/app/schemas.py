@@ -187,8 +187,10 @@ class ModelSettingsPatch(BaseModel):
 
     prediction_horizon_days: int | None = Field(default=None, ge=1, le=365)
     # Account indices are sums of service indices, so the thresholds may exceed 100.
-    high_risk_min: int | None = Field(default=None, ge=1, le=1_000)
-    medium_risk_min: int | None = Field(default=None, ge=0, le=999)
+    high_risk_min: int | None = Field(default=None, ge=1, le=100)
+    medium_risk_min: int | None = Field(default=None, ge=0, le=99)
+    account_high_risk_min: int | None = Field(default=None, ge=1, le=1_000)
+    account_medium_risk_min: int | None = Field(default=None, ge=0, le=999)
     weights: dict[str, int] | None = Field(default=None, max_length=4)
 
 
@@ -353,6 +355,8 @@ class ModelSettingsResponse(BaseModel):
     prediction_horizon_days: int
     high_risk_min: int
     medium_risk_min: int
+    account_high_risk_min: int
+    account_medium_risk_min: int
     weights: dict[str, int]
     normalizer: int
     features: list[FeatureDescription]

@@ -50,6 +50,10 @@ DEFAULT_MODEL_SETTINGS: dict[str, Any] = {
     "prediction_horizon_days": 30,
     "high_risk_min": 50,
     "medium_risk_min": 30,
+    # The account index is a sum of service indices and grows with the number of
+    # services, so its levels are edited separately from the service levels.
+    "account_high_risk_min": 50,
+    "account_medium_risk_min": 30,
     "weights": dict(DEFAULT_WEIGHTS),
 }
 
@@ -74,6 +78,12 @@ def merge_model_settings(settings: dict[str, Any] | None) -> dict[str, Any]:
         ),
         "high_risk_min": int(current.get("high_risk_min", DEFAULT_MODEL_SETTINGS["high_risk_min"])),
         "medium_risk_min": int(current.get("medium_risk_min", DEFAULT_MODEL_SETTINGS["medium_risk_min"])),
+        "account_high_risk_min": int(
+            current.get("account_high_risk_min", DEFAULT_MODEL_SETTINGS["account_high_risk_min"])
+        ),
+        "account_medium_risk_min": int(
+            current.get("account_medium_risk_min", DEFAULT_MODEL_SETTINGS["account_medium_risk_min"])
+        ),
         "weights": weights,
     }
 
@@ -176,6 +186,16 @@ def _risk_level(score: float | None, model: dict[str, Any]) -> str | None:
     if score >= model["high_risk_min"]:
         return "high"
     if score >= model["medium_risk_min"]:
+        return "medium"
+    return "low"
+
+
+def _account_level(score: float | None, model: dict[str, Any]) -> str | None:
+    if score is None:
+        return None
+    if score >= model["account_high_risk_min"]:
+        return "high"
+    if score >= model["account_medium_risk_min"]:
         return "medium"
     return "low"
 
@@ -475,7 +495,7 @@ def evaluate_customer(
     # The account index is the sum of service indices, as agreed with the mentor.
     # Its level comes from the same thresholds as the service level.
     account_sum = round(sum(service["risk_score"] for service in assessed), 1) if complete else None
-    level = _risk_level(account_sum, model)
+    level = _account_level(account_sum, model)
     divisor = model_divisor(model)
     max_score = max((service["risk_score"] for service in assessed), default=None)
     high_count = sum(service["risk_level"] == "high" for service in assessed)
