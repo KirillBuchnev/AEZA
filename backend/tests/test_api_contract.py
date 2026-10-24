@@ -225,3 +225,21 @@ def test_summary_splits_potential_loss_by_level(open_app):
         assert summary["potential_loss_by_level_minor"]["high"] == 9_380  # index 93.8 on a 10 000 shortfall
         assert summary["potential_loss_by_level_minor"]["low"] == 0
         assert summary["potential_loss_minor"] == summary["potential_loss_by_level_minor"]["high"]
+
+
+def test_settings_report_control_cases_and_queue_sorts_by_service_count(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(
+            client,
+            customer("1", [service("a"), service("b")], balance=0),
+            customer("2", [service("c")], balance=0),
+        )
+        cases = client.get(SETTINGS).json()["control_cases"]
+        assert [case["key"] for case in cases] == ["a", "b", "c", "d"]
+        assert all(case["matches"] for case in cases)
+        for order in ("asc", "desc"):
+            response = client.get(CUSTOMERS, params={"sort_by": "service_count", "order": order})
+            assert response.status_code == 200
+        desc = [item["id"] for item in client.get(CUSTOMERS, params={"sort_by": "service_count", "order": "desc"}).json()["items"]]
+        assert desc == ["1", "2"]

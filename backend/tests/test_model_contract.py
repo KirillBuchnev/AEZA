@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.risk import (
     DEFAULT_MODEL_SETTINGS,
+    control_cases,
     evaluate_customer,
     merge_model_settings,
     model_divisor,
@@ -239,3 +240,45 @@ class AccountThresholdsTest(unittest.TestCase):
         self.assertEqual(result["risk_score"], 116.0)
         self.assertEqual(result["risk_level"], "medium")
         self.assertEqual([item["risk_level"] for item in result["services"]], ["high", "high"])
+
+
+class ReviewFixesTest(unittest.TestCase):
+    def test_waiting_service_without_autoprolong_is_high(self) -> None:
+        # Without autoprolong nobody else pays: manual 45 + urgency 20 + grace 5 * 0.2 over 110.
+        result = evaluated(service(status="prolong_wait", expires_in_days=-1, auto_prolong=False), balance=10_000)
+        self.assertEqual(result["services"][0]["risk_score"], 60.0)
+        self.assertEqual(result["services"][0]["risk_level"], "high")
+        self.assertEqual(result["services"][0]["recommended_action"]["code"], "manual_reminder")
+
+    def test_waiting_service_without_expiry_is_unscored(self) -> None:
+        result = evaluated(service(status="prolong_wait", expires_in_days=None), balance=0)
+        self.assertIsNone(result["services"][0]["risk_score"])
+        self.assertIsNone(result["risk_level"])
+        self.assertEqual(result["data_quality"][0]["code"], "missing_expiry")
+
+    def test_failed_payment_applies_only_to_its_own_service(self) -> None:
+        other = {
+            "id": "t-2", "service_id": "service-2", "status": "not_performed", "type": "prolong",
+            "amount_minor": 10_000, "created_at": (NOW - timedelta(days=1)).isoformat(),
+        }
+        result = evaluate_customer(
+            {
+                **customer(balance=10_000, services=[service(service_id="service-1", expires_in_days=40, auto_prolong=True)],
+                           transactions=[other]),
+            },
+            DEFAULT_MODEL_SETTINGS,
+            NOW,
+        )
+        self.assertFalse(result["services"][0]["recent_failed_payment"])
+        self.assertNotIn("неуспешной", result["services"][0]["recommended_action"]["text"])
+
+    def test_deficit_outside_action_window_is_visible_as_forecast_action(self) -> None:
+        result = evaluated(service(expires_in_days=20, auto_prolong=True), balance=0)
+        self.assertEqual(result["services"][0]["recommended_action"]["code"], "forecast_only")
+        self.assertEqual(result["uncovered_revenue_minor"], 10_000)
+        self.assertIn("не хватает", result["services"][0]["reasons"][0]["explanation"])
+
+    def test_control_cases_reproduce_the_mentor_levels(self) -> None:
+        cases = control_cases(DEFAULT_MODEL_SETTINGS, NOW)
+        self.assertEqual([case["risk_score"] for case in cases], [55.5, 58.0, 53.6, 0.9])
+        self.assertTrue(all(case["matches"] for case in cases))

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AezaIcon, reasonIcon } from "./AezaIcon.jsx";
 import { Icon } from "./Icons.jsx";
 import { CardHead, PageHead } from "./Shared.jsx";
-import { featureCodes, money, timeLabel } from "./format.js";
+import { featureCodes, money, riskText, timeLabel } from "./format.js";
 
 const featureHints = {
   prolong_wait: "status = prolong_wait: услуга уже ждёт оплаты после expiresAt",
@@ -329,6 +329,32 @@ export function ModelPage({ settings, summary, onSave, saving }) {
                 />
                 {thresholdError && <small role="alert">{thresholdError}</small>}
               </label>
+            </div>
+          </section>
+
+          <section className="card">
+            <CardHead
+              icon="info"
+              title="Контрольные случаи"
+              description="Четыре аккаунта из обсуждения с ментором, пересчитаны текущими весами"
+            />
+            <div className="control-table">
+              {(settings.control_cases || []).map((item) => (
+                <div className="control-row" key={item.key}>
+                  <b>{item.key}</b>
+                  <span>{item.title}</span>
+                  <span className="num">
+                    {item.risk_score == null
+                      ? "—"
+                      : item.risk_score.toFixed(1).replace(".", ",")}
+                  </span>
+                  <span>
+                    {riskText[item.risk_level] || "—"}
+                    {!item.matches &&
+                      ` (ожидалось: ${riskText[item.expected_level]})`}
+                  </span>
+                </div>
+              ))}
             </div>
           </section>
 

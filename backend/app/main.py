@@ -17,7 +17,7 @@ from fastapi.security import APIKeyCookie
 from .config import load_config
 from .database import Database
 from .oidc import OidcClient, OidcError
-from .risk import DEFAULT_WEIGHTS, FACTORS, MODEL_VERSION, evaluate_customer, model_divisor, outflow_forecast
+from .risk import DEFAULT_WEIGHTS, FACTORS, MODEL_VERSION, control_cases, evaluate_customer, model_divisor, outflow_forecast
 from .schemas import (
     AnalyticsSummary,
     AuthMethodsResponse,
@@ -279,7 +279,7 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "bonus_balance_minor": customer["bonus_balance_minor"],
         "bonus_spend_enabled": customer["bonus_spend_enabled"],
         "total_replenished_minor": customer["total_replenished_minor"],
-        "service_count": len(customer["services"]),
+        "service_count": customer["service_count"],
         "risk_score": customer["risk_score"],
         "risk_level": customer["risk_level"],
         "risk_label": customer["risk_label"],
@@ -359,6 +359,7 @@ def _model_response(model: dict[str, Any], **extra: Any) -> dict[str, Any]:
         "account_medium_risk_min": model["account_medium_risk_min"],
         "weights": dict(model["weights"]),
         "normalizer": model_divisor(model),
+        "control_cases": control_cases(model),
         "features": [
             {**factor, "weight": model["weights"][factor["code"]]}
             for factor in FACTORS

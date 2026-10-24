@@ -351,6 +351,15 @@ class FeatureDescription(BaseModel):
     weight: int
 
 
+class ControlCase(BaseModel):
+    key: str
+    title: str
+    risk_score: float | None
+    risk_level: str | None
+    expected_level: str
+    matches: bool
+
+
 class ModelSettingsResponse(BaseModel):
     version: int
     revision: int
@@ -363,6 +372,7 @@ class ModelSettingsResponse(BaseModel):
     weights: dict[str, int]
     normalizer: int
     features: list[FeatureDescription]
+    control_cases: list[ControlCase]
     recalculated: bool | None = None
     changed_at: datetime | None = None
 

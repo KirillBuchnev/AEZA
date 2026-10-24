@@ -247,11 +247,14 @@ def _explain(
             {"price_minor": price, "available_minor": available, "shortfall_minor": shortfall},
         )
     if code == "autoprolong_disabled":
-        return (
-            f"Автопродление выключено, продление {_due_text(seconds_left)}. "
-            "Клиент должен продлить услугу сам, иначе она уйдёт в ожидание оплаты.",
-            {"auto_prolong": False, "days_to_due": days_left},
-        )
+        if is_waiting:
+            text = "Автопродление выключено и услуга ждёт оплаты: списания не будет, клиент должен оплатить сам."
+        else:
+            text = (
+                f"Автопродление выключено, продление {_due_text(seconds_left)}. "
+                "Клиент должен продлить услугу сам, иначе она уйдёт в ожидание оплаты."
+            )
+        return text, {"auto_prolong": False, "days_to_due": days_left}
     if code == "renewal_urgency":
         if is_waiting:
             text = "Срок продления уже прошёл: срочность максимальная."
@@ -271,6 +274,7 @@ def _service_action(
     shortfall: int,
     urgency: float,
     manual: float,
+    due: bool,
     recent_failed: bool,
     seconds_left: float | None,
     grace_remaining: int | None,
@@ -284,6 +288,11 @@ def _service_action(
             "code": "top_up",
             "text": f"Напомнить об оплате и попросить пополнить баланс на {euro(shortfall)}; {_grace_text(grace_remaining)}.",
         }
+    elif is_waiting and manual > 0:
+        action = {
+            "code": "manual_reminder",
+            "text": f"Напомнить оплатить услугу вручную: автопродление выключено; {_grace_text(grace_remaining)}.",
+        }
     elif is_waiting:
         action = {
             "code": "check_payment",
@@ -296,10 +305,19 @@ def _service_action(
         }
     elif manual > 0:
         action = {"code": "manual_reminder", "text": f"Напомнить продлить услугу вручную ({_due_text(seconds_left)})."}
+    elif due and shortfall > 0:
+        # Outside the 7-day action window the index is zero, but the shortfall is still real money.
+        action = {
+            "code": "forecast_only",
+            "text": f"Срок продления вне 7-дневного окна ({_due_text(seconds_left)}), но на продление не хватает {euro(shortfall)}: запланировать пополнение заранее.",
+        }
     else:
         action = {"code": "none", "text": "Действий не требуется: признаков непродления нет."}
-    if recent_failed and action["code"] != "check_payment":
-        action["text"] += " Также проверить причину последней неуспешной оплаты продления."
+    if recent_failed:
+        if action["code"] == "none":
+            action = {"code": "check_payment", "text": "Проверить причину последней неуспешной оплаты продления."}
+        elif action["code"] != "check_payment":
+            action["text"] += " Также проверить причину последней неуспешной оплаты продления."
     return action
 
 
@@ -319,17 +337,16 @@ def _evaluate_service(
     is_waiting = service["status"] == "prolong_wait"
 
     issue: str | None = None
-    if not is_waiting:
-        if expires_at is None:
-            issue = "missing_expiry"
-        elif expires_at < now:
-            issue = "expired_active"
+    if expires_at is None:
+        issue = "missing_expiry"
+    elif not is_waiting and expires_at < now:
+        issue = "expired_active"
 
     urgency = 0.0
     if issue is None and due:
         urgency = 1.0 if is_waiting else _urgency(expires_at, now)
     distress = _clip(shortfall / price) * urgency if price else 0.0
-    manual = 0.0 if is_waiting or service["auto_prolong"] or issue else urgency
+    manual = 0.0 if service["auto_prolong"] or issue else urgency
     renewal = urgency if manual > 0 or distress > 0 else 0.0
     grace_progress, grace_elapsed, grace_remaining = (
         _grace(expires_at, now) if is_waiting else (0.0, None, None)
@@ -368,12 +385,17 @@ def _evaluate_service(
                 "evidence": evidence,
             })
     if not reasons and score is not None:
+        explanation = (
+            f"Срок вне 7-дневного окна, но на продление не хватает {euro(shortfall)}: индекс 0, сумма учтена в деньгах."
+            if shortfall > 0
+            else "Баланс покрывает продление, автопродление включено, срок не близко."
+        )
         reasons.append({
             "code": "no_active_signals",
             "title": "Признаков непродления нет",
             "points": 0.0,
-            "explanation": "Баланс покрывает продление, автопродление включено, срок не близко.",
-            "evidence": {},
+            "explanation": explanation,
+            "evidence": {"shortfall_minor": shortfall},
         })
     if issue:
         reasons.append({
@@ -393,6 +415,7 @@ def _evaluate_service(
         shortfall=shortfall,
         urgency=urgency,
         manual=manual,
+        due=due,
         recent_failed=recent_failed,
         seconds_left=seconds_left,
         grace_remaining=grace_remaining,
@@ -470,12 +493,12 @@ def evaluate_customer(
     uncovered_total = max(0, due_revenue - available_balance)
     shortfalls = _allocate_balance(due_services, available_balance)
 
+    # A failed payment without a service id cannot be attributed to one service: it is ignored.
     failed_service_ids = {
-        transaction.get("service_id")
+        transaction["service_id"]
         for transaction in customer["transactions"]
-        if _is_failed_prolong(transaction, now)
+        if transaction.get("service_id") and _is_failed_prolong(transaction, now)
     }
-    failed_for_all = None in failed_service_ids
 
     service_results = [
         _evaluate_service(
@@ -484,7 +507,7 @@ def evaluate_customer(
             shortfall=shortfalls.get(str(service["id"]), 0),
             model=model,
             now=now,
-            recent_failed=failed_for_all or str(service["id"]) in failed_service_ids,
+            recent_failed=str(service["id"]) in failed_service_ids,
         )
         for service in eligible
     ]
@@ -555,6 +578,7 @@ def evaluate_customer(
         "max_service_score": max_score,
         "high_count": high_count,
         "unscored_services_count": len(unscored),
+        "service_count": len(service_results),
         "assessed_at": now.isoformat(),
         "calculation": {
             "horizon_days": model["prediction_horizon_days"],
@@ -638,6 +662,52 @@ def outflow_forecast(
             ),
         },
     }
+
+
+def control_cases(model: dict[str, Any], now: datetime | None = None) -> list[dict[str, Any]]:
+    """The four control accounts from the mentor's answer, scored with the current model."""
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+
+    def account(balance: int, auto: bool, status: str, expires_at: datetime) -> dict[str, Any]:
+        return {
+            "id": "control",
+            "email": "control@example.com",
+            "balance_minor": balance,
+            "withdraw_balance_minor": 0,
+            "bonus_balance_minor": 0,
+            "bonus_spend_enabled": False,
+            "total_replenished_minor": 0,
+            "services": [{
+                "id": "control-service",
+                "name": "Control service",
+                "price_minor": 10_000,
+                "auto_prolong": auto,
+                "payment_term": "month",
+                "status": status,
+                "expires_at": expires_at.isoformat(),
+            }],
+            "transactions": [],
+        }
+
+    cases = (
+        ("a", "Ожидает оплаты 1 день, баланса нет", account(0, True, "prolong_wait", now - timedelta(days=1)), "high"),
+        ("b", "Ручное продление через 3 часа, деньги есть", account(10_000, False, "active", now + timedelta(hours=3)), "high"),
+        ("c", "Автопродление через 3 часа, баланса нет", account(0, True, "active", now + timedelta(hours=3)), "high"),
+        ("d", "Ожидает оплаты 1 день, деньги есть", account(10_000, True, "prolong_wait", now - timedelta(days=1)), "low"),
+    )
+    result = []
+    for key, title, customer, expected in cases:
+        evaluated = evaluate_customer(customer, model, now)
+        service = evaluated["services"][0]
+        result.append({
+            "key": key,
+            "title": title,
+            "risk_score": service["risk_score"],
+            "risk_level": service["risk_level"],
+            "expected_level": expected,
+            "matches": service["risk_level"] == expected,
+        })
+    return result
 
 
 def demo_snapshot() -> list[dict[str, Any]]:

@@ -2495,3 +2495,14 @@ a.button {
 @media (max-width: 760px) {
   .outflow-summary { grid-template-columns: 1fr; }
 }
+
+/* Model page: control cases. */
+.control-table { display: grid; gap: 6px; }
+.control-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 56px auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.control-row b { font-weight: 700; }
