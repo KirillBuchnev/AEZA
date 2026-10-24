@@ -70,6 +70,15 @@ class Database:
                     expires_at TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS users (
+                    username TEXT PRIMARY KEY,
+                    last_name TEXT NOT NULL,
+                    first_name TEXT NOT NULL,
+                    middle_name TEXT,
+                    password_hash TEXT NOT NULL,
+                    codeword_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS login_attempts (
                     client_key TEXT PRIMARY KEY,
                     window_started_at TEXT NOT NULL,
@@ -275,6 +284,51 @@ class Database:
     def delete_session(self, token_hash: str) -> None:
         with self.connection() as connection:
             connection.execute("DELETE FROM sessions WHERE token_hash = ?", (token_hash,))
+
+    def delete_user_sessions(self, username: str) -> None:
+        with self.connection() as connection:
+            connection.execute("DELETE FROM sessions WHERE username = ?", (username,))
+
+    def create_user(
+        self,
+        username: str,
+        last_name: str,
+        first_name: str,
+        middle_name: str | None,
+        password_hash: str,
+        codeword_hash: str,
+    ) -> bool:
+        """Return False when the username is already taken."""
+        try:
+            with self.connection() as connection:
+                connection.execute(
+                    "INSERT INTO users(username, last_name, first_name, middle_name, password_hash, codeword_hash, created_at)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        username,
+                        last_name,
+                        first_name,
+                        middle_name,
+                        password_hash,
+                        codeword_hash,
+                        datetime.now(timezone.utc).isoformat(),
+                    ),
+                )
+        except sqlite3.IntegrityError:
+            return False
+        return True
+
+    def get_user(self, username: str) -> dict[str, Any] | None:
+        with self.connection() as connection:
+            row = connection.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+            return dict(row) if row else None
+
+    def update_password(self, username: str, password_hash: str) -> None:
+        with self.connection() as connection:
+            connection.execute(
+                "UPDATE users SET password_hash = ? WHERE username = ?",
+                (password_hash, username),
+            )
 
     def begin_login_attempt(
         self,

@@ -13,11 +13,15 @@ async function request(path, options = {}) {
   if (!response.ok) {
     const detail = payload?.detail;
     const firstIssue = Array.isArray(detail) ? detail[0] : null;
+    const issueText = firstIssue?.msg?.replace(/^Value error, /, "");
+    const issuePath = (firstIssue?.loc || []).slice(1).join(".");
     const message =
       typeof detail === "string"
         ? detail
-        : firstIssue?.msg
-          ? `${(firstIssue.loc || []).slice(1).join(".") || "Данные"}: ${firstIssue.msg}.`
+        : issueText
+          ? issuePath
+            ? `${issuePath}: ${issueText}.`
+            : `${issueText}.`
           : `Не удалось выполнить запрос (${response.status}).`;
     const error = new Error(message);
     error.status = response.status;
@@ -34,6 +38,16 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request("/api/v1/auth/logout", { method: "POST" }),
+  register: (form) =>
+    request("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
+  resetPassword: (form) =>
+    request("/api/v1/auth/password-reset", {
+      method: "POST",
+      body: JSON.stringify(form),
+    }),
   summary: () => request("/api/v1/analytics/summary"),
   customers: (params = {}) => {
     const search = new URLSearchParams();

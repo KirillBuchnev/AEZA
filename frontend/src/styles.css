@@ -2079,12 +2079,60 @@ button.kv-row:hover > span:nth-child(2) {
   gap: 10px;
 }
 
+.login-side {
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+  overflow-y: auto;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 20px;
-  padding: 0 80px;
+  justify-content: safe center;
+  gap: 18px;
+  min-height: 100%;
+  margin: auto 0;
+  padding: 40px 80px;
+}
+
+.field small {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.field .optional {
+  color: var(--text-secondary);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.field-with-action {
+  position: relative;
+}
+
+.field-with-action .field-action {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.form-notice {
+  padding: 10px 14px;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--risk-low) 22%, transparent);
+  font-size: 13px;
+}
+
+.form-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.form-switch .link {
+  font-size: 13px;
+  color: var(--text-primary);
 }
 
 .login-form header {
@@ -2280,6 +2328,10 @@ button.kv-row:hover > span:nth-child(2) {
     min-height: 100vh;
     padding: 24px 16px;
   }
+
+  .login-side {
+    max-height: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2398,4 +2450,14 @@ a.button {
 :root[data-theme="dark"] .aicon-flat {
   --tile: var(--brand-blue);
   --glyph: #000;
+}
+
+.login-form > .field,
+.login-form .field-with-action,
+.login-form .field-with-action .field {
+  width: 100%;
+}
+
+.login-form .fields .field {
+  flex: 1 1 0;
 }

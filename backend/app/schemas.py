@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_MONEY_MINOR = 9_000_000_000_000
 
@@ -135,6 +135,59 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
+USERNAME_PATTERN = r"^[A-Za-z0-9._@-]{3,64}$"
+
+
+class RegisterRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    username: str = Field(pattern=USERNAME_PATTERN, description="Логин: латиница, цифры, . _ @ -")
+    last_name: str = Field(min_length=1, max_length=80)
+    first_name: str = Field(min_length=1, max_length=80)
+    middle_name: str | None = Field(default=None, max_length=80)
+    password: str = Field(min_length=8, max_length=1024)
+    password_confirm: str = Field(min_length=1, max_length=1024)
+    codeword: str = Field(min_length=4, max_length=128, description="Кодовое слово для сброса пароля")
+
+    @field_validator("username")
+    @classmethod
+    def lower_username(cls, value: str) -> str:
+        return value.lower()
+
+    @field_validator("middle_name")
+    @classmethod
+    def empty_middle_name(cls, value: str | None) -> str | None:
+        return value or None
+
+    @model_validator(mode="after")
+    def check_secrets(self) -> "RegisterRequest":
+        if self.password != self.password_confirm:
+            raise ValueError("Пароли не совпадают")
+        if self.codeword.casefold() == self.password.casefold():
+            raise ValueError("Кодовое слово не должно совпадать с паролем")
+        return self
+
+
+class PasswordResetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    username: str = Field(min_length=1, max_length=64)
+    codeword: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=1024)
+    new_password_confirm: str = Field(min_length=1, max_length=1024)
+
+    @field_validator("username")
+    @classmethod
+    def lower_username(cls, value: str) -> str:
+        return value.lower()
+
+    @model_validator(mode="after")
+    def check_passwords(self) -> "PasswordResetRequest":
+        if self.new_password != self.new_password_confirm:
+            raise ValueError("Пароли не совпадают")
+        return self
+
+
 class ModelSettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -218,6 +271,7 @@ class CustomerDetail(CustomerListItem):
 class UserResponse(BaseModel):
     username: str
     role: str
+    full_name: str | None = None
 
 
 class LoginResponse(BaseModel):

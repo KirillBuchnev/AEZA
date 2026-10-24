@@ -15,6 +15,7 @@ from fastapi.security import APIKeyCookie
 
 from .config import load_config
 from .database import Database
+from .passwords import hash_secret, normalize_codeword, verify_secret
 from .risk import DEFAULT_MODEL_SETTINGS, evaluate_customer
 from .schemas import (
     AnalyticsSummary,
@@ -22,6 +23,8 @@ from .schemas import (
     CustomerListResponse,
     LoginRequest,
     LoginResponse,
+    PasswordResetRequest,
+    RegisterRequest,
     ModelSettingsPatch,
     ModelSettingsResponse,
     SnapshotImportResponse,
@@ -219,15 +222,33 @@ def login(body: LoginRequest, request: Request, response: Response) -> dict[str,
             headers={"Retry-After": str(retry_after)},
         )
 
-    username_ok = hmac.compare_digest(body.username.encode("utf-8"), config.admin_username.encode("utf-8"))
-    password_ok = hmac.compare_digest(body.password.encode("utf-8"), config.admin_password.encode("utf-8"))
-    if not (username_ok and password_ok):
-        raise HTTPException(status_code=401, detail="Неверный логин или пароль.")
+    is_admin = hmac.compare_digest(
+        body.username.encode("utf-8"), config.admin_username.encode("utf-8")
+    ) and hmac.compare_digest(body.password.encode("utf-8"), config.admin_password.encode("utf-8"))
+    username = config.admin_username if is_admin else body.username.strip().lower()
+    if not is_admin:
+        user = database.get_user(username)
+        if not verify_secret(body.password, user["password_hash"] if user else None):
+            raise HTTPException(status_code=401, detail="Неверный логин или пароль.")
 
     database.clear_login_attempts(client_key)
+    return _start_session(response, username)
+
+
+def _user_payload(username: str) -> dict[str, Any]:
+    user = database.get_user(username)
+    full_name = (
+        " ".join(part for part in (user["first_name"], user["last_name"]) if part)
+        if user
+        else None
+    )
+    return {"username": username, "role": "analyst", "full_name": full_name}
+
+
+def _start_session(response: Response, username: str) -> dict[str, Any]:
     token = secrets.token_urlsafe(32)
     expires_at = datetime.now(timezone.utc) + timedelta(days=config.session_days)
-    database.create_session(_token_hash(token), config.admin_username, expires_at.isoformat())
+    database.create_session(_token_hash(token), username, expires_at.isoformat())
     response.set_cookie(
         key=SESSION_COOKIE,
         value=token,
@@ -237,15 +258,68 @@ def login(body: LoginRequest, request: Request, response: Response) -> dict[str,
         samesite="lax",
         path="/",
     )
-    return {
-        "user": {"username": config.admin_username, "role": "analyst"},
-        "expires_at": expires_at.isoformat(),
-    }
+    return {"user": _user_payload(username), "expires_at": expires_at.isoformat()}
+
+
+def _throttle(request: Request, action: str, max_attempts: int) -> str:
+    """Отдельный счётчик попыток для регистрации и сброса пароля, по образцу входа."""
+    client_key = f"{_client_key(request)}:{action}"
+    retry_after = database.begin_login_attempt(client_key, max_attempts=max_attempts)
+    if retry_after:
+        raise HTTPException(
+            status_code=429,
+            detail="Слишком много попыток. Попробуйте позже.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    return client_key
+
+
+@app.post(
+    "/api/v1/auth/register",
+    status_code=201,
+    tags=["auth"],
+    summary="Зарегистрироваться: ФИО, логин, пароль и кодовое слово",
+    response_model=LoginResponse,
+)
+def register(body: RegisterRequest, request: Request, response: Response) -> dict[str, Any]:
+    _throttle(request, "register", max_attempts=10)
+    if hmac.compare_digest(body.username.encode("utf-8"), config.admin_username.lower().encode("utf-8")):
+        raise HTTPException(status_code=409, detail="Этот логин уже занят.")
+    created = database.create_user(
+        username=body.username,
+        last_name=body.last_name,
+        first_name=body.first_name,
+        middle_name=body.middle_name,
+        password_hash=hash_secret(body.password),
+        codeword_hash=hash_secret(normalize_codeword(body.codeword)),
+    )
+    if not created:
+        raise HTTPException(status_code=409, detail="Этот логин уже занят.")
+    response.status_code = 201
+    return _start_session(response, body.username)
+
+
+@app.post(
+    "/api/v1/auth/password-reset",
+    status_code=204,
+    tags=["auth"],
+    summary="Сбросить пароль по кодовому слову",
+)
+def reset_password(body: PasswordResetRequest, request: Request) -> Response:
+    client_key = _throttle(request, "reset", max_attempts=5)
+    user = database.get_user(body.username)
+    if not verify_secret(normalize_codeword(body.codeword), user["codeword_hash"] if user else None):
+        # Один ответ на неверный логин и неверное кодовое слово: логины не перебрать.
+        raise HTTPException(status_code=400, detail="Логин или кодовое слово не подходят.")
+    database.update_password(body.username, hash_secret(body.new_password))
+    database.delete_user_sessions(body.username)
+    database.clear_login_attempts(client_key)
+    return Response(status_code=204)
 
 
 @app.get("/api/v1/auth/me", tags=["auth"], summary="Получить текущего пользователя", response_model=UserResponse)
 def current_user(username: str = Depends(require_session)) -> dict[str, Any]:
-    return {"username": username, "role": "analyst"}
+    return _user_payload(username)
 
 
 @app.post("/api/v1/auth/logout", status_code=204, tags=["auth"], summary="Завершить сессию")

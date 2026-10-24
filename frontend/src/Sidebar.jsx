@@ -76,10 +76,12 @@ export function Sidebar({
         </div>
         <div className="sidebar-user">
           <span className="avatar">
-            {(user?.username || "A").slice(0, 1).toUpperCase()}
+            {(user?.full_name || user?.username || "A")
+              .slice(0, 1)
+              .toUpperCase()}
           </span>
           <span className="sidebar-user-text">
-            <b>{user?.username || "Аналитик"}</b>
+            <b>{user?.full_name || user?.username || "Аналитик"}</b>
             <small>Маркетинг</small>
           </span>
           <button

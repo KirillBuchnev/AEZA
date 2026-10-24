@@ -339,7 +339,13 @@ export default function App() {
   if (!authenticated)
     return (
       <>
-        <Login onLogin={handleLogin} />
+        <Login
+          onLogin={handleLogin}
+          onRegistered={(registered) => {
+            setUser(registered);
+            setAuthenticated(true);
+          }}
+        />
         <Toast
           message={toast?.message}
           kind={toast?.kind}
