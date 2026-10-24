@@ -1,3 +1,10 @@
+## Статус в проекте
+
+- Рабочий бэкенд хранит данные в SQLite (см. `PRODUCT.md`), эта схема не используется в рантайме.
+- `001`–`003` — схема и тестовый набор из кейса (`accounts`, `services`, `transactions`), а также целевое описание для PostgreSQL. Из `002_seed.sql` собирается снимок кейса для приложения: `backend/scripts/build_case_snapshot.py`.
+- Соответствие: `accounts` = клиент (`customers` в API), `services.ownerId` = владелец услуги, `services.paymentTerm` = срок оплаты.
+- Черновик переноса на PostgreSQL с отдельной схемой сессий и пользователей: `docs/postgres-prototype/`.
+
 # База данных «Анализатор рисков оттока»
 
 PostgreSQL 16. Схема спроектирована по методологии книги
