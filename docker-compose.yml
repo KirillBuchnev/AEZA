@@ -18,6 +18,13 @@ services:
       AEZA_METRICS_TOKEN: ${AEZA_METRICS_TOKEN:-local-demo-metrics-token-change-this-before-production}
       AEZA_DOCS_ENABLED: ${AEZA_DOCS_ENABLED:-}
       AEZA_ALLOWED_ORIGINS: ${AEZA_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8001,http://127.0.0.1:8001}
+      AEZA_OIDC_ISSUER: ${AEZA_OIDC_ISSUER:-}
+      AEZA_OIDC_CLIENT_ID: ${AEZA_OIDC_CLIENT_ID:-}
+      AEZA_OIDC_CLIENT_SECRET: ${AEZA_OIDC_CLIENT_SECRET:-}
+      AEZA_OIDC_REDIRECT_URI: ${AEZA_OIDC_REDIRECT_URI:-}
+      AEZA_OIDC_SCOPES: ${AEZA_OIDC_SCOPES:-openid profile email}
+      AEZA_OIDC_AUTO_PROVISION: ${AEZA_OIDC_AUTO_PROVISION:-false}
+      AEZA_OIDC_USERNAME_CLAIM: ${AEZA_OIDC_USERNAME_CLAIM:-preferred_username}
     networks:
       - aeza
     ports:
