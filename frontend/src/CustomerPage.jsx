@@ -144,6 +144,17 @@ export function CustomerPage({ id, version, onToast }) {
     }
   }
 
+  async function copyActionMessage() {
+    const message = customer.action_plan?.message_template;
+    if (!message) return;
+    try {
+      await navigator.clipboard.writeText(message);
+      onToast({ kind: "success", message: "Шаблон сообщения скопирован" });
+    } catch {
+      onToast({ kind: "error", message: "Не удалось скопировать шаблон" });
+    }
+  }
+
   return (
     <>
       <div className="client-head">
@@ -213,6 +224,24 @@ export function CustomerPage({ id, version, onToast }) {
           <small>стоимость услуг в горизонте</small>
         </div>
       </section>
+
+      {customer.action_plan && (
+        <section className="card action-plan-card" aria-label="План действия">
+          <CardHead
+            icon="info"
+            title={`Следующее действие: ${customer.action_plan.title}`}
+            description={`Приоритет ${points(customer.action_plan.priority)} / 100 · уверенность ${Math.round(customer.action_plan.confidence * 100)}%`}
+          />
+          <p className="verdict"><b>Диагноз:</b> {customer.action_plan.diagnosis}</p>
+          <p className="verdict"><b>Что сделать:</b> {customer.action_plan.next_best_action}</p>
+          <div className="action-message">
+            <span>{customer.action_plan.message_template}</span>
+            <button className="button button-secondary" onClick={copyActionMessage}>
+              Скопировать текст
+            </button>
+          </div>
+        </section>
+      )}
 
       <div className="row-split">
         <section className="card">

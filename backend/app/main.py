@@ -302,6 +302,9 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
         "near_term_loss_minor": customer["near_term_loss_minor"],
         "account_risk_sum": customer["account_risk_sum"],
+        "real_revenue_at_risk_minor": customer.get("real_revenue_at_risk_minor", customer["revenue_at_risk_minor"]),
+        "real_near_term_loss_minor": customer.get("real_near_term_loss_minor", customer["near_term_loss_minor"]),
+        "action_plan": customer["action_plan"],
         "max_service_score": customer["max_service_score"],
         "high_count": customer["high_count"],
         "unscored_services_count": customer["unscored_services_count"],
@@ -807,6 +810,8 @@ def get_customer(
             "snapshot_id": meta["snapshot_id"],
             "calculation_version": meta["calculation_version"],
             "calculation": customer["calculation"],
+            "cashflow": customer.get("cashflow", {}),
+            "real_monetisation_alpha": customer.get("real_monetisation_alpha", 1.0),
         }
     raise HTTPException(status_code=404, detail="Клиент не найден.")
 

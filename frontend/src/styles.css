@@ -473,6 +473,37 @@ p {
   color: var(--text-secondary);
 }
 
+.action-plan-card {
+  margin: 18px 0;
+}
+
+.verdict {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.action-message {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px dashed var(--border-default);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+
+.action-message span {
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .action-message {
+    flex-direction: column;
+  }
+}
+
 .button {
   display: inline-flex;
   align-items: center;

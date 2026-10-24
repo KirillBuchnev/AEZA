@@ -196,6 +196,21 @@ class RecommendedAction(BaseModel):
     text: str
 
 
+class ActionPlan(BaseModel):
+    """Marketer-facing decision: diagnosis, money, deadline and next action."""
+
+    archetype: str
+    title: str
+    priority: float
+    diagnosis: str
+    next_best_action: str
+    message_template: str
+    expected_revenue_at_risk_minor: int
+    deadline: datetime | None = None
+    confidence: float
+    evidence: dict[str, Any] = Field(default_factory=dict)
+
+
 class RiskReason(BaseModel):
     code: str
     title: str
@@ -231,6 +246,9 @@ class CustomerListItem(BaseModel):
     revenue_at_risk_minor: int
     near_term_loss_minor: int
     account_risk_sum: float | None
+    real_revenue_at_risk_minor: int = 0
+    real_near_term_loss_minor: int = 0
+    action_plan: ActionPlan
     max_service_score: float | None
     high_count: int
     unscored_services_count: int
@@ -299,6 +317,10 @@ class CustomerCalculation(BaseModel):
     near_term_loss_minor: int
     potential_loss_minor: int
     monthly_cost_minor: int
+    real_revenue_at_risk_minor: int = 0
+    real_near_term_loss_minor: int = 0
+    cashflow: dict[str, Any] = Field(default_factory=dict)
+    real_monetisation_alpha: float = 1.0
 
 
 class CustomerDetail(CustomerListItem):
@@ -311,6 +333,8 @@ class CustomerDetail(CustomerListItem):
     snapshot_id: str | None
     calculation_version: str
     calculation: CustomerCalculation
+    cashflow: dict[str, Any] = Field(default_factory=dict)
+    real_monetisation_alpha: float = 1.0
 
 
 class UserResponse(BaseModel):

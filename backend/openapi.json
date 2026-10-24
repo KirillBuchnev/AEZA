@@ -1,6 +1,72 @@
 {
   "components": {
     "schemas": {
+      "ActionPlan": {
+        "description": "Marketer-facing decision: diagnosis, money, deadline and next action.",
+        "properties": {
+          "archetype": {
+            "title": "Archetype",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          },
+          "deadline": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline"
+          },
+          "diagnosis": {
+            "title": "Diagnosis",
+            "type": "string"
+          },
+          "evidence": {
+            "additionalProperties": true,
+            "title": "Evidence",
+            "type": "object"
+          },
+          "expected_revenue_at_risk_minor": {
+            "title": "Expected Revenue At Risk Minor",
+            "type": "integer"
+          },
+          "message_template": {
+            "title": "Message Template",
+            "type": "string"
+          },
+          "next_best_action": {
+            "title": "Next Best Action",
+            "type": "string"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archetype",
+          "title",
+          "priority",
+          "diagnosis",
+          "next_best_action",
+          "message_template",
+          "expected_revenue_at_risk_minor",
+          "confidence"
+        ],
+        "title": "ActionPlan",
+        "type": "object"
+      },
       "AnalyticsSummary": {
         "properties": {
           "assessed_total": {
@@ -226,6 +292,11 @@
             "title": "Available Balance Minor",
             "type": "integer"
           },
+          "cashflow": {
+            "additionalProperties": true,
+            "title": "Cashflow",
+            "type": "object"
+          },
           "due_revenue_minor": {
             "title": "Due Revenue Minor",
             "type": "integer"
@@ -263,6 +334,21 @@
           },
           "potential_loss_minor": {
             "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "real_monetisation_alpha": {
+            "default": 1.0,
+            "title": "Real Monetisation Alpha",
+            "type": "number"
+          },
+          "real_near_term_loss_minor": {
+            "default": 0,
+            "title": "Real Near Term Loss Minor",
+            "type": "integer"
+          },
+          "real_revenue_at_risk_minor": {
+            "default": 0,
+            "title": "Real Revenue At Risk Minor",
             "type": "integer"
           },
           "revenue_at_risk_minor": {
@@ -324,6 +410,9 @@
             ],
             "title": "Account Risk Sum"
           },
+          "action_plan": {
+            "$ref": "#/components/schemas/ActionPlan"
+          },
           "assessed_at": {
             "format": "date-time",
             "title": "Assessed At",
@@ -351,6 +440,11 @@
           "calculation_version": {
             "title": "Calculation Version",
             "type": "string"
+          },
+          "cashflow": {
+            "additionalProperties": true,
+            "title": "Cashflow",
+            "type": "object"
           },
           "data_issues_count": {
             "title": "Data Issues Count",
@@ -400,6 +494,21 @@
           },
           "potential_loss_minor": {
             "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "real_monetisation_alpha": {
+            "default": 1.0,
+            "title": "Real Monetisation Alpha",
+            "type": "number"
+          },
+          "real_near_term_loss_minor": {
+            "default": 0,
+            "title": "Real Near Term Loss Minor",
+            "type": "integer"
+          },
+          "real_revenue_at_risk_minor": {
+            "default": 0,
+            "title": "Real Revenue At Risk Minor",
             "type": "integer"
           },
           "reasons": {
@@ -508,6 +617,7 @@
           "revenue_at_risk_minor",
           "near_term_loss_minor",
           "account_risk_sum",
+          "action_plan",
           "max_service_score",
           "high_count",
           "unscored_services_count",
@@ -537,6 +647,9 @@
               }
             ],
             "title": "Account Risk Sum"
+          },
+          "action_plan": {
+            "$ref": "#/components/schemas/ActionPlan"
           },
           "balance_minor": {
             "title": "Balance Minor",
@@ -591,6 +704,16 @@
           },
           "potential_loss_minor": {
             "title": "Potential Loss Minor",
+            "type": "integer"
+          },
+          "real_near_term_loss_minor": {
+            "default": 0,
+            "title": "Real Near Term Loss Minor",
+            "type": "integer"
+          },
+          "real_revenue_at_risk_minor": {
+            "default": 0,
+            "title": "Real Revenue At Risk Minor",
             "type": "integer"
           },
           "reasons": {
@@ -670,6 +793,7 @@
           "revenue_at_risk_minor",
           "near_term_loss_minor",
           "account_risk_sum",
+          "action_plan",
           "max_service_score",
           "high_count",
           "unscored_services_count",

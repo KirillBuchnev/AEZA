@@ -2,6 +2,13 @@ from datetime import datetime, timedelta, timezone
 from math import ceil, floor
 from typing import Any
 
+from .recommendations import (
+    FINANCIAL_HORIZON_DAYS,
+    build_action_plan,
+    cashflow_waterfall,
+    real_monetisation_alpha,
+)
+
 
 MODEL_VERSION = 3
 ACTION_HORIZON_DAYS = 7
@@ -574,6 +581,12 @@ def evaluate_customer(
     near_term_loss = sum(service["near_term_loss_minor"] for service in service_results)
     monthly_cost = sum(service["monthly_cost_minor"] for service in service_results)
     exposed_services = sum(service["exposed"] for service in service_results)
+    waterfall = cashflow_waterfall(
+        customer,
+        eligible,
+        now,
+        financial_days=max(FINANCIAL_HORIZON_DAYS, model["prediction_horizon_days"]),
+    )
 
     reasons = _account_reasons(assessed, account_index)
     if not service_results:
@@ -629,6 +642,17 @@ def evaluate_customer(
             else {"code": "none", "text": "Действий не требуется: признаков непродления нет."}
         )
 
+    enriched_for_plan = {
+        **customer,
+        "monthly_cost_minor": monthly_cost,
+        "risk_score": account_index,
+        "data_quality": data_quality,
+    }
+    action_plan = build_action_plan(enriched_for_plan, service_results, waterfall)
+    alpha = real_monetisation_alpha(customer)
+    real_revenue_at_risk = round(revenue_at_risk * alpha)
+    real_near_term_loss = round(near_term_loss * alpha)
+
     return {
         **customer,
         "services": service_results,
@@ -644,9 +668,14 @@ def evaluate_customer(
         "potential_loss_minor": potential_loss,
         "revenue_at_risk_minor": revenue_at_risk,
         "near_term_loss_minor": near_term_loss,
+        "real_revenue_at_risk_minor": real_revenue_at_risk,
+        "real_near_term_loss_minor": real_near_term_loss,
         "monthly_cost_minor": monthly_cost,
         "account_risk_sum": account_sum,
         "exposed_services": exposed_services,
+        "cashflow": waterfall,
+        "action_plan": action_plan,
+        "real_monetisation_alpha": alpha,
         "max_service_score": max_score,
         "high_count": high_count,
         "unscored_services_count": len(unscored),
@@ -667,6 +696,10 @@ def evaluate_customer(
             "near_term_loss_minor": near_term_loss,
             "potential_loss_minor": potential_loss,
             "monthly_cost_minor": monthly_cost,
+            "cashflow": waterfall,
+            "real_monetisation_alpha": alpha,
+            "real_revenue_at_risk_minor": real_revenue_at_risk,
+            "real_near_term_loss_minor": real_near_term_loss,
         },
     }
 
