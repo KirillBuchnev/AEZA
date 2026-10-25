@@ -71,7 +71,7 @@ def _admin_profile() -> dict[str, str]:
     }
 
 
-PUBLISHED_DEMO_PASSWORDS = ("local-demo-change-this-password", "demo-local-only-change-me")
+PUBLISHED_DEMO_PASSWORDS = ("hackathon2026", "local-demo-change-this-password", "demo-local-only-change-me")
 # Аккаунты, созданные через SSO, не имеют локального секрета. Это значение — не scrypt-хеш,
 # поэтому проверки пароля и кодового слова для них всегда проваливаются.
 OIDC_ONLY_SECRET = "oidc-only-account"

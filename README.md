@@ -21,7 +21,7 @@
 | Проверка работоспособности | <http://217.144.184.182:7468/healthz> |
 | Метрики Prometheus | <http://217.144.184.182:7468/metrics> с заголовком `Authorization: Bearer local-demo-metrics-token-change-this-before-production` |
 
-Вход: `demo` / `local-demo-change-this-password`. На стенде данные кейса и 14 сценарных аккаунтов S01–S14. Веса модели и данные можно менять: панель пересчитается сама.
+Вход: `demo` / `hackathon2026`. На стенде данные кейса и 14 сценарных аккаунтов S01–S14. Веса модели и данные можно менять: панель пересчитается сама.
 
 ![Очередь клиентов](docs/screenshots/customers.png)
 
@@ -108,7 +108,7 @@ curl http://localhost:8001/healthz
 
 ```text
 Логин:          demo
-Пароль:         local-demo-change-this-password
+Пароль:         hackathon2026
 Кодовое слово:  demo-codeword   (для восстановления пароля)
 ```
 
@@ -121,7 +121,7 @@ curl http://localhost:8001/healthz
 
 ```bash
 curl -c jar -H "Origin: http://localhost:5173" -H "Content-Type: application/json" \
-     -d '{"username":"demo","password":"local-demo-change-this-password"}' \
+     -d '{"username":"demo","password":"hackathon2026"}' \
      http://localhost:8001/api/v1/auth/login
 curl -b jar -X PUT -H "Origin: http://localhost:5173" -H "Content-Type: application/json" \
      --data @backend/tests/fixtures/data.json \
@@ -178,7 +178,7 @@ npm install
 AEZA_API_TARGET=http://127.0.0.1:8000 npm run dev -- --host 127.0.0.1
 ```
 
-Панель откроется на <http://127.0.0.1:5173>, вход тот же: `demo` / `local-demo-change-this-password`.
+Панель откроется на <http://127.0.0.1:5173>, вход тот же: `demo` / `hackathon2026`.
 
 ## Тесты
 
@@ -520,7 +520,7 @@ LTV клиента и базы показан как ориентир для п�
 ```bash
 # вход и первые пять клиентов по ожидаемой потере
 curl -c jar -H "Origin: http://localhost:5173" -H "Content-Type: application/json" \
-     -d '{"username":"demo","password":"local-demo-change-this-password"}' \
+     -d '{"username":"demo","password":"hackathon2026"}' \
      http://localhost:8001/api/v1/auth/login
 curl -b jar "http://localhost:8001/api/v1/customers?limit=5"
 ```
@@ -535,6 +535,26 @@ curl -b jar "http://localhost:8001/api/v1/customers?limit=5"
 - **Запросы из браузера:** изменяющие запросы проверяют `Origin` и Fetch Metadata, cookie `HttpOnly` и `SameSite=Lax`.
 - **Контейнеры:** API и панель работают с read-only файловой системой, без Linux capabilities, с `no-new-privileges`. Панель отдаётся с CSP и защитными заголовками.
 - **Выгрузки** не содержат хешей, токенов и служебных таблиц. Текст, похожий на формулу Excel, сохраняется как текст.
+
+### Пароли и секреты
+
+Все пароли и токены задаются только через переменные окружения и проходят один путь:
+
+```text
+.env  →  docker-compose.yml (environment)  →  окружение контейнера api  →  backend/app/config.py (load_config)  →  объект config  →  код
+```
+
+| Переменная | Что с ней происходит в коде |
+| --- | --- |
+| `AEZA_ADMIN_PASSWORD`, `AEZA_ADMIN_CODEWORD` | при первом запуске на пустой базе создают администратора. В базу пишется только хеш scrypt, сам пароль дальше нигде не хранится. Смена пароля: в панели или `POST /auth/password/change`; новое значение в `.env` существующий пароль не перезаписывает |
+| `AEZA_METRICS_TOKEN` | `config.metrics_token`, сверяется с заголовком `Authorization: Bearer` через `hmac.compare_digest` |
+| `AEZA_RATE_LIMIT_SECRET` | ключ HMAC: счётчики попыток входа хранят не адрес и логин, а их подпись |
+| `AEZA_POSTGRES_PASSWORD` | Compose подставляет его и в контейнер базы, и в `AEZA_DATABASE_URL` для API |
+| `AEZA_OIDC_CLIENT_SECRET` | `config.oidc_client_secret`, передаётся провайдеру SSO при обмене кода на токен |
+
+В коде есть только значения по умолчанию для локального запуска. `.env` не попадает в git. С `AEZA_ENVIRONMENT=production` `config.py` не даёт запуститься с опубликованными демо-паролями, короткими токенами и логином `demo`.
+
+**Swagger** открывается без пароля: это описание API без данных. В production он выключен (`AEZA_DOCS_ENABLED`). Чтобы вызывать методы прямо из Swagger, выполните `POST /auth/login` с `demo` / `hackathon2026`: браузер сохранит cookie сессии, и остальные запросы пройдут. `/metrics` требует токен `AEZA_METRICS_TOKEN`.
 
 ### SSO (OpenID Connect)
 

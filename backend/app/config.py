@@ -116,7 +116,7 @@ def load_config() -> AppConfig:
         raise ValueError("Production requires an HTTPS AEZA_OIDC_ISSUER.")
 
     if environment == "production":
-        if username.lower() in {"admin", "demo"} or len(password) < 16 or password in {"local-demo-change-this-password", "demo-local-only-change-me"}:
+        if username.lower() in {"admin", "demo"} or len(password) < 16 or password in {"hackathon2026", "local-demo-change-this-password", "demo-local-only-change-me"}:
             raise ValueError("Production requires a non-default admin username and a password of at least 16 characters.")
         if (
             len(codeword) < 8
