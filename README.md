@@ -8,6 +8,8 @@
 
 Команда «Программисты», хакатон Aéza, кейс «Анализатор рисков оттока».
 
+> **Готовая версия целиком лежит в ветке `main`.** Берите всё из неё: код, Docker Compose, тесты, данные кейса и эту инструкцию. Других веток в репозитории нет.
+
 ![Очередь клиентов](docs/screenshots/customers.png)
 
 | | |
@@ -50,8 +52,10 @@
 
 ### Шаг 1. Скачать и настроить
 
+Скопируйте ветку `main` целиком:
+
 ```bash
-git clone https://github.com/KirillBuchnev/AEZA.git
+git clone --branch main https://github.com/KirillBuchnev/AEZA.git
 cd AEZA
 cp .env.example .env
 ```
