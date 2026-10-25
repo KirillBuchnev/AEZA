@@ -117,7 +117,7 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
           <b>{factTotal}</b>
           <small>
             {estimated
-              ? "по текущему снимку, датой считаем окончание срока"
+              ? "по текущему снимку"
               : `удалено ${facts.totals.deleted}, пропало ${facts.totals.removed}, блок ${facts.totals.blocked}`}
           </small>
         </div>
@@ -131,7 +131,7 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
         <div className="outflow-chip">
           <span>Ждут оплаты</span>
           <b>{waiting.services}</b>
-          <small>в grace-периоде до {GRACE_DAYS} дней, потом удаляются</small>
+          <small>до {GRACE_DAYS} дней на оплату</small>
           {waiting.beyond_grace_services > 0 && (
             <small className="outflow-warn">
               ещё {waiting.beyond_grace_services} просрочены сверх {GRACE_DAYS} дней: проверьте статус в источнике
@@ -261,27 +261,17 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
       <div className="outflow-legend">
         <span>
           <i className="legend-fact" />
-          {estimated ? "Ушло (оценка): удалено, по дате окончания" : "Ушло: удалено, пропало, заблокировано"}
+          {estimated ? "Ушло (оценка)" : "Ушло"}
         </span>
         <span>
           <i className="legend-forecast" />
-          Под риском: услуги, срок которых наступает в этот день (ожидающие оплаты, в день удаления)
+          Под риском
         </span>
         <span>
           <i className="legend-dot" />
           Ожидаемые непродления
         </span>
       </div>
-      {(!hasFacts || estimated) && (
-        <div className="calculation-note">
-          <Icon name="info" size={15} />
-          <span>
-            {estimated
-              ? "Факты оценены по статусам текущего снимка: удалённую услугу относим к дате окончания срока. Журнал переходов заполнится, когда загрузится следующий снимок."
-              : "Журнал переходов пуст: он заполняется, когда загружается следующий снимок, и показывает, какие услуги продлились, удалились или заблокировались. Сейчас показан только прогноз."}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

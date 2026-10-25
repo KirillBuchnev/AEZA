@@ -91,7 +91,6 @@ export function SourcePage({ summary, updates, onToast, version }) {
     <>
       <PageHead
         title="Источник данных"
-        description="Аккаунты, услуги и транзакции. После загрузки риск пересчитается сам, обновлять страницу не нужно."
       >
         <button
           className="button button-primary"
@@ -163,7 +162,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
           <p>
             {uploadError
               ? `${uploadError} Текущий снимок на месте, расчёты не менялись.`
-              : "Или нажмите, чтобы выбрать файл. Полная замена: customers с услугами и транзакциями, суммы в евроцентах."}
+              : "Или нажмите, чтобы выбрать файл. Суммы в евроцентах."}
           </p>
         </label>
       </div>
@@ -173,7 +172,6 @@ export function SourcePage({ summary, updates, onToast, version }) {
           <CardHead
             icon="clock"
             title="Журнал обновлений"
-            description="События этой сессии: что поменялось и когда панель пересчиталась"
           />
           {updates.length ? (
             <div>
@@ -183,15 +181,13 @@ export function SourcePage({ summary, updates, onToast, version }) {
                   <span className="dot" />
                   <div>
                     <span>{eventText[update.type] || update.type}</span>
-                    <small>Рейтинг, деньги и метрики пересчитаны</small>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <p className="muted">
-              Пока изменений не было. Поменяйте коэффициент или загрузите
-              снимок, и событие сразу появится здесь.
+              Изменений пока не было.
             </p>
           )}
         </section>
@@ -199,7 +195,7 @@ export function SourcePage({ summary, updates, onToast, version }) {
         <section className="dev">
           <h2 className="h2">Для интеграции</h2>
           <p>
-            GET /metrics отдаёт те же числа, что на панели, в формате Prometheus
+            GET /metrics в формате Prometheus
           </p>
           <pre>{metrics || "Метрики недоступны"}</pre>
           <a href="/api/v1/docs" target="_blank" rel="noreferrer">

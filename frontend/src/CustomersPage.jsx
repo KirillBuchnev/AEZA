@@ -33,7 +33,7 @@ export function CustomersPage({
     <>
       <PageHead
         title="Клиенты"
-        description={`${summary?.customers_total ?? total} клиентов · данные обновляются автоматически`}
+        description={`${summary?.customers_total ?? total} клиентов`}
       >
         <label className="search">
           <Icon name="search" size={18} />

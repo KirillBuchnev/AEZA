@@ -263,7 +263,7 @@ def build_action_plan(
         title = "Пополнить баланс"
         action = f"Попросить пополнить баланс на {deficit / 100:.2f} € до ближайшего списания"
         message = f"Пополните баланс минимум на {deficit / 100:.2f} €, чтобы продление прошло автоматически."
-        diagnosis = "Хронологический waterfall показывает кассовый разрыв до ближайшего списания."
+        diagnosis = "Денег на балансе не хватит до ближайшего списания."
         expected = top.get("revenue_at_risk_minor", 0)
     elif top.get("recommended_action", {}).get("code") == "manual_reminder":
         archetype = "manual_renewal"

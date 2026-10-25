@@ -69,7 +69,6 @@ function CustomerEditor({ customer, onClose, onSaved, onToast }) {
       <CardHead
         icon="info"
         title="Исправить данные клиента"
-        description="Изменения сохраняются в текущем источнике и сразу участвуют в расчёте риска и LTV."
       />
       <form className="edit-form" onSubmit={save}>
         <div className="fields">
@@ -347,31 +346,27 @@ export function CustomerPage({ id, version, onToast }) {
         <div>
           <span>Баланс</span>
           <b className="number">{money(customer.balance_minor)}</b>
-          <small>balance · основной</small>
         </div>
         <div>
           <span>Бонусы</span>
           <b className="number">{money(customer.bonus_balance_minor)}</b>
           <small>
             {customer.bonus_spend_enabled
-              ? "bonusBalance · можно тратить"
-              : "bonusBalance · тратить нельзя"}
+              ? "можно тратить"
+              : "тратить нельзя"}
           </small>
         </div>
         <div>
           <span>Реферальный</span>
           <b className="number">{money(customer.withdraw_balance_minor)}</b>
-          <small>withdrawBalance</small>
         </div>
         <div>
           <span>Пополнено всего</span>
           <b className="number">{money(customer.total_replenished_minor)}</b>
-          <small>totalReplenished</small>
         </div>
         <div>
           <span>Продления за {horizon} дней</span>
           <b className="number">{money(customer.due_revenue_minor)}</b>
-          <small>стоимость услуг в горизонте</small>
         </div>
       </section>
 
@@ -379,7 +374,6 @@ export function CustomerPage({ id, version, onToast }) {
         <CardHead
           icon="wallet"
           title="LTV клиента"
-          description="Оценка будущей выручки на основе текущих услуг, платежей и риска."
         />
         <div className="ltv-grid">
           <div><span>Текущий MRR</span><b>{money(customer.ltv?.current_mrr_minor)}</b></div>
@@ -389,7 +383,6 @@ export function CustomerPage({ id, version, onToast }) {
         </div>
         <p className="small muted">
           Уверенность {Math.round((customer.ltv?.confidence || 0) * 100)}% · успешных платежей: {customer.ltv?.payment_success_rate == null ? "нет истории" : `${Math.round(customer.ltv.payment_success_rate * 100)}%`}.
-          Это объяснимая оценка, а не бухгалтерская прибыль.
         </p>
       </section>
 
@@ -398,7 +391,7 @@ export function CustomerPage({ id, version, onToast }) {
           <CardHead
             icon="info"
             title={`Следующее действие: ${customer.action_plan.title}`}
-            description={`Приоритет ${points(customer.action_plan.priority)} / 100 · уверенность ${Math.round(customer.action_plan.confidence * 100)}%`}
+            description={`Приоритет ${points(customer.action_plan.priority)} · уверенность ${Math.round(customer.action_plan.confidence * 100)}%`}
           />
           <p className="verdict"><b>Диагноз:</b> {customer.action_plan.diagnosis}</p>
           <p className="verdict"><b>Что сделать:</b> {customer.action_plan.next_best_action}</p>
@@ -422,8 +415,8 @@ export function CustomerPage({ id, version, onToast }) {
             }
             description={
               customer.risk_score == null
-                ? "Мало данных: нет активных услуг или даты окончания. Когда появятся, оценка посчитается сама."
-                : "Риск клиента растёт, если несколько услуг могут не продлиться. Подробности — на странице «Модель риска»."
+                ? "Нет активных услуг или даты окончания"
+                : undefined
             }
           />
           {customer.risk_score == null ? (
@@ -468,15 +461,13 @@ export function CustomerPage({ id, version, onToast }) {
               {indexed.length > 1 && (
                 <p className="small muted">
                   Оценки по услугам: {indexed.slice(0, 6).map((service) => points(service.risk_score)).join(", ")}
-                  {indexed.length > 6 && "…"}. Просто сложить их нельзя: вышло бы{" "}
-                  {points(indexedSum)}. Общий риск учитывает вероятность того,
-                  что не продлится хотя бы одна услуга, поэтому не превышает 100.
+                  {indexed.length > 6 && "…"}
                 </p>
               )}
               {customer.service_count > 3 && customer.risky_service_count > 0 && (
                 <p className="small muted">
                   В портфеле {customer.service_count} услуг, риск есть у {customer.risky_service_count}
-                  ({Math.round((customer.service_risk_share || 0) * 100)}%). Поправка масштаба портфеля:{" "}
+                  ({Math.round((customer.service_risk_share || 0) * 100)}%). Поправка за размер портфеля:{" "}
                   {points(customer.service_count_adjustment ?? 1)}×.
                 </p>
               )}
@@ -490,7 +481,6 @@ export function CustomerPage({ id, version, onToast }) {
           <CardHead
             icon="euro"
             title="Сколько можем потерять"
-            description="Сумма под риском и верхняя граница по ближайшим продлениям"
           />
           <div>
             <div className="calc-line">
@@ -511,7 +501,7 @@ export function CustomerPage({ id, version, onToast }) {
             </b>
             {!scored && (
               <span className="small muted">
-                Нет оценки — сумму не показываем
+                Нет оценки
               </span>
             )}
             {scored && !customer.near_term_loss_minor && (
@@ -531,8 +521,6 @@ export function CustomerPage({ id, version, onToast }) {
             {calc.uncovered_revenue_minor > 0
               ? `Продления за ${horizon} дн. ${money(calc.due_revenue_minor)} против доступного баланса ${money(calc.available_balance_minor)}: не покрыто ${money(calc.uncovered_revenue_minor)}. `
               : `Баланс покрывает продления за ${horizon} дн.: ${money(calc.due_revenue_minor)} против ${money(calc.available_balance_minor)}. `}
-            Доступно на продление: основной и разрешённый бонусный баланс.
-            Реферальный баланс не учитывается.
           </p>
         </section>
       </div>
@@ -541,7 +529,6 @@ export function CustomerPage({ id, version, onToast }) {
         <CardHead
           icon="clock"
           title={`Услуги · ${customer.services.length}`}
-          description="Статусы и сроки из текущего снимка"
         />
         {customer.services.length ? (
           <div className="plain-scroll">
@@ -623,7 +610,6 @@ export function CustomerPage({ id, version, onToast }) {
         <CardHead
           icon="info"
           title="Качество данных"
-          description="Что мешает точной оценке и что проверить в источнике"
         />
         {customer.data_quality?.length ? (
           <ul className="data-issues">
@@ -643,7 +629,6 @@ export function CustomerPage({ id, version, onToast }) {
         <CardHead
           icon="wallet"
           title={`Транзакции · ${customer.transactions.length}`}
-          description="Заказы и продления из снимка"
         />
         {customer.transactions.length ? (
           <div className="plain-scroll">

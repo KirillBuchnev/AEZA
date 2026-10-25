@@ -18,12 +18,12 @@ const featureHints = {
 // are the main thresholds above. Ranges match the backend validation.
 const extraSettings = {
   account_medium_risk_min: {
-    label: "Средний риск аккаунта от (индекс аккаунта)",
+    label: "Средний риск аккаунта от",
     min: 0,
     max: 99,
   },
   account_high_risk_min: {
-    label: "Высокий риск аккаунта от (индекс аккаунта)",
+    label: "Высокий риск аккаунта от",
     min: 1,
     max: 100,
   },
@@ -143,7 +143,6 @@ export function ModelPage({ settings, summary, onSave, saving }) {
     <>
       <PageHead
         title="Модель риска"
-        description="Каждое изменение пересчитывает рейтинг и деньги без перезагрузки и сохраняется после перезапуска"
       >
         <span className="saved">
           {changed ? (
@@ -171,7 +170,6 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             <CardHead
               icon="info"
               title="Признаки и баллы"
-              description="Индекс услуги — сумма баллов её признаков, от 0 до 100. Индекс аккаунта — «хотя бы одна услуга не продлится»: 100 × (1 − Π(1 − индекс услуги / 100)), тоже не выше 100."
             />
           </div>
           {codes.map((code) => (
@@ -203,8 +201,6 @@ export function ModelPage({ settings, summary, onSave, saving }) {
           ))}
           <div className="save-bar">
             <span>
-              Новый признак добавляется в бэкенде одной записью и сразу
-              появляется здесь.
             </span>
             {saveError && (
               <span className="inline-error" role="alert">
@@ -225,11 +221,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
           {!lastChange && (
             <section className="impact">
               <span>Что изменится</span>
-              <b>Поменяйте балл и нажмите «Сохранить и пересчитать»</b>
-              <small>
-                Здесь появится, сколько клиентов сменили уровень и как
-                изменилась ожидаемая потеря. Обзор и список обновятся сами.
-              </small>
+              <b>Поменяйте балл и сохраните</b>
             </section>
           )}
           {lastChange && summary && (
@@ -265,7 +257,6 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             <CardHead
               icon="error"
               title="Пороги уровней"
-              description="Где заканчивается низкий риск и начинается высокий"
             />
             <div className="scale" aria-hidden="true">
               <div className="scale-track">
@@ -336,7 +327,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             <CardHead
               icon="info"
               title="Контрольные случаи"
-              description="Четыре аккаунта из обсуждения с ментором, пересчитаны текущими весами"
+              description="Пересчитаны текущими весами"
             />
             <div className="control-table">
               {(settings.control_cases || []).map((item) => (
@@ -362,33 +353,15 @@ export function ModelPage({ settings, summary, onSave, saving }) {
             <CardHead
               icon="euro"
               title="Денежная оценка"
-              description="Ожидаемая потеря и максимум считаются на одной выборке услуг"
             />
             <div className="formula">
               <b>Ожидаемо = Σ цена услуги × индекс услуги / 100</b>
-              <small>
-                Главная сумма: стоимость продлений, взвешенная индексом риска.
-                По ней строится очередь клиентов.
-              </small>
               <b>Максимум = Σ цена тех же услуг</b>
-              <small>
-                Сколько не поступит, если не продлятся все услуги выборки. Выборка
-                одна на обе суммы, поэтому ожидаемо никогда не больше максимума.
-              </small>
               <b>
                 Из ожидаемого: не хватает средств = Σ недостаток × индекс услуги
                 / 100
               </b>
-              <small>
-                Часть ожидаемой потери, которую объясняет нехватка денег на
-                балансе. Если баланс покрывает продление, она 0.
-              </small>
               <b>Выборка = услуги с индексом больше 0, решение по которым впереди</b>
-              <small>
-                Срок в пределах 7 дней или услуга ждёт оплаты меньше 5 дней.
-                Услуга, которая ждёт дольше, уже должна быть удалена: это ошибка
-                данных, её деньги не считаем.
-              </small>
             </div>
             <label className="field">
               <span>Горизонт прогноза, дней</span>

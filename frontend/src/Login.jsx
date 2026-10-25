@@ -90,7 +90,6 @@ function LoginForm({ onLogin, onMode, initialUsername, notice, methods }) {
     <form className="login-form" onSubmit={submit} noValidate>
       <header>
         <h1 className="h1">Вход</h1>
-        <p>Панель защищена: данные клиентов видят только сотрудники</p>
       </header>
       {notice && (
         <p className="form-notice" role="status">
@@ -235,7 +234,6 @@ function RegisterForm({ onRegistered, onMode }) {
     <form className="login-form" onSubmit={submit} noValidate>
       <header>
         <h1 className="h1">Регистрация</h1>
-        <p>Доступ к панели для сотрудников Aéza</p>
       </header>
       <div className="fields">
         <Field

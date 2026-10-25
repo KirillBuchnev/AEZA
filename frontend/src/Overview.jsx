@@ -84,7 +84,6 @@ export function Overview({
     <>
       <PageHead
         title="Риск оттока"
-        description="Кому нужно внимание, почему и сколько можем потерять"
       >
         <button
           className="chip chip-link"
@@ -101,7 +100,6 @@ export function Overview({
       <section className="outflow-section">
         <CardHead
           title="Отток: факты и прогноз"
-          description="Слева — что уже ушло по снимкам, справа — услуги под риском по дням решения и ожидаемые непродления. Линия «сегодня» разделяет их."
         />
         <OutflowChart outflow={outflow} days={outflowDays} onDays={setOutflowDays} />
       </section>
@@ -202,7 +200,6 @@ export function Overview({
           <CardHead
             icon="wallet"
             title="Где сосредоточены потери"
-            description="Клиенты с наибольшей суммой под риском. Рядом — верхняя граница по тем же услугам."
           />
           {exposure.length ? (
             <div className="exposure">
@@ -271,11 +268,6 @@ export function Overview({
               </button>
             ))}
           </div>
-          <p className="note small muted">
-            <AezaIcon name="info" variant="flat" size={22} />
-            «Нет оценки»: у клиента нет активных услуг или дат окончания,
-            поэтому риск не считаем.
-          </p>
         </section>
       </div>
 
@@ -283,7 +275,6 @@ export function Overview({
         <CardHead
           icon="wallet"
           title="Ценность базы (LTV)">
-          <span className="small muted">Оценка по текущим услугам, платежам и риску</span>
         </CardHead>
         <div className="ltv-grid">
           <div><span>Оценка LTV базы</span><b>{money(summary?.ltv_total_minor)}</b></div>
@@ -291,7 +282,6 @@ export function Overview({
           <div><span>Текущий MRR</span><b>{money(summary?.monthly_cost_minor)}</b></div>
           <div><span>Клиентов с оценкой</span><b>{summary?.assessed_total ?? 0}</b></div>
         </div>
-        <p className="small muted">LTV — объяснимая оценка для приоритизации маркетинга. Она не заменяет прибыль и не включает маржу, возвраты или CAC.</p>
       </section>
 
       <section className="table-card">
@@ -302,7 +292,6 @@ export function Overview({
                 ? `Причина: ${activeReasonTitle}`
                 : "Очередь клиентов"
             }
-            description="Сверху те, с кого ожидаем потерять больше всего. Нажмите на заголовок колонки, чтобы отсортировать"
           >
             {activeReason && (
               <button className="link" onClick={() => setActiveReason("")}>
