@@ -497,10 +497,8 @@ backend/            FastAPI-приложение, тесты, сборка сн�
 frontend/           React-панель, конфигурация nginx
 db/                 справочная схема БД, тестовый набор кейса, проект БД
 docs/screenshots/   снимки экранов для этого README
-docs/notes/         рабочие заметки команды
 sso/                конфигурация локального провайдера OIDC
 docker-compose.yml, docker-compose.sso.yml, .env.example
-PRODUCT.md          продуктовые решения: бренд, стек
 ```
 
 ## Команда
