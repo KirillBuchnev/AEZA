@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "./api.js";
-import {
-  codewordError,
-  matchError,
-  passwordError,
-  usernameError,
-} from "./authRules.js";
+import { matchError, passwordError, usernameError } from "./authRules.js";
 import { Brand } from "./Icons.jsx";
 import mascotLaptop from "./assets/mascot-laptop.webp";
 
@@ -149,173 +144,6 @@ function LoginForm({ onLogin, onMode, initialUsername, notice, methods }) {
           </a>
         </>
       )}
-      {methods.registration && (
-        <p className="form-switch">
-          Нет аккаунта?{" "}
-          <button
-            type="button"
-            className="link"
-            onClick={() => onMode("register")}
-          >
-            Зарегистрироваться
-          </button>
-        </p>
-      )}
-    </form>
-  );
-}
-
-function RegisterForm({ onRegistered, onMode }) {
-  const [form, setForm] = useState({
-    last_name: "",
-    first_name: "",
-    middle_name: "",
-    username: "",
-    password: "",
-    password_confirm: "",
-    codeword: "",
-  });
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState("");
-  const set = (key) => (value) =>
-    setForm((current) => ({ ...current, [key]: value }));
-
-  function validate(values) {
-    const next = {};
-    if (!values.last_name.trim()) next.last_name = "Укажите фамилию";
-    if (!values.first_name.trim()) next.first_name = "Укажите имя";
-    const login = usernameError(values.username.trim());
-    if (login) next.username = login;
-    const password = passwordError(values.password, values.username.trim());
-    if (password) next.password = password;
-    const match = matchError(values.password, values.password_confirm);
-    if (match) next.password_confirm = match;
-    const codeword = codewordError(values.codeword, values.password);
-    if (codeword) next.codeword = codeword;
-    return next;
-  }
-
-  async function submit(event) {
-    event.preventDefault();
-    setTouched(true);
-    setServerError("");
-    const next = validate(form);
-    setErrors(next);
-    if (Object.keys(next).length) {
-      document.getElementById(`field-${Object.keys(next)[0]}`)?.focus();
-      return;
-    }
-    setLoading(true);
-    try {
-      const result = await api.register({
-        ...form,
-        middle_name: form.middle_name.trim() || null,
-      });
-      onRegistered(result.user);
-    } catch (requestError) {
-      if (requestError.status === 409) {
-        setErrors({ username: requestError.message });
-        document.getElementById("field-username")?.focus();
-      } else setServerError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const err = (key) => (touched ? errors[key] : "");
-  const onChange = (key) => (value) => {
-    set(key)(value);
-    if (touched) setErrors(validate({ ...form, [key]: value }));
-  };
-
-  return (
-    <form className="login-form" onSubmit={submit} noValidate>
-      <header>
-        <h1 className="h1">Регистрация</h1>
-      </header>
-      <div className="fields">
-        <Field
-          label="Фамилия"
-          name="last_name"
-          autoComplete="family-name"
-          value={form.last_name}
-          onChange={onChange("last_name")}
-          error={err("last_name")}
-        />
-        <Field
-          label="Имя"
-          name="first_name"
-          autoComplete="given-name"
-          value={form.first_name}
-          onChange={onChange("first_name")}
-          error={err("first_name")}
-        />
-      </div>
-      <Field
-        label="Отчество"
-        optional
-        name="middle_name"
-        autoComplete="additional-name"
-        value={form.middle_name}
-        onChange={onChange("middle_name")}
-      />
-      <Field
-        label="Логин"
-        name="username"
-        autoComplete="username"
-        spellCheck={false}
-        autoCapitalize="none"
-        hint="Латиница, цифры и . _ @ -, можно рабочий email"
-        value={form.username}
-        onChange={onChange("username")}
-        error={err("username")}
-      />
-      <div className="fields">
-        <Field
-          label="Пароль"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          value={form.password}
-          onChange={onChange("password")}
-          error={err("password")}
-        />
-        <Field
-          label="Повторите пароль"
-          name="password_confirm"
-          type="password"
-          autoComplete="new-password"
-          value={form.password_confirm}
-          onChange={onChange("password_confirm")}
-          error={err("password_confirm")}
-        />
-      </div>
-      <Field
-        label="Кодовое слово"
-        name="codeword"
-        autoComplete="off"
-        spellCheck={false}
-        hint="Спросим его, если забудете пароль. Регистр не важен"
-        value={form.codeword}
-        onChange={onChange("codeword")}
-        error={err("codeword")}
-      />
-      {serverError && (
-        <p className="inline-error" role="alert">
-          {serverError}
-        </p>
-      )}
-      <button className="button button-primary button-wide" disabled={loading}>
-        {loading ? "Создаём аккаунт…" : "Зарегистрироваться"}
-      </button>
-      <p className="form-switch">
-        Уже есть аккаунт?{" "}
-        <button type="button" className="link" onClick={() => onMode("login")}>
-          Войти
-        </button>
-      </p>
     </form>
   );
 }
@@ -469,11 +297,10 @@ function ResetForm({ onMode, initialUsername }) {
   );
 }
 
-export function Login({ onLogin, onRegistered }) {
+export function Login({ onLogin }) {
   const [view, setView] = useState({ mode: "login", username: "", notice: "" });
   const [methods, setMethods] = useState({
     password: true,
-    registration: false,
     sso: { enabled: false, label: "" },
   });
   const [ssoNotice] = useState(readSsoNotice);
@@ -525,9 +352,7 @@ export function Login({ onLogin, onRegistered }) {
         />
       </section>
       <div className="login-side">
-        {view.mode === "register" && methods.registration ? (
-          <RegisterForm onRegistered={onRegistered} onMode={onMode} />
-        ) : view.mode === "reset" ? (
+        {view.mode === "reset" ? (
           <ResetForm onMode={onMode} initialUsername={view.username} />
         ) : (
           <LoginForm

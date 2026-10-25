@@ -45,7 +45,6 @@ class AppConfig:
     admin_codeword: str
     admin_first_name: str
     admin_last_name: str
-    registration_enabled: bool
     oidc_issuer: str
     oidc_client_id: str
     oidc_client_secret: str
@@ -164,7 +163,6 @@ def load_config() -> AppConfig:
         admin_codeword=codeword,
         admin_first_name=os.getenv("AEZA_ADMIN_FIRST_NAME", "Демо").strip() or "Демо",
         admin_last_name=os.getenv("AEZA_ADMIN_LAST_NAME", "Аналитик").strip() or "Аналитик",
-        registration_enabled=_boolean("AEZA_REGISTRATION_ENABLED", default=environment != "production"),
         oidc_issuer=oidc_issuer,
         oidc_client_id=oidc_client_id,
         oidc_client_secret=oidc_client_secret,

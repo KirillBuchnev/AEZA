@@ -4,6 +4,7 @@ import { api } from "./api.js";
 import { Brand } from "./Icons.jsx";
 import { CustomerPage } from "./CustomerPage.jsx";
 import { CustomersPage } from "./CustomersPage.jsx";
+import { AdminPage } from "./AdminPage.jsx";
 import { Login } from "./Login.jsx";
 import { PasswordDialog } from "./PasswordDialog.jsx";
 import { ModelPage } from "./ModelPage.jsx";
@@ -40,6 +41,7 @@ const pageTitles = {
   customers: [{ label: "Клиенты" }],
   model: [{ label: "Управление" }, { label: "Модель риска" }],
   source: [{ label: "Управление" }, { label: "Источник данных" }],
+  admin: [{ label: "Администрирование" }, { label: "Пользователи" }],
 };
 
 export default function App() {
@@ -387,13 +389,7 @@ export default function App() {
   if (!authenticated)
     return (
       <>
-        <Login
-          onLogin={handleLogin}
-          onRegistered={(registered) => {
-            setUser(registered);
-            setAuthenticated(true);
-          }}
-        />
+        <Login onLogin={handleLogin} />
         <Toast
           message={toast?.message}
           kind={toast?.kind}
@@ -542,6 +538,12 @@ export default function App() {
                   onToast={setToast}
                 />
               )}
+              {page === "admin" &&
+                (user?.role === "admin" ? (
+                  <AdminPage currentUser={user} onToast={setToast} />
+                ) : (
+                  <p className="muted">Раздел доступен только администраторам AEZA.</p>
+                ))}
             </>
           )}
         </div>

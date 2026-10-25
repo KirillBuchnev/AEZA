@@ -34,8 +34,11 @@ from .schemas import (
     OutflowResponse,
     PasswordChangeRequest,
     PasswordResetRequest,
+    AdminUserCreate,
+    AdminUserItem,
+    AdminUsersResponse,
+    AdminUserUpdate,
     PasswordResetTokenResponse,
-    RegisterRequest,
     SnapshotImportResponse,
     SnapshotUpload,
     ServicePatch,
@@ -461,19 +464,37 @@ def _sort_key(sort_by: str, field: str) -> Callable[[dict[str, Any]], Any]:
     return key
 
 
+def _emergency_password_account(user: dict[str, Any] | None) -> bool:
+    """Только аварийная учётная запись хранит пароль; остальные сотрудники входят через SSO."""
+    return (
+        user is not None
+        and user["username"] == normalize_username(config.admin_username)
+        and user["password_hash"] != OIDC_ONLY_SECRET
+    )
+
+
 def _oidc_user(issuer: str, claims: dict[str, Any]) -> dict[str, Any] | None:
     subject = str(claims["sub"])
     username = database.oidc_identity(issuer, subject)
     if username is not None:
-        return database.get_user(username)
-    if not config.oidc_auto_provision:
-        return None
+        user = database.get_user(username)
+        return user if user and user["active"] else None
     claimed = claims.get(config.oidc_username_claim) or claims.get("email")
     if not isinstance(claimed, str):
         return None
     username = normalize_username(claimed)
-    if username_error(username) or database.get_user(username) is not None:
-        # Никогда не привязывать SSO-идентичность к существующему локальному аккаунту автоматически.
+    if username_error(username):
+        return None
+    existing = database.get_user(username)
+    if existing is not None:
+        # Сотрудника, которого завёл администратор, связываем с SSO при первом входе.
+        # Локальную учётку с паролем не связываем никогда: иначе SSO перехватил бы парольный вход.
+        if existing["password_hash"] != OIDC_ONLY_SECRET or not existing["active"]:
+            return None
+        database.link_oidc_identity(issuer, subject, username)
+        return existing
+    if not config.oidc_auto_provision:
+        # Доступ выдаёт администратор в панели пользователей; незнакомые SSO-учётки не пускаем.
         return None
     # Провайдеры различаются: берём given name, затем отображаемое имя, затем логин.
     first_name = str(claims.get("given_name") or claims.get("name") or username).strip()[:60] or username
@@ -499,7 +520,6 @@ def health() -> dict[str, str]:
 def auth_methods() -> dict[str, Any]:
     return {
         "password": True,
-        "registration": config.registration_enabled,
         "sso": {"enabled": oidc_client is not None, "label": "Войти через SSO"},
     }
 
@@ -520,7 +540,9 @@ def login(body: LoginRequest, request: Request, response: Response) -> dict[str,
 
     user = database.get_user(username)
     password_ok = verify_secret(body.password, user["password_hash"] if user else DUMMY_HASH)
-    if user is None or not password_ok:
+    # Заблокированная учётка и любая учётка, кроме аварийной, получают тот же ответ, что и неверный пароль,
+    # поэтому ответ ничего не раскрывает.
+    if user is None or not password_ok or not user["active"] or not _emergency_password_account(user):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль.")
 
     database.clear_login_attempts(client_key)
@@ -605,6 +627,7 @@ def _profile(user: dict[str, Any]) -> dict[str, Any]:
         "middle_name": middle_name,
         "full_name": " ".join(part for part in (user["last_name"], user["first_name"], middle_name) if part),
         "role": user["role"],
+        "has_password": _emergency_password_account(user),
     }
 
 
@@ -624,34 +647,37 @@ def _start_session(response: Response, user: dict[str, Any]) -> dict[str, Any]:
     return {"user": _profile(user), "expires_at": expires_at.isoformat()}
 
 
-@app.post("/api/v1/auth/register", status_code=201, tags=["auth"], summary="Зарегистрироваться", response_model=LoginResponse)
-def register(body: RegisterRequest, request: Request, response: Response) -> dict[str, Any]:
-    if not config.registration_enabled:
-        raise HTTPException(status_code=403, detail="Регистрация отключена администратором.")
-    client_key = _scoped_client_key(request, "register")
-    retry_after = database.begin_login_attempt(client_key, max_attempts=10)
-    if retry_after:
-        raise _too_many_attempts(retry_after)
+def require_admin(username: str = Depends(require_session)) -> str:
+    user = database.get_user(username)
+    if user is None or user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Раздел доступен только администраторам AEZA.")
+    return username
 
+
+def _admin_user_item(user: dict[str, Any]) -> dict[str, Any]:
+    return {
+        **_profile(user),
+        "active": bool(user["active"]),
+        "created_at": str(user["created_at"]),
+    }
+
+
+@app.get("/api/v1/admin/users", tags=["admin"], summary="Сотрудники AEZA и их роли", response_model=AdminUsersResponse)
+def admin_list_users(_: str = Depends(require_admin)) -> dict[str, Any]:
+    return {"items": [_admin_user_item(row) for row in database.admin_user_rows()]}
+
+
+@app.post("/api/v1/admin/users", status_code=201, tags=["admin"], summary="Завести сотрудника для входа через SSO", response_model=AdminUserItem)
+def admin_create_user(body: AdminUserCreate, _: str = Depends(require_admin)) -> dict[str, Any]:
     username = normalize_username(body.username)
+    error = username_error(username)
+    if error:
+        raise HTTPException(status_code=422, detail=error)
     first_name = body.first_name.strip()
     last_name = body.last_name.strip()
     middle_name = (body.middle_name or "").strip() or None
     if not first_name or not last_name:
         raise HTTPException(status_code=422, detail="Укажите имя и фамилию.")
-    if len(first_name) > 60 or len(last_name) > 60 or len(middle_name or "") > 60:
-        raise HTTPException(status_code=422, detail="Имя, фамилия и отчество должны быть не длиннее 60 символов.")
-    error = username_error(username)
-    if error:
-        raise HTTPException(status_code=422, detail=error)
-    if body.password != body.password_confirm:
-        raise HTTPException(status_code=422, detail="Пароли не совпадают.")
-    error = password_error(body.password, username)
-    if error:
-        raise HTTPException(status_code=422, detail=error)
-    error = codeword_error(body.codeword, body.password)
-    if error:
-        raise HTTPException(status_code=422, detail=error)
     if database.get_user(username) is not None:
         raise HTTPException(status_code=409, detail="Логин уже занят.")
     try:
@@ -659,15 +685,28 @@ def register(body: RegisterRequest, request: Request, response: Response) -> dic
             username,
             first_name,
             last_name,
-            hash_secret(body.password),
-            hash_secret(normalize_codeword(body.codeword)),
+            OIDC_ONLY_SECRET,
+            OIDC_ONLY_SECRET,
             middle_name=middle_name,
+            role=body.role,
         )
     except IntegrityError:
         raise HTTPException(status_code=409, detail="Логин уже занят.")
+    return _admin_user_item(database.get_user(username))
 
-    database.clear_login_attempts(client_key)
-    return _start_session(response, database.get_user(username))
+
+@app.patch("/api/v1/admin/users/{username}", tags=["admin"], summary="Сменить роль или заблокировать сотрудника", response_model=AdminUserItem)
+def admin_update_user(username: str, body: AdminUserUpdate, actor: str = Depends(require_admin)) -> dict[str, Any]:
+    target = normalize_username(username)
+    if target == actor and (body.active is False or body.role == "analyst"):
+        raise HTTPException(status_code=409, detail="Нельзя заблокировать себя или снять с себя роль администратора.")
+    try:
+        user = database.update_user(target, role=body.role, active=body.active)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Пользователь не найден.")
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return _admin_user_item(user)
 
 
 @app.post("/api/v1/auth/password/verify-codeword", tags=["auth"], summary="Проверить кодовое слово для сброса", response_model=PasswordResetTokenResponse)
@@ -685,7 +724,7 @@ def verify_codeword(body: VerifyCodewordRequest, request: Request) -> dict[str, 
     user = database.get_user(username)
     stored = user["codeword_hash"] if user else DUMMY_HASH
     codeword_ok = verify_secret(normalize_codeword(body.codeword), stored)
-    if user is None or not codeword_ok:
+    if user is None or not codeword_ok or not _emergency_password_account(user):
         raise HTTPException(status_code=401, detail="Неверный логин или кодовое слово.")
 
     database.clear_login_attempts(client_key)
@@ -723,6 +762,8 @@ def change_password(
     user = database.get_user(username)
     if user is None:
         raise _unauthorized()
+    if not _emergency_password_account(user):
+        raise HTTPException(status_code=403, detail="Смена пароля доступна только аварийной учётной записи.")
     change_key = _throttle_key("change-password", username)
     retry_after = database.begin_login_attempt(change_key, max_attempts=5)
     if retry_after:

@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -228,18 +228,6 @@ class LoginRequest(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
-class RegisterRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    username: str = Field(min_length=1, max_length=120)
-    first_name: str = Field(min_length=1, max_length=120)
-    last_name: str = Field(min_length=1, max_length=120)
-    middle_name: str | None = Field(default=None, max_length=120)
-    password: str = Field(min_length=1, max_length=256)
-    password_confirm: str = Field(min_length=1, max_length=256)
-    codeword: str = Field(min_length=1, max_length=256)
-
-
 class VerifyCodewordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -282,7 +270,6 @@ class SsoMethod(BaseModel):
 
 class AuthMethodsResponse(BaseModel):
     password: bool
-    registration: bool
     sso: SsoMethod
 
 
@@ -483,6 +470,8 @@ class UserResponse(BaseModel):
     middle_name: str | None = None
     full_name: str
     role: str
+    # False у сотрудников, которые входят только через SSO: панель скрывает для них смену пароля.
+    has_password: bool = True
 
 
 class PasswordResetTokenResponse(BaseModel):
@@ -493,6 +482,41 @@ class PasswordResetTokenResponse(BaseModel):
 class LoginResponse(BaseModel):
     user: UserResponse
     expires_at: datetime
+
+
+class AdminUserCreate(BaseModel):
+    """Сотрудника заводит администратор, а затем он входит через SSO."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=120)
+    first_name: str = Field(min_length=1, max_length=60)
+    last_name: str = Field(min_length=1, max_length=60)
+    middle_name: str | None = Field(default=None, max_length=60)
+    role: Literal["analyst", "admin"] = "analyst"
+
+
+class AdminUserUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role: Literal["analyst", "admin"] | None = None
+    active: bool | None = None
+
+
+class AdminUserItem(BaseModel):
+    username: str
+    first_name: str
+    last_name: str
+    middle_name: str | None = None
+    full_name: str
+    role: str
+    active: bool
+    has_password: bool
+    created_at: str
+
+
+class AdminUsersResponse(BaseModel):
+    items: list[AdminUserItem]
 
 
 class FeatureDescription(BaseModel):

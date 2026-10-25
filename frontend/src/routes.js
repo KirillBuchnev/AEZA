@@ -1,4 +1,4 @@
-const pages = new Set(["overview", "customers", "model", "source"]);
+const pages = new Set(["overview", "customers", "model", "source", "admin"]);
 
 // Адрес отражает экран: #/customers, #/customers/1088, #/customers?risk=high
 export function readHash() {
