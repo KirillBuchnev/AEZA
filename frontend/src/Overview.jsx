@@ -182,7 +182,7 @@ export function Overview({
               <dd>{money(summary?.near_term_loss_minor)}</dd>
             </div>
             <div>
-              <dt>Из ожидаемого: не хватает средств</dt>
+              <dt>Из ожидаемой суммы не хватает на балансе</dt>
               <dd>{money(summary?.potential_loss_minor)}</dd>
             </div>
           </dl>
