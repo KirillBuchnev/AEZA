@@ -2301,6 +2301,22 @@
       },
       "SnapshotUpload": {
         "properties": {
+          "accounts": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 5000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accounts"
+          },
           "customers": {
             "items": {
               "$ref": "#/components/schemas/CustomerSnapshot"
@@ -2308,11 +2324,40 @@
             "maxItems": 5000,
             "title": "Customers",
             "type": "array"
+          },
+          "services": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 25000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Services"
+          },
+          "transactions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "maxItems": 50000,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transactions"
           }
         },
-        "required": [
-          "customers"
-        ],
         "title": "SnapshotUpload",
         "type": "object"
       },

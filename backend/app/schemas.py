@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_MONEY_MINOR = 9_000_000_000_000
 
@@ -123,7 +123,76 @@ class CustomerSnapshot(BaseModel):
 class SnapshotUpload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    customers: list[CustomerSnapshot] = Field(max_length=5_000)
+    customers: list[CustomerSnapshot] = Field(default_factory=list, max_length=5_000)
+    # Flat organizer export accepted by the same endpoint and normalized below.
+    accounts: list[dict[str, Any]] | None = Field(default=None, max_length=5_000)
+    services: list[dict[str, Any]] | None = Field(default=None, max_length=25_000)
+    transactions: list[dict[str, Any]] | None = Field(default=None, max_length=50_000)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_flat_source_export(cls, value: Any) -> Any:
+        """Accept the organizers' flat data.json beside the nested API format."""
+        if not isinstance(value, dict) or value.get("customers") is not None:
+            return value
+        accounts = value.get("accounts")
+        services = value.get("services")
+        transactions = value.get("transactions")
+        if not isinstance(accounts, list) or not isinstance(services, list) or not isinstance(transactions, list):
+            return value
+
+        services_by_owner: dict[str, list[dict[str, Any]]] = {}
+        owner_by_service: dict[str, str] = {}
+        for service in services:
+            if not isinstance(service, dict):
+                continue
+            service_id = str(service.get("id"))
+            owner_id = str(service.get("ownerId"))
+            owner_by_service[service_id] = owner_id
+            services_by_owner.setdefault(owner_id, []).append({
+                "id": service.get("id"),
+                "name": service.get("name"),
+                "price": service.get("price"),
+                "autoprolong": service.get("autoProlong"),
+                "paymentTerm": service.get("paymentTerm"),
+                "status": service.get("status"),
+                "expiresAt": service.get("expiresAt"),
+            })
+
+        transactions_by_owner: dict[str, list[dict[str, Any]]] = {}
+        for transaction in transactions:
+            if not isinstance(transaction, dict):
+                continue
+            service_id = str(transaction.get("serviceId"))
+            owner_id = owner_by_service.get(service_id)
+            if owner_id is None:
+                raise ValueError(f"Транзакция {transaction.get('id')} ссылается на неизвестную услугу")
+            transactions_by_owner.setdefault(owner_id, []).append({
+                "id": transaction.get("id"),
+                "serviceId": transaction.get("serviceId"),
+                "status": transaction.get("status"),
+                "type": transaction.get("type"),
+                "amount": transaction.get("amount"),
+                "createdAt": transaction.get("createdAt"),
+            })
+
+        customers = []
+        for account in accounts:
+            if not isinstance(account, dict):
+                continue
+            account_id = str(account.get("id"))
+            customers.append({
+                "id": account.get("id"),
+                "email": account.get("email"),
+                "balance": account.get("balance"),
+                "withdrawBalance": account.get("withdrawBalance", 0),
+                "bonusBalance": account.get("bonusBalance", 0),
+                "bonusState": account.get("bonusState", "locked"),
+                "totalReplenished": account.get("totalReplenished", 0),
+                "services": services_by_owner.get(account_id, []),
+                "transactions": transactions_by_owner.get(account_id, []),
+            })
+        return {"customers": customers}
 
 
 class CustomerPatch(BaseModel):

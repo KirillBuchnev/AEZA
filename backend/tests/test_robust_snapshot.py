@@ -52,3 +52,44 @@ def test_waiting_longer_than_the_grace_period_is_flagged(open_app):
         assert client.put(SNAPSHOT, json={"customers": [account([service("a", status="prolong_wait", expires_in_days=-9)])]}).status_code == 200
         codes = [issue["code"] for issue in detail(client)["data_quality"]]
         assert "grace_expired" in codes
+
+
+def test_flat_organizer_export_is_accepted_and_joined(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        response = client.put(SNAPSHOT, json={
+            "accounts": [{
+                "id": 7,
+                "email": "flat@example.test",
+                "balance": 5000,
+                "withdrawBalance": 0,
+                "bonusBalance": 0,
+                "bonusState": "locked",
+                "totalReplenished": 9000,
+            }],
+            "services": [{
+                "id": 70,
+                "ownerId": 7,
+                "name": "Flat service",
+                "price": 1000,
+                "autoProlong": False,
+                "paymentTerm": "month",
+                "status": "active",
+                "expiresAt": days_from_now(2),
+            }],
+            "transactions": [{
+                "id": 700,
+                "serviceId": 70,
+                "amount": 1000,
+                "status": "performed",
+                "type": "order",
+                "createdAt": days_from_now(-2),
+            }],
+        })
+        assert response.status_code == 200
+        detail_response = client.get(f"{CUSTOMERS}/7")
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail["email"] == "flat@example.test"
+        assert detail["services"][0]["id"] == "70"
+        assert detail["transactions"][0]["id"] == "700"
