@@ -269,7 +269,7 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
         </span>
         <span>
           <i className="legend-dot" />
-          Ожидаемые непродления по индексу риска
+          Ожидаемые непродления
         </span>
       </div>
       {(!hasFacts || estimated) && (

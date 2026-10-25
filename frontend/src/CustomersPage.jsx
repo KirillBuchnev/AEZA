@@ -33,7 +33,7 @@ export function CustomersPage({
     <>
       <PageHead
         title="Клиенты"
-        description={`${summary?.customers_total ?? total} клиентов · рейтинг пересчитывается сам при новых данных или коэффициентах`}
+        description={`${summary?.customers_total ?? total} клиентов · данные обновляются автоматически`}
       >
         <label className="search">
           <Icon name="search" size={18} />

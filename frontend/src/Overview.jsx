@@ -129,7 +129,7 @@ export function Overview({
         <div className="hero-col">
           <span className="hero-q">
             <AezaIcon name="info" variant="keyBlue" size={34} />
-            Почему растёт риск
+            Главные причины риска
           </span>
           {reasons.length ? (
             reasons.map((reason) => (
@@ -156,7 +156,7 @@ export function Overview({
             ))
           ) : (
             <span className="hero-note">
-              Среди клиентов под риском признаков нет.
+              Сейчас нет клиентов с активным риском.
             </span>
           )}
         </div>
@@ -178,7 +178,7 @@ export function Overview({
           </span>
           <dl className="hero-money">
             <div>
-              <dt>Максимум, если не продлятся все</dt>
+              <dt>Максимум по этим услугам</dt>
               <dd>{money(summary?.near_term_loss_minor)}</dd>
             </div>
             <div>
@@ -187,7 +187,7 @@ export function Overview({
             </div>
           </dl>
           <button className="link" onClick={() => onNavigate.page("model")}>
-            Как считается →
+            Открыть методику →
           </button>
         </div>
         <div className="stripes" aria-hidden="true">
@@ -202,7 +202,7 @@ export function Overview({
           <CardHead
             icon="wallet"
             title="Где сосредоточены потери"
-            description="Клиенты с наибольшей ожидаемой потерей: цена услуг × индекс риска. Справа — максимум по тем же услугам"
+            description="Клиенты с наибольшей суммой под риском. Рядом — верхняя граница по тем же услугам."
           />
           {exposure.length ? (
             <div className="exposure">
@@ -238,7 +238,7 @@ export function Overview({
           <CardHead
             icon="error"
             title="Уровни риска"
-            description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · ожидаемая потеря по уровню`}
+            description={`${summary?.customers_total ?? 0} ${plural(summary?.customers_total ?? 0, ["клиент", "клиента", "клиентов"])} · сумма под риском по уровню`}
           />
           <div className="levels-bar" aria-hidden="true">
             {levels.map((key) =>

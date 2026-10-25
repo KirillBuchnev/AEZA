@@ -3,7 +3,6 @@
 - Рабочий бэкенд хранит данные в PostgreSQL (см. `PRODUCT.md`). Его схема создаётся кодом в `backend/app/database.py` (`_schema_statements`); эта папка описывает кейс и справочную схему.
 - `001`–`003` — схема и тестовый набор из кейса (`accounts`, `services`, `transactions`), а также целевое описание для PostgreSQL. Из `002_seed.sql` собирается снимок кейса для приложения: `backend/scripts/build_case_snapshot.py`.
 - Соответствие: `accounts` = клиент (`customers` в API), `services.ownerId` = владелец услуги, `services.paymentTerm` = срок оплаты.
-- Ранний черновик `docs/postgres-prototype/` — ориентир по типам (BOOLEAN, BIGINT); рантайм от него отличается, см. README, раздел «Решения и ограничения».
 
 # База данных «Анализатор рисков оттока»
 

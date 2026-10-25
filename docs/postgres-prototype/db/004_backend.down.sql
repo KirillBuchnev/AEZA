@@ -1,6 +1,0 @@
-DROP TABLE IF EXISTS app_state;
-DROP TABLE IF EXISTS login_attempts;
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS transactions;
-DROP TABLE IF EXISTS services;
-DROP TABLE IF EXISTS customers;

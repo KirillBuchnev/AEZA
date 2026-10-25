@@ -40,22 +40,17 @@ function ServiceDetail({ service }) {
       )}
       {service.revenue_at_risk_minor > 0 && (
         <p className="service-loss">
-          Ожидаемо: {money(service.revenue_at_risk_minor)} = цена{" "}
-          {money(service.price_minor)} × индекс {index} / 100. Максимум —{" "}
-          {money(service.near_term_loss_minor)}, полная цена продления
+          Под риском: {money(service.revenue_at_risk_minor)} из {money(service.near_term_loss_minor)} полной цены продления
         </p>
       )}
       {service.potential_loss_minor > 0 && (
         <p className="service-loss">
-          Из ожидаемого не хватает средств: {money(service.potential_loss_minor)}{" "}
-          = недостаток {money(service.uncovered_revenue_minor)} × индекс {index}{" "}
-          / 100
+          Не хватает на балансе: {money(service.potential_loss_minor)}
         </p>
       )}
       {staleWait && (
         <p className="service-loss">
-          Деньги не считаем: ожидание оплаты дольше 5 дней, услуга уже должна
-          быть удалена. Проверьте данные в источнике.
+          Ожидание оплаты длится больше 5 дней. Проверьте статус услуги в источнике.
         </p>
       )}
       <p className="service-action">
@@ -255,7 +250,7 @@ export function CustomerPage({ id, version, onToast }) {
             description={
               customer.risk_score == null
                 ? "Мало данных: нет активных услуг или даты окончания. Когда появятся, оценка посчитается сама."
-                : "Индекс аккаунта — «хотя бы одна услуга не продлится»: 100 × (1 − Π(1 − индекс услуги / 100)), не выше 100. У аккаунта с одной услугой он равен её индексу. Веса — в «Модели риска»."
+                : "Риск клиента растёт, если несколько услуг могут не продлиться. Подробности — на странице «Модель риска»."
             }
           />
           {customer.risk_score == null ? (
@@ -286,7 +281,7 @@ export function CustomerPage({ id, version, onToast }) {
                 </div>
               ))}
               <div className="total-row">
-                <b>Индекс аккаунта</b>
+                <b>Риск клиента</b>
                 <span className="muted">
                   {reasons.map((reason) => points(reason.points)).join(" + ")}{" "}
                   = {points(customer.risk_score)}
@@ -294,11 +289,10 @@ export function CustomerPage({ id, version, onToast }) {
               </div>
               {indexed.length > 1 && (
                 <p className="small muted">
-                  Индексы услуг: {indexed.slice(0, 6).map((service) => points(service.risk_score)).join(", ")}
+                  Оценки по услугам: {indexed.slice(0, 6).map((service) => points(service.risk_score)).join(", ")}
                   {indexed.length > 6 && "…"}. Просто сложить их нельзя: вышло бы{" "}
-                  {points(indexedSum)}. Индекс аккаунта отвечает на вопрос
-                  «хотя бы одна услуга не продлится», поэтому он ниже суммы и не
-                  выше 100.
+                  {points(indexedSum)}. Общий риск учитывает вероятность того,
+                  что не продлится хотя бы одна услуга, поэтому не превышает 100.
                 </p>
               )}
             </div>
@@ -311,17 +305,17 @@ export function CustomerPage({ id, version, onToast }) {
           <CardHead
             icon="euro"
             title="Сколько можем потерять"
-            description="Ожидаемая потеря и максимум по услугам, у которых срок в пределах 7 дней или идёт ожидание оплаты"
+            description="Сумма под риском и верхняя граница по ближайшим продлениям"
           />
           <div>
             <div className="calc-line">
               <i />
-              <span>Максимум: цена услуг с признаками риска</span>
+              <span>Максимум по услугам с риском</span>
               <b>{scored ? money(customer.near_term_loss_minor) : "—"}</b>
             </div>
             <div className="calc-line">
               <i>×</i>
-              <span>Индекс каждой услуги / 100</span>
+              <span>С учётом риска каждой услуги</span>
               <b>{scored ? "см. услуги" : "нет оценки"}</b>
             </div>
           </div>
@@ -338,22 +332,22 @@ export function CustomerPage({ id, version, onToast }) {
             {scored && !customer.near_term_loss_minor && (
               <span className="small muted">
                 {staleWaits
-                  ? "Деньги не считаем: услуги ждут оплаты дольше 5 дней, проверьте данные в источнике"
+                  ? "Ожидание оплаты длится дольше 5 дней. Проверьте статус услуги в источнике."
                   : "Впереди нет услуг с признаками риска"}
               </span>
             )}
           </div>
           <div className="calc-line">
             <i />
-            <span>Из ожидаемого: не хватает средств</span>
+            <span>Из неё не хватает на балансе</span>
             <b>{scored ? money(customer.potential_loss_minor) : "—"}</b>
           </div>
           <p className="small muted">
             {calc.uncovered_revenue_minor > 0
               ? `Продления за ${horizon} дн. ${money(calc.due_revenue_minor)} против доступного баланса ${money(calc.available_balance_minor)}: не покрыто ${money(calc.uncovered_revenue_minor)}. `
               : `Баланс покрывает продления за ${horizon} дн.: ${money(calc.due_revenue_minor)} против ${money(calc.available_balance_minor)}. `}
-            Доступный баланс: основной плюс бонусный, если bonusState разрешает
-            его тратить. Реферальный не учитываем.
+            Доступно на продление: основной и разрешённый бонусный баланс.
+            Реферальный баланс не учитывается.
           </p>
         </section>
       </div>
