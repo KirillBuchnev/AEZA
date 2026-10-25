@@ -23,7 +23,7 @@ export function CustomersPage({
   pageNumber,
   setPageNumber,
 }) {
-  // The server pages the list: `customers` is the current page and `total` covers all filters.
+  // Список пагинирует на сервере: `customers` — текущая страница, `total` считает по всем фильтрам.
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const shown = customers;
   const counts = summary?.risk_counts || {};

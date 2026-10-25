@@ -11,8 +11,8 @@ const featureHints = {
   renewal_urgency: "Срок в ближайшие 7 дней, вклад растёт к сроку",
 };
 
-// Levels of the account index, which is 0..100 like the service index. The service levels
-// are the main thresholds above. Ranges match the backend validation.
+// Уровни индекса аккаунта, который 0..100, как индекс услуги. Уровни услуг —
+// главные пороги выше. Диапазоны совпадают с валидацией бэкенда.
 const extraSettings = {
   account_medium_risk_min: {
     label: "Средний риск аккаунта от",
@@ -26,8 +26,8 @@ const extraSettings = {
   },
 };
 
-// The PATCH body accepts exactly these keys; everything else in the draft (version,
-// revision, normalizer, features, timestamps) is read-only and must not be sent.
+// Тело PATCH принимает ровно эти ключи; всё остальное в черновике (version,
+// revision, normalizer, features, timestamps) — read-only и отправлять нельзя.
 const EDITABLE_SETTINGS = [
   "prediction_horizon_days",
   "high_risk_min",
@@ -84,7 +84,7 @@ export function ModelPage({ settings, summary, onSave, saving }) {
     );
 
   const codes = featureCodes(settings);
-  // Labels come from the features list the backend returns: one object per factor.
+  // Подписи берутся из списка features, который возвращает бэкенд: по объекту на фактор.
   const featureTitle = (code) =>
     settings.features?.find((feature) => feature.code === code)?.title || code;
   const changed = JSON.stringify(draft) !== JSON.stringify(settings);

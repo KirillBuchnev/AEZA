@@ -1,9 +1,9 @@
-// Mirrors backend/app/security.py so the form explains problems before sending.
+// Зеркалит backend/app/security.py, чтобы форма объясняла проблемы до отправки.
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9._@-]{3,64}$/;
 const WEAK_CODEWORDS = new Set(["password", "qwerty", "codeword", "letmein", "aeza"]);
 
-// Python's len() and casefold() are closest to these: code points, and upper-then-lower folding.
+// Ближе всего к этому len() и casefold() из Python: код-поинты и свёртка верхний-потом-нижний регистр.
 const codePointLength = (value) => Array.from(value).length;
 const fold = (value) => value.toUpperCase().toLowerCase();
 

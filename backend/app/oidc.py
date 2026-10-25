@@ -1,8 +1,8 @@
-"""OpenID Connect login with authorization code flow, PKCE and signed id_tokens.
+"""Вход через OpenID Connect: authorization code flow, PKCE и подписанные id_tokens.
 
-The client keeps no session state of its own: the pending login (state, nonce and
-PKCE verifier) lives in the oidc_transactions table for ten minutes and is consumed
-once. The HTTP client is injectable, so tests can play the identity provider.
+Клиент не хранит собственного состояния сессии: незавершённый вход (state, nonce и
+PKCE verifier) живёт в таблице oidc_transactions десять минут и расходуется
+однократно. HTTP-клиент можно подменить, поэтому в тестах identity-провайдера играет фейковый.
 """
 
 import base64
@@ -20,7 +20,7 @@ from .database import Database
 from .security import new_token
 
 
-# Asymmetric algorithms only. "none" and shared-secret HMAC are never accepted.
+# Только асимметричные алгоритмы. "none" и HMAC с общим секретом не принимаются никогда.
 ALGORITHMS = ["RS256", "RS384", "RS512", "ES256", "ES384", "ES512"]
 TRANSACTION_MINUTES = 10
 DISCOVERY_TTL_SECONDS = 3600
@@ -28,7 +28,7 @@ JWKS_TTL_SECONDS = 600
 
 
 class OidcError(Exception):
-    """A login could not be completed. The message is for logs and never shown to the user."""
+    """Вход не удалось завершить. Сообщение предназначено для логов и никогда не показывается пользователю."""
 
 
 def state_hash(state: str) -> str:
@@ -55,8 +55,8 @@ class OidcClient:
     ) -> None:
         self._database = database
         self._issuer = issuer.rstrip("/")
-        # Server-to-server calls may reach the provider under another address (for example inside
-        # a container network). The public address stays in the issuer and in browser redirects.
+        # Сервер-сервер вызовы могут доходить до провайдера по другому адресу (например, внутри
+        # контейнерной сети). Публичный адрес остаётся в issuer и в браузерных редиректах.
         self._internal_issuer = internal_issuer.rstrip("/")
         self._client_id = client_id
         self._client_secret = client_secret
@@ -73,7 +73,7 @@ class OidcClient:
         return self._issuer
 
     def start_login(self) -> str:
-        """Create a pending login and return the identity provider URL to redirect to."""
+        """Создаёт незавершённый вход и возвращает URL identity-провайдера для редиректа."""
         state = new_token()
         nonce = new_token()
         verifier = secrets.token_urlsafe(48)
@@ -93,7 +93,7 @@ class OidcClient:
         return f"{metadata['authorization_endpoint']}?{query}"
 
     def complete_login(self, *, state: str, code: str) -> dict[str, Any]:
-        """Exchange the code and return the verified id_token claims."""
+        """Обменивает код и возвращает проверенные claims из id_token."""
         stored = self._database.consume_oidc_transaction(state_hash(state))
         if stored is None:
             raise OidcError("unknown, expired or reused state")

@@ -15,7 +15,7 @@ const SSO_NOTICES = {
   unavailable: "Сервис SSO временно недоступен. Войдите по логину и паролю.",
 };
 
-// The SSO callback reports a failure in the query string: read it once and clean the URL.
+// Колбэк SSO сообщает об ошибке в query string: читаем один раз и чистим URL.
 function readSsoNotice() {
   const reason = new URLSearchParams(window.location.search).get("sso");
   if (!reason) return "";
@@ -485,7 +485,7 @@ export function Login({ onLogin, onRegistered }) {
         if (active) setMethods(available);
       })
       .catch(() => {
-        /* Without the list the password form still works. */
+        /* Без списка форма пароля всё равно работает. */
       });
     return () => {
       active = false;

@@ -34,7 +34,7 @@ def _challenge(verifier: str) -> str:
 
 
 class FakeIdentityProvider:
-    """Serves discovery, JWKS and the token endpoint, and signs real RS256 id_tokens."""
+    """Раздаёт discovery, JWKS и token endpoint, подписывает настоящие RS256 id_tokens."""
 
     def __init__(self) -> None:
         self.key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -97,7 +97,7 @@ def install(main, idp: FakeIdentityProvider) -> None:
 
 
 def start_login(client, idp: FakeIdentityProvider, code: str = "code-1") -> str:
-    """Begin a login as the browser would and let the fake provider remember the authorization request."""
+    """Начинает вход, как сделал бы браузер, и фейковый провайдер запоминает authorization request."""
     response = client.get(LOGIN, follow_redirects=False)
     assert response.status_code == 302
     query = parse_qs(urlsplit(response.headers["location"]).query)
@@ -161,7 +161,7 @@ def test_provisioned_user_signs_in_and_password_login_stays_closed(open_app, idp
         assert me["first_name"] == "Иван"
         assert main.database.oidc_identity(ISSUER, "subject-42") == "ivan_p"
 
-        # SSO-only accounts have no local password; the password form must refuse them.
+        # У SSO-аккаунтов нет локального пароля; форма пароля должна их отклонять.
         client.cookies.clear()
         refused = client.post(PASSWORD_LOGIN, json={"username": "ivan_p", "password": "Quartz-7421"})
         assert refused.status_code == 401

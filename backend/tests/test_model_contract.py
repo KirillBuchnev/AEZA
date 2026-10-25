@@ -63,16 +63,16 @@ def evaluated(*services: dict, balance: int = 0, transactions: list[dict] | None
 
 
 class MentorControlCasesTest(unittest.TestCase):
-    """The four control accounts from the mentor's answer: a, b and c are high, d is low."""
+    """Четыре контрольных аккаунта из ответа ментора: a, b и c — высокие, d — низкий."""
 
     def test_control_values_match_the_team_formula(self) -> None:
-        # a) prolong_wait one day, balance zero: 40 + 20 + 5 * 0.2 over 110.
+        # a) prolong_wait один день, баланс нулевой: 40 + 20 + 5 * 0.2 из 110.
         a = evaluated(service(status="prolong_wait", expires_in_days=-1, auto_prolong=True), balance=0)
-        # b) renewal in three hours, autoprolong off, enough money: (45 + 20) * urgency over 110.
+        # b) продление через три часа, автопродление выключено, денег хватает: (45 + 20) * urgency из 110.
         b = evaluated(service(expires_in_days=3 / 24, auto_prolong=False), balance=10_000)
-        # c) renewal in three hours, autoprolong on, balance zero: (40 + 20) * urgency over 110.
+        # c) продление через три часа, автопродление включено, баланс нулевой: (40 + 20) * urgency из 110.
         c = evaluated(service(expires_in_days=3 / 24, auto_prolong=True), balance=0)
-        # d) prolong_wait one day, enough money: only the grace progress 5 * 0.2 over 110.
+        # d) prolong_wait один день, денег хватает: только прогресс льготного периода 5 * 0.2 из 110.
         d = evaluated(service(status="prolong_wait", expires_in_days=-1, auto_prolong=True), balance=10_000)
 
         self.assertEqual(a["services"][0]["risk_score"], 55.5)
@@ -115,7 +115,7 @@ class AccountAggregationTest(unittest.TestCase):
             service(service_id="s-2", expires_in_days=3 / 24, auto_prolong=False),
             balance=20_000,
         )
-        self.assertEqual(result["account_risk_sum"], 116.0)  # the plain sum stays as a reference
+        self.assertEqual(result["account_risk_sum"], 116.0)  # простая сумма остаётся для справки
         self.assertEqual(result["risk_score"], 82.4)  # 1 - (1 - 0.58) ** 2
         self.assertEqual(result["calculation"]["risk_score_index"], 82.4)
         self.assertEqual(result["max_service_score"], 58.0)
@@ -172,7 +172,7 @@ class AccountAggregationTest(unittest.TestCase):
         self.assertEqual(round(points, 1), result["risk_score"])
 
     def test_displayed_points_add_up_exactly_to_every_index(self) -> None:
-        # Each point is rounded to one decimal; the rounding must not leave 0.1 between the parts and the index.
+        # Каждый балл округляется до одного знака; округление не должно оставлять 0.1 между слагаемыми и индексом.
         cases = [
             ([service(price=500, expires_in_days=2.75)], 300),
             ([service(price=10_000, expires_in_days=3.24)], 1_000),
@@ -282,7 +282,7 @@ class MoneyAndForecastTest(unittest.TestCase):
         self.assertIn("не калибровано", forecast["method"].lower())
 
     def test_waiting_service_is_placed_on_the_day_its_grace_ends(self) -> None:
-        # Expired one day ago, so the five-day grace ends in four days.
+        # Просрочена день назад, поэтому пятидневный льготный период кончается через четыре дня.
         waiting = evaluated(service(status="prolong_wait", expires_in_days=-1), balance=0)
         forecast = outflow_forecast([waiting], NOW, 30)
         self.assertEqual([bucket["date"] for bucket in forecast["buckets"]], ["2026-10-28"])
@@ -304,9 +304,9 @@ class MoneyAndForecastTest(unittest.TestCase):
 
 
 class NearTermLossTest(unittest.TestCase):
-    """The pair on one sample: services with some risk and the decision still ahead.
+    """Пара на одной выборке: услуги с некоторым риском, решение ещё впереди.
 
-    Expected loss (revenue at risk) is price x index / 100, the maximum (near-term loss) is the full price."""
+    Ожидаемые потери (выручка под риском) — цена x индекс / 100, максимум (близкие потери) — полная цена."""
 
     def test_high_renewal_inside_window_counts_at_full_price(self) -> None:
         result = evaluated(service(auto_prolong=False, expires_in_days=3 / 24), balance=10_000)
@@ -322,8 +322,8 @@ class NearTermLossTest(unittest.TestCase):
     def test_low_renewal_is_in_the_sample_but_barely_in_the_expected_loss(self) -> None:
         result = evaluated(service(auto_prolong=True, expires_in_days=3), balance=9_000)
         self.assertEqual(result["services"][0]["risk_level"], "low")
-        self.assertEqual(result["near_term_loss_minor"], 10_000)  # some risk: the full price is the maximum
-        self.assertEqual(result["revenue_at_risk_minor"], 1_250)  # index 12.5 of the price
+        self.assertEqual(result["near_term_loss_minor"], 10_000)  # риск есть: максимум — полная цена
+        self.assertEqual(result["revenue_at_risk_minor"], 1_250)  # индекс 12.5 от цены
 
     def test_renewal_outside_the_action_window_is_not_near_term(self) -> None:
         result = evaluated(service(auto_prolong=False, expires_in_days=20), balance=0)
@@ -356,7 +356,7 @@ class NearTermLossTest(unittest.TestCase):
 
     def test_waiting_service_past_its_grace_is_left_out_of_the_money(self) -> None:
         stale = evaluated(service(status="prolong_wait", auto_prolong=False, expires_in_days=-30), balance=0)
-        self.assertGreater(stale["risk_score"], 0)  # the risk itself is still shown
+        self.assertGreater(stale["risk_score"], 0)  # сам риск всё равно показывается
         self.assertEqual(stale["revenue_at_risk_minor"], 0)
         self.assertEqual(stale["near_term_loss_minor"], 0)
         self.assertEqual(stale["potential_loss_minor"], 0)
@@ -398,7 +398,7 @@ class ModelSettingsTest(unittest.TestCase):
         self.assertNotIn("failed_prolong_payment", migrated["weights"])
 
     def test_account_thresholds_of_older_rows_are_clamped_to_the_index_scale(self) -> None:
-        # While the account index was a sum of service indices its thresholds could exceed 100.
+        # Пока индекс аккаунта был суммой индексов услуг, его пороги могли превышать 100.
         migrated = merge_model_settings({"account_high_risk_min": 150, "account_medium_risk_min": 120})
         self.assertEqual(migrated["account_high_risk_min"], 100)
         self.assertEqual(migrated["account_medium_risk_min"], 99)
@@ -431,7 +431,7 @@ class AccountThresholdsTest(unittest.TestCase):
 
 class ReviewFixesTest(unittest.TestCase):
     def test_waiting_service_without_autoprolong_is_high(self) -> None:
-        # Without autoprolong nobody else pays: manual 45 + urgency 20 + grace 5 * 0.2 over 110.
+        # Без автопродления платить больше некому: ручное 45 + срочность 20 + льгота 5 * 0.2 из 110.
         result = evaluated(service(status="prolong_wait", expires_in_days=-1, auto_prolong=False), balance=10_000)
         self.assertEqual(result["services"][0]["risk_score"], 60.0)
         self.assertEqual(result["services"][0]["risk_level"], "high")

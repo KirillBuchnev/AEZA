@@ -31,8 +31,8 @@ class ServiceSnapshot(BaseModel):
         max_length=120,
         validation_alias=AliasChoices("payment_term", "paymentTerm"),
     )
-    # Known values: active, suspended, prolong_wait, deleted, blocked. Unknown values are kept
-    # and reported in data_quality instead of rejecting the whole snapshot.
+    # Известные значения: active, suspended, prolong_wait, deleted, blocked. Неизвестные сохраняются
+    # и попадают в data_quality вместо отклонения всего снапшота.
     status: str = Field(min_length=1, max_length=40)
     expires_at: datetime | None = Field(
         default=None,
@@ -55,7 +55,7 @@ class TransactionSnapshot(BaseModel):
         max_length=120,
         validation_alias=AliasChoices("service_id", "serviceId"),
     )
-    # Known values: performed, not_performed / prolong, order. Unknown values are reported, not rejected.
+    # Известные значения: performed, not_performed / prolong, order. Неизвестные сообщаются, а не отклоняются.
     status: str = Field(min_length=1, max_length=40)
     type: str = Field(min_length=1, max_length=40)
     amount_minor: int = Field(ge=0, le=MAX_MONEY_MINOR, validation_alias=AliasChoices("amount_minor", "amount"))
@@ -124,7 +124,7 @@ class SnapshotUpload(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     customers: list[CustomerSnapshot] = Field(default_factory=list, max_length=5_000)
-    # Flat organizer export accepted by the same endpoint and normalized below.
+    # Плоский экспорт организатора принимается тем же эндпоинтом и нормализуется ниже.
     accounts: list[dict[str, Any]] | None = Field(default=None, max_length=5_000)
     services: list[dict[str, Any]] | None = Field(default=None, max_length=25_000)
     transactions: list[dict[str, Any]] | None = Field(default=None, max_length=50_000)
@@ -132,7 +132,7 @@ class SnapshotUpload(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def normalize_flat_source_export(cls, value: Any) -> Any:
-        """Accept the organizers' flat data.json beside the nested API format."""
+        """Принимает плоский data.json организаторов наряду с вложенным форматом API."""
         if not isinstance(value, dict) or value.get("customers") is not None:
             return value
         accounts = value.get("accounts")
@@ -196,7 +196,7 @@ class SnapshotUpload(BaseModel):
 
 
 class CustomerPatch(BaseModel):
-    """Fields an operator may correct without replacing the whole source snapshot."""
+    """Поля, которые оператор может исправить, не заменяя весь снапшот источника."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -209,7 +209,7 @@ class CustomerPatch(BaseModel):
 
 
 class ServicePatch(BaseModel):
-    """Editable service fields used by the data-quality correction workflow."""
+    """Редактируемые поля услуги для сценария исправления качества данных."""
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -267,7 +267,7 @@ class ModelSettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prediction_horizon_days: int | None = Field(default=None, ge=1, le=365)
-    # The account index is 0-100 like the service index, so both pairs of thresholds share one scale.
+    # Индекс аккаунта — 0-100, как и индекс услуги, поэтому обе пары порогов живут на одной шкале.
     high_risk_min: int | None = Field(default=None, ge=1, le=100)
     medium_risk_min: int | None = Field(default=None, ge=0, le=99)
     account_high_risk_min: int | None = Field(default=None, ge=1, le=100)
@@ -303,7 +303,7 @@ class ActionStep(BaseModel):
 
 
 class ActionPlan(BaseModel):
-    """Marketer-facing decision: diagnosis, money, deadline and next action."""
+    """Решение для маркетолога: диагноз, деньги, дедлайн и следующее действие."""
 
     archetype: str
     title: str
@@ -325,7 +325,7 @@ class ActionPlan(BaseModel):
 
 
 class LtvSummary(BaseModel):
-    """Explainable LTV proxy; it is deliberately named a proxy until outcomes are available."""
+    """Объяснимый LTV-прокси; сознательно называется прокси, пока нет фактических исходов."""
 
     current_mrr_minor: int = 0
     historical_revenue_minor: int = 0
@@ -341,7 +341,7 @@ class LtvSummary(BaseModel):
 class RiskReason(BaseModel):
     code: str
     title: str
-    # Points are the factor's share of the 0-100 index, with one decimal.
+    # Баллы — доля фактора в индексе 0-100, с одним десятичным знаком.
     points: float
     explanation: str
     evidence: dict[str, Any] = Field(default_factory=dict)

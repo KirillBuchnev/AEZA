@@ -1,4 +1,4 @@
-"""The scenario accounts are the executable list of situations an analyst has to recognise."""
+"""Сценарные аккаунты — исполнимый список ситуаций, которые аналитик должен распознавать."""
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +16,7 @@ SUMMARY = "/api/v1/analytics/summary"
 CUSTOMERS = "/api/v1/customers"
 SNAPSHOT = "/api/v1/source/snapshot"
 
-# level, recommended action, maximum (near-term loss) and balance part (potential loss) in euro cents
+# уровень, рекомендованное действие, максимум (близкие потери) и балансовая часть (потенциальные потери) в евроцентах
 EXPECTED = {
     "S01": ("high", "manual_reminder", 900, 0),
     "S02": ("medium", "top_up", 1500, 406),
@@ -75,7 +75,7 @@ def test_shortfall_of_a_large_account_lands_on_the_last_due_service():
     assert scores[:2] == [0.0, 0.0]
     assert scores[2] > 50
     assert evaluated()["S05"]["uncovered_revenue_minor"] == 2000
-    # The other two services carry no risk, so the account index is the index of the third one.
+    # Другие две услуги без риска, поэтому индекс аккаунта — индекс третьей.
     assert evaluated()["S05"]["risk_score"] == scores[2]
 
 
@@ -149,7 +149,7 @@ def test_showcase_seed_keeps_the_case_accounts_and_adds_the_scenarios(open_app):
         assert summary["near_term_loss_minor"] >= summary["revenue_at_risk_minor"] >= summary["potential_loss_minor"]
         assert summary["exposed_services"] > 0
         assert items["S03"]["risk_level"] == "high"
-        # The default queue goes by the expected loss: the big annual renewal leads, though its risk is low.
+        # Очередь по умолчанию идёт по ожидаемым потерям: крупное годовое продление впереди, хотя риск низкий.
         queue = client.get(CUSTOMERS).json()
         assert queue["sort_by"] == "revenue_at_risk"
         assert [item["id"] for item in queue["items"][:2]] == ["S06", "S03"]

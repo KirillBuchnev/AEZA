@@ -34,17 +34,17 @@ def test_sqlite_data_and_journal_reach_postgres(database_url, tmp_path):
     source_path = tmp_path / "source.db"
     source = Database(f"sqlite:///{source_path}")
     source.initialize(admin_profile=admin_profile(), seed_customers=demo_snapshot(), seed_name="demo")
-    source.replace_snapshot(demo_snapshot())  # the first upload starts the journal
+    source.replace_snapshot(demo_snapshot())  # первая загрузка запускает журнал
     changed = demo_snapshot()
     changed[0]["services"][0]["status"] = "prolong_wait"
-    source.replace_snapshot(changed)  # one service enters waiting for payment
+    source.replace_snapshot(changed)  # одна услуга переходит в ожидание оплаты
     source.create_session("session-hash", "demo", FUTURE)
     source.begin_login_attempt("client-key")
     source.dispose()
 
     target = Database(database_url)
     target.initialize()
-    target.create_user("demo", "Старое", "Имя", "scrypt$old", "scrypt$old")  # created by the app first
+    target.create_user("demo", "Старое", "Имя", "scrypt$old", "scrypt$old")  # сначала создаётся приложением
     target.dispose()
 
     counts = migrate_sqlite(str(source_path), database_url)
@@ -61,7 +61,7 @@ def test_sqlite_data_and_journal_reach_postgres(database_url, tmp_path):
         assert target.session_username("session-hash") == "demo"
         assert counts["snapshot_events"] == 1
 
-        # The copied journal ids are explicit: the next recorded event must not collide with them.
+        # Скопированные id журнала заданы явно: следующее записанное событие не должно с ними столкнуться.
         renewed = demo_snapshot()
         renewed[0]["services"][0]["status"] = "active"
         target.replace_snapshot(renewed)

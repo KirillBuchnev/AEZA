@@ -1,4 +1,4 @@
-# Optional SSO: adds a local OpenID Connect provider and turns the login button on.
+# Необязательный SSO: добавляет локальный OpenID Connect провайдер и включает кнопку входа.
 #   docker compose -f docker-compose.yml -f docker-compose.sso.yml up --build
 services:
   dex:

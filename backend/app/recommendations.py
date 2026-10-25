@@ -1,9 +1,9 @@
-"""Deterministic cashflow and next-best-action helpers.
+"""Детерминированные помощники для денежного потока и next-best-action.
 
-The source snapshot does not contain enough labelled outcomes to train a reliable
-black-box model.  These functions therefore keep every decision auditable: the
-waterfall produces the cash gap, and the action plan points at the exact service
-and money amount that caused it.
+В снапшоте источника недостаточно размеченных исходов, чтобы обучить надёжную
+black-box модель.  Поэтому эти функции сохраняют проверяемость каждого решения:
+водопад списаний даёт кассовый разрыв, а план действий указывает конкретную услугу
+и сумму денег, которые его вызвали.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _as_utc(value: datetime | str | None) -> datetime | None:
 
 
 def monthly_multiplier(payment_term: str | None) -> float:
-    """Convert one payment into a monthly recurring revenue multiplier."""
+    """Переводит один платёж в множитель месячной регулярной выручки (MRR)."""
     return {
         "hour": 720.0,
         "week": 30.0 / 7.0,
@@ -46,7 +46,7 @@ def monthly_multiplier(payment_term: str | None) -> float:
 
 
 def is_bonus_hunter(customer: dict[str, Any]) -> bool:
-    """A bonus-only account should not inflate real-cash exposure."""
+    """Аккаунт только с бонусами не должен завышать экспозицию реальных денег."""
     return (
         _money(customer.get("total_replenished_minor")) == 0
         and _money(customer.get("balance_minor")) == 0
@@ -64,12 +64,12 @@ def ltv_estimate(
     risk_score: float | None,
     now: datetime,
 ) -> dict[str, Any]:
-    """Calculate an explainable, risk-adjusted LTV proxy from the snapshot.
+    """Считает объяснимый LTV-прокси с поправкой на риск по снапшоту.
 
-    The snapshot has no margin, refunds, acquisition cost or labelled lifetime,
-    so a true finance-grade LTV is impossible. We blend current recurring value
-    with observed successful payments, use the risk index only as a churn proxy,
-    and expose the inputs and confidence instead of hiding them in one number.
+    В снапшоте нет маржи, возвратов, стоимости привлечения и размеченного срока жизни,
+    поэтому «настоящий» финансовый LTV невозможен. Мы смешиваем текущую регулярную
+    выручку с наблюдаемыми успешными платежами, используем индекс риска только как
+    прокси оттока и показываем входы и уверенность, а не прячем их в одно число.
     """
     now = _as_utc(now) or datetime.now(timezone.utc)
     active = [
@@ -106,7 +106,7 @@ def ltv_estimate(
     success_rate = round(len(performed) / attempts, 3) if attempts else None
     churn_proxy = max(0.05, min(0.95, (float(risk_score) / 100) if risk_score is not None else 0.35))
     expected_lifetime = max(1.0, min(24.0, 1.0 / churn_proxy))
-    # Repeated failed renewals shorten the expected lifetime, but never erase all value.
+    # Повторные неудачные продления сокращают ожидаемый срок жизни, но не обнуляют всю ценность.
     if success_rate is not None:
         expected_lifetime *= 0.5 + 0.5 * success_rate
     expected_lifetime = round(max(1.0, min(24.0, expected_lifetime)), 1)
@@ -143,10 +143,10 @@ def cashflow_waterfall(
     operational_days: int = OPERATIONAL_HORIZON_DAYS,
     financial_days: int = FINANCIAL_HORIZON_DAYS,
 ) -> dict[str, Any]:
-    """Simulate chronological debits from the spendable wallet.
+    """Моделирует хронологические списания с тратяемого кошелька.
 
-    Waiting services are due at t=0.  The balance is consumed in chronological
-    order, so a large later renewal cannot incorrectly hide an earlier cash gap.
+    Ожидающие услуги подлежат оплате в t=0.  Баланс расходуется в хронологическом
+    порядке, поэтому крупное позднее продление не может ошибочно скрыть более ранний кассовый разрыв.
     """
     now = _as_utc(now) or datetime.now(timezone.utc)
     liquid = _money(customer.get("balance_minor"))
@@ -481,7 +481,7 @@ def build_action_plan(
     waterfall: dict[str, Any],
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Return a marketer-ready diagnosis, priority, steps and a ready message."""
+    """Возвращает готовое для маркетолога заключение: диагноз, приоритет, шаги и заготовку письма."""
     now = _as_utc(now) or datetime.now(timezone.utc)
     scored = [service for service in services if service.get("risk_score") is not None]
     exposed = [service for service in scored if service.get("revenue_at_risk_minor", 0) > 0]

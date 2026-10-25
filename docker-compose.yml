@@ -34,7 +34,7 @@ services:
     ports:
       - "127.0.0.1:${AEZA_API_PORT:-8001}:8000"
     volumes:
-      # The SQLite file of the previous runtime, read once by: python -m app.migration /data/aeza.db
+      # Файл SQLite прежнего рантайма, читается однократно командой: python -m app.migration /data/aeza.db
       - aeza-data:/data:ro
     read_only: true
     tmpfs:
@@ -58,7 +58,7 @@ services:
       POSTGRES_PASSWORD: ${AEZA_POSTGRES_PASSWORD:-aeza-local-only-change-me}
     networks:
       - aeza
-    # No published port: only the API reaches the database, over the compose network.
+    # Порт не публикуется: к базе ходит только API, через compose-сеть.
     volumes:
       - aeza-pg:/var/lib/postgresql/data
     healthcheck:
@@ -76,7 +76,7 @@ services:
         condition: service_healthy
     networks:
       aeza:
-        # Fixed address: the API trusts X-Real-IP only from this proxy (AEZA_TRUSTED_PROXY_IPS).
+        # Фиксированный адрес: API доверяет X-Real-IP только от этого прокси (AEZA_TRUSTED_PROXY_IPS).
         ipv4_address: 10.233.40.10
     ports:
       - "127.0.0.1:5173:8080"

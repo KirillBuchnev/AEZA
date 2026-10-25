@@ -285,14 +285,14 @@ def test_summary_pairs_expected_loss_and_maximum_on_one_sample(open_app):
         sign_in(client)
         put_snapshot(
             client,
-            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=10_000)], balance=0),  # index 93.8
-            customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),  # no risk, not due
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=10_000)], balance=0),  # индекс 93.8
+            customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),  # риска нет, срок не наступил
         )
         summary = client.get("/api/v1/analytics/summary").json()
         assert summary["exposed_services"] == 1
-        assert summary["near_term_loss_minor"] == 10_000  # maximum: the full price of the services with risk
-        assert summary["revenue_at_risk_minor"] == 9_380  # expected: price x index / 100
-        assert summary["potential_loss_minor"] == 9_380  # the part caused by the missing balance
+        assert summary["near_term_loss_minor"] == 10_000  # максимум: полная цена услуг с риском
+        assert summary["revenue_at_risk_minor"] == 9_380  # ожидаемо: цена x индекс / 100
+        assert summary["potential_loss_minor"] == 9_380  # часть, вызванная нехваткой баланса
         assert summary["revenue_at_risk_by_level_minor"]["high"] == 9_380
         top = summary["top_exposure"]
         assert [item["id"] for item in top] == ["1"]
@@ -305,9 +305,9 @@ def test_default_queue_goes_by_the_expected_loss_and_unscored_stay_last(open_app
         sign_in(client)
         put_snapshot(
             client,
-            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=1_000)], balance=5_000),  # high risk, small money
-            customer("2", [service("b", expires_in_days=5, auto=False, price=50_000)], balance=100_000),  # low risk, big money
-            customer("3", [service("c", expires_in_days=None)], balance=0),  # no expiry: unscored
+            customer("1", [service("a", expires_in_days=3 / 24, auto=False, price=1_000)], balance=5_000),  # высокий риск, маленькие деньги
+            customer("2", [service("b", expires_in_days=5, auto=False, price=50_000)], balance=100_000),  # низкий риск, большие деньги
+            customer("3", [service("c", expires_in_days=None)], balance=0),  # нет даты окончания: без оценки
         )
         payload = client.get(CUSTOMERS).json()
         assert payload["sort_by"] == "revenue_at_risk"
@@ -327,7 +327,7 @@ def test_account_risk_is_the_chance_that_at_least_one_service_fails(open_app):
             ], balance=10_000),
         )
         item = client.get(CUSTOMERS).json()["items"][0]
-        assert item["risk_score"] == 82.4  # 1 - (1 - 0.58) ** 2, not the sum 116
+        assert item["risk_score"] == 82.4  # 1 - (1 - 0.58) ** 2, а не сумма 116
         assert item["account_risk_sum"] == 116.0
         assert item["risk_level"] == "high"
 
@@ -341,7 +341,7 @@ def test_summary_splits_potential_loss_by_level(open_app):
             customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),
         )
         summary = client.get("/api/v1/analytics/summary").json()
-        assert summary["potential_loss_by_level_minor"]["high"] == 9_380  # index 93.8 on a 10 000 shortfall
+        assert summary["potential_loss_by_level_minor"]["high"] == 9_380  # индекс 93.8 на нехватке в 10 000
         assert summary["potential_loss_by_level_minor"]["low"] == 0
         assert summary["potential_loss_minor"] == summary["potential_loss_by_level_minor"]["high"]
 
@@ -355,8 +355,8 @@ def test_near_term_loss_is_sortable_and_matches_the_summary(open_app):
             customer("2", [service("b", expires_in_days=45, price=1_000)], balance=5_000),
         )
         summary = client.get("/api/v1/analytics/summary").json()
-        assert summary["near_term_loss_minor"] == 10_000  # full price: manual renewal inside 7 days, high risk
-        assert summary["revenue_at_risk_minor"] == 9_380  # the same renewal weighted by index 93.8: no balance covers it
+        assert summary["near_term_loss_minor"] == 10_000  # полная цена: ручное продление в пределах 7 дней, высокий риск
+        assert summary["revenue_at_risk_minor"] == 9_380  # то же продление, взвешенное индексом 93.8: баланс его не покрывает
         items = client.get(CUSTOMERS, params={"sort_by": "near_term_loss", "order": "desc"}).json()["items"]
         assert [item["id"] for item in items] == ["1", "2"]
         assert items[0]["near_term_loss_minor"] == 10_000

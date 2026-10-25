@@ -12,7 +12,7 @@ ADMIN_CODEWORD = "demo-codeword"
 
 
 def reset_schema(url: str) -> None:
-    """Drop every table of a PostgreSQL test database. Only databases whose name contains 'test' qualify."""
+    """Удаляет все таблицы тестовой базы PostgreSQL. Годятся только базы, чьё имя содержит 'test'."""
     engine = create_engine(url)
     try:
         if "test" not in (engine.url.database or ""):
@@ -26,7 +26,7 @@ def reset_schema(url: str) -> None:
 
 @pytest.fixture
 def database_url(tmp_path):
-    """A fresh database per test: a SQLite file, or the PostgreSQL test database from AEZA_TEST_DATABASE_URL."""
+    """Свежая база на каждый тест: файл SQLite или тестовая база PostgreSQL из AEZA_TEST_DATABASE_URL."""
     configured = os.getenv("AEZA_TEST_DATABASE_URL", "").strip()
     if not configured:
         return f"sqlite:///{tmp_path / 'aeza.db'}"
@@ -36,7 +36,7 @@ def database_url(tmp_path):
 
 @pytest.fixture
 def open_app(tmp_path, monkeypatch, database_url):
-    """Start the app against one database; open it again with the same URL to simulate a restart."""
+    """Стартует приложение на одной базе; открывает её снова по тому же URL, имитируя рестарт."""
 
     @contextmanager
     def opener(**overrides):

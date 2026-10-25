@@ -9,14 +9,14 @@ export function PasswordDialog({ username, onClose, onDone, onExpired }) {
   const [saving, setSaving] = useState(false);
   const firstFieldRef = useRef(null);
 
-  // Move focus into the dialog and give it back to the trigger when it closes.
+  // Переносим фокус в диалог и возвращаем его триггеру при закрытии.
   useEffect(() => {
     const opener = document.activeElement;
     firstFieldRef.current?.focus();
     return () => opener?.focus?.();
   }, []);
 
-  // Closing is blocked while a save is in flight, so a failed save is never hidden.
+  // Закрытие заблокировано, пока сохранение в полёте, поэтому неудачное сохранение не остаётся скрытым.
   const requestClose = () => {
     if (!saving) onClose();
   };
@@ -53,7 +53,7 @@ export function PasswordDialog({ username, onClose, onDone, onExpired }) {
       onDone();
     } catch (requestError) {
       if (requestError.status === 401) {
-        // The session ended elsewhere: the app should show the login screen, not this dialog.
+        // Сессия завершена в другом месте: приложение должно показать экран входа, а не этот диалог.
         onExpired?.();
         return;
       }

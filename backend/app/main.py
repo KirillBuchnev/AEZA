@@ -72,8 +72,8 @@ def _admin_profile() -> dict[str, str]:
 
 
 PUBLISHED_DEMO_PASSWORDS = ("local-demo-change-this-password", "demo-local-only-change-me")
-# Accounts created through SSO have no local secret. This value is not a scrypt
-# hash, so password and codeword checks always fail for them.
+# Аккаунты, созданные через SSO, не имеют локального секрета. Это значение — не scrypt-хеш,
+# поэтому проверки пароля и кодового слова для них всегда проваливаются.
 OIDC_ONLY_SECRET = "oidc-only-account"
 
 
@@ -85,7 +85,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         seed_name=config.seed,
     )
     if config.environment == "production":
-        # Any account, including rows left by a development run, must not keep a published demo password.
+        # Ни один аккаунт, включая строки, оставленные дев-запуском, не должен хранить опубликованный демо-пароль.
         for user in database.list_users():
             if any(verify_secret(password, user["password_hash"]) for password in PUBLISHED_DEMO_PASSWORDS):
                 raise RuntimeError(
@@ -109,7 +109,7 @@ def _build_oidc_client() -> OidcClient | None:
     )
 
 
-# Replaced in tests with a client that talks to a fake identity provider.
+# В тестах подменяется клиентом, который общается с фейковым identity-провайдером.
 oidc_client: OidcClient | None = _build_oidc_client()
 
 app = FastAPI(
@@ -191,7 +191,7 @@ events = EventBroker()
 SESSION_COOKIE = "aeza_session"
 session_cookie = APIKeyCookie(name=SESSION_COOKIE, scheme_name="sessionCookie", auto_error=False)
 
-# Sort keys accepted by GET /api/v1/customers and the customer field they read.
+# Ключи сортировки, принимаемые GET /api/v1/customers, и поля клиента, которые они читают.
 SORT_FIELDS = {
     "id": "id",
     "email": "email",
@@ -207,7 +207,7 @@ SORT_FIELDS = {
     "near_term_loss": "near_term_loss_minor",
     "service_count": "service_count",
 }
-# Money sorts put customers without an assessment last, as the table shows a dash for them.
+# Денежные сортировки ставят клиентов без оценки в конец: в таблице для них рисуется прочерк.
 MONEY_SORTS = {"potential_loss", "revenue_at_risk", "near_term_loss"}
 
 
@@ -216,7 +216,7 @@ def _token_hash(token: str) -> str:
 
 
 def _throttle_key(scope: str, value: str) -> str:
-    """Return a keyed, non-reversible identifier for an attempt counter."""
+    """Возвращает ключевой необратимый идентификатор для счётчика попыток."""
     return hmac.new(
         config.rate_limit_secret,
         f"{scope}:{value}".encode("utf-8"),
@@ -237,7 +237,7 @@ def _too_many_attempts(retry_after: int) -> HTTPException:
 
 
 def _client_key(request: Request) -> str:
-    """Return a keyed, non-reversible identifier for login throttling."""
+    """Возвращает ключевой необратимый идентификатор для троттлинга входа."""
     socket_address = request.client.host if request.client else "unknown"
     try:
         normalized_socket = ipaddress.ip_address(socket_address).compressed
@@ -271,7 +271,7 @@ def _calculation_version(model: dict[str, Any]) -> str:
 
 
 def _score_all() -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
-    """Score every customer against the current snapshot and model settings."""
+    """Оценивает каждого клиента по текущему снапшоту и настройкам модели."""
     model = database.model_settings()
     now = datetime.now(timezone.utc)
     customers = [evaluate_customer(customer, model, now) for customer in database.customer_rows()]
@@ -331,7 +331,7 @@ def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[
         ltv_by_level[level] += customer.get("ltv", {}).get("gross_ltv_minor", 0)
         for code in {reason["code"] for reason in customer["reasons"]} & set(reason_counts):
             reason_counts[code] += 1
-    # The largest contributors to the expected loss: one big service must not vanish inside the total.
+    # Главные вкладчики в ожидаемые потери: одна большая услуга не должна раствориться в общей сумме.
     exposed = sorted(
         (customer for customer in customers if customer["revenue_at_risk_minor"] > 0),
         key=lambda customer: (customer["revenue_at_risk_minor"], customer["id"]),
@@ -447,14 +447,14 @@ def _sort_key(sort_by: str, field: str) -> Callable[[dict[str, Any]], Any]:
         value = customer[field]
         if sort_by == "id":
             identifier = customer["id"]
-            # Only ASCII digits are numeric: str.isdigit() accepts other scripts and breaks int().
+            # Числовые — только ASCII-цифры: str.isdigit() принимает другие письменности и ломает int().
             if identifier.isascii() and identifier.isdecimal():
                 return (0, int(identifier), identifier)
             return (1, 0, identifier.casefold())
         if isinstance(value, str):
             return (value.casefold(), customer["id"])
         if sort_by in MONEY_SORTS:
-            # Equal money: the riskier account first.
+            # Деньги равны: первым идёт более рискованный аккаунт.
             return (value, customer["risk_score"] or 0, customer["id"])
         return (value, customer["id"])
 
@@ -473,9 +473,9 @@ def _oidc_user(issuer: str, claims: dict[str, Any]) -> dict[str, Any] | None:
         return None
     username = normalize_username(claimed)
     if username_error(username) or database.get_user(username) is not None:
-        # Never link an SSO identity to an existing local account automatically.
+        # Никогда не привязывать SSO-идентичность к существующему локальному аккаунту автоматически.
         return None
-    # Identity providers differ: take the given name, then the display name, then the login.
+    # Провайдеры различаются: берём given name, затем отображаемое имя, затем логин.
     first_name = str(claims.get("given_name") or claims.get("name") or username).strip()[:60] or username
     last_name = str(claims.get("family_name") or "").strip()[:60]
     try:
@@ -779,7 +779,7 @@ def list_customers(
         items = [customer for customer in items if customer["data_quality"]]
 
     field = SORT_FIELDS[sort_by]
-    # Customers without a value (unscored) always go last, in both directions.
+    # Клиенты без значения (неоценённые) всегда уходят в конец, в обоих направлениях.
     def has_value(customer: dict[str, Any]) -> bool:
         return customer[field] is not None and (sort_by not in MONEY_SORTS or customer["risk_level"] is not None)
 
@@ -885,8 +885,8 @@ def analytics_summary(_: str = Depends(require_session)) -> dict[str, Any]:
 
 
 def _snapshot_facts(raw_customers: list[dict[str, Any]], now: datetime, days: int) -> dict[str, Any]:
-    """Historical deletions read from snapshot statuses. A deleted service has no deletion date
-    in the source, so its expiry date stands in for it: the figures are an estimate."""
+    """Исторические удаления читаются из статусов снапшота. У удалённой услуги нет даты удаления
+    в источнике, поэтому её место занимает дата окончания: цифры — оценка."""
     start = now.date() - timedelta(days=days)
     by_day = {
         (start + timedelta(days=offset)).isoformat(): {
@@ -934,7 +934,7 @@ def analytics_outflow(
     now = meta["as_of"]
     journal = database.outflow_facts((now - timedelta(days=days)).isoformat())
     if journal["snapshots"] == 0:
-        # No transitions between uploads yet: show the estimate from the statuses instead.
+        # Переходов между загрузками пока нет: вместо них показываем оценку по статусам.
         facts = _snapshot_facts(database.customer_rows(), now, days)
     else:
         facts = {**_facts_payload(journal, days, now), "estimated": False}
@@ -1062,8 +1062,8 @@ async def event_stream(_: str = Depends(require_session)) -> StreamingResponse:
     )
 
 
-# Tables that hold secrets or internal state are deliberately absent: sessions, users,
-# login attempts, password resets and settings are never exported.
+# Таблицы с секретами и внутренним состоянием сознательно отсутствуют: sessions, users,
+# попытки входа, сбросы пароля и настройки никогда не экспортируются.
 EXPORT_FIELDS = {
     "customers": ["id", "email", "balance_minor", "withdraw_balance_minor", "bonus_balance_minor", "bonus_spend_enabled", "total_replenished_minor"],
     "services": ["id", "customer_id", "name", "price_minor", "auto_prolong", "payment_term", "status", "expires_at"],

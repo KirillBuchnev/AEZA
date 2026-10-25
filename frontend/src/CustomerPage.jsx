@@ -154,13 +154,13 @@ function ServiceEditor({ customerId, service, onClose, onSaved, onToast }) {
   );
 }
 
-// Waiting past the grace period: the service should already be deleted, so no money is counted for it.
+// Ожидание дольше льготного периода: услуга должна быть уже удалена, поэтому деньги за неё не считаются.
 const isStaleWait = (service) =>
   service.status === "prolong_wait" &&
   service.grace_remaining_days === 0 &&
   service.risk_score > 0;
 
-// Explanation under a service: its own reasons with numbers, the money at stake and the next step.
+// Пояснение под услугой: её собственные причины с числами, деньги на кону и следующий шаг.
 function ServiceDetail({ service }) {
   const reasons = service.reasons || [];
   const index = service.risk_score == null ? null : points(service.risk_score);
@@ -200,7 +200,7 @@ function ServiceDetail({ service }) {
   );
 }
 
-// What the marketer does next: the situation, the facts behind it, steps by time and a ready letter.
+// Что маркетолог делает дальше: ситуация, факты за ней, шаги по времени и готовое письмо.
 function ActionPlanCard({ plan, onCopy }) {
   const signals = plan.signals || [];
   const steps = plan.steps || [];
@@ -346,7 +346,7 @@ export function CustomerPage({ id, version, onToast }) {
   );
   const maxPoints = Math.max(1, ...reasons.map((reason) => reason.points));
   const scored = customer.risk_score != null;
-  // Services that carry some risk: the account index is built from exactly these.
+  // Услуги с ненулевым риском: именно из них строится индекс аккаунта.
   const indexed = customer.services.filter((service) => service.risk_score > 0);
   const indexedSum = indexed.reduce((sum, service) => sum + service.risk_score, 0);
   const staleWaits = customer.services.filter(isStaleWait).length;

@@ -27,7 +27,7 @@ const reasonTitles = {
   prolong_wait: "Ожидание оплаты",
 };
 
-// Counts come from the summary, which covers every customer, not from the loaded page.
+// Счётчики берутся из summary, который покрывает всех клиентов, а не из загруженной страницы.
 function topReasons(summary) {
   return Object.entries(summary?.reason_counts || {})
     .filter(([, count]) => count > 0)

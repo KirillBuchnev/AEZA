@@ -20,7 +20,7 @@ KNOWN_SERVICE_STATUSES = {"active", "suspended", "prolong_wait", "deleted", "blo
 TERMINAL_SERVICE_STATUSES = {"deleted", "blocked"}
 KNOWN_TRANSACTION_STATUSES = {"performed", "not_performed"}
 KNOWN_TRANSACTION_TYPES = {"prolong", "order"}
-# Months covered by one payment, for the case terms: hour and week are fractions of a month (30-day month).
+# Месяцы, покрываемые одним платежом, для сроков кейса: час и неделя — доли месяца (30-дневный месяц).
 PAYMENT_TERM_MONTHS = {
     "hour": 1 / 720,
     "week": 7 / 30,
@@ -30,16 +30,16 @@ PAYMENT_TERM_MONTHS = {
     "half_year": 6,
     "year": 12,
 }
-# Starting expert coefficients agreed with the mentor. They make the control cases
-# of the brief land in the expected levels. They were not fitted to outcomes.
+# Стартовые экспертные коэффициенты, согласованные с ментором. Они приводят контрольные кейсы
+# брифа к ожидаемым уровням. По фактическим исходам они не подгонялись.
 DEFAULT_WEIGHTS: dict[str, int] = {
     "prolong_wait": 5,
     "autoprolong_disabled": 45,
     "insufficient_balance": 40,
     "renewal_urgency": 20,
 }
-# Order of factors in reasons and on the model page. Adding a factor means adding
-# a weight, an entry here and a branch in _explain.
+# Порядок факторов в reasons и на странице модели. Добавить фактор — значит добавить
+# вес, запись здесь и ветку в _explain.
 FACTORS: tuple[dict[str, str], ...] = (
     {
         "code": "autoprolong_disabled",
@@ -71,8 +71,8 @@ DEFAULT_MODEL_SETTINGS: dict[str, Any] = {
     "prediction_horizon_days": 30,
     "high_risk_min": 50,
     "medium_risk_min": 30,
-    # The account index is the chance that at least one service does not renew. It grows with the
-    # number of risky services, so its levels are edited separately from the service levels.
+    # Индекс аккаунта — вероятность, что хотя бы одна услуга не продлится. Он растёт с числом
+    # рискованных услуг, поэтому его уровни редактируются отдельно от уровней услуг.
     "account_high_risk_min": 50,
     "account_medium_risk_min": 30,
     "weights": dict(DEFAULT_WEIGHTS),
@@ -80,14 +80,14 @@ DEFAULT_MODEL_SETTINGS: dict[str, Any] = {
 
 
 def merge_model_settings(settings: dict[str, Any] | None) -> dict[str, Any]:
-    """Return a complete model contract while accepting rows written by older versions."""
+    """Возвращает полный контракт модели, принимая строки, записанные старыми версиями."""
     current = settings or {}
     stored_weights = current.get("weights") or {}
     weights = dict(DEFAULT_WEIGHTS)
     for code in DEFAULT_WEIGHTS:
         if code in stored_weights:
             weights[code] = int(stored_weights[code])
-    # Version 2 kept the renewal urgency weight in the formula block. Carry a custom value over.
+    # Версия 2 хранила вес срочности продления в блоке формулы. Переносим пользовательское значение.
     legacy_urgency = (current.get("formula") or {}).get("urgency_weight")
     if "renewal_urgency" not in stored_weights and legacy_urgency is not None:
         weights["renewal_urgency"] = int(legacy_urgency)
@@ -99,7 +99,7 @@ def merge_model_settings(settings: dict[str, Any] | None) -> dict[str, Any]:
         ),
         "high_risk_min": int(current.get("high_risk_min", DEFAULT_MODEL_SETTINGS["high_risk_min"])),
         "medium_risk_min": int(current.get("medium_risk_min", DEFAULT_MODEL_SETTINGS["medium_risk_min"])),
-        # Rows written while the account index was a sum may hold thresholds above the 0-100 scale.
+        # В строках, записанных, когда индекс аккаунта был суммой, пороги могут выходить за шкалу 0-100.
         "account_high_risk_min": min(100, max(1, int(
             current.get("account_high_risk_min", DEFAULT_MODEL_SETTINGS["account_high_risk_min"])
         ))),
@@ -111,7 +111,7 @@ def merge_model_settings(settings: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def model_divisor(model: dict[str, Any]) -> int:
-    """The index normalizer is the sum of weights, so a full set of signals gives 100."""
+    """Нормализатор индекса — сумма весов, поэтому полный набор сигналов даёт 100."""
     return sum(model["weights"].values()) or 1
 
 
@@ -134,13 +134,13 @@ def _clip(value: float, minimum: float = 0.0, maximum: float = 1.0) -> float:
 
 
 def _points(value: float) -> float:
-    """One decimal, as in the control values of the brief, without float noise."""
+    """Один десятичный знак, как в контрольных значениях брифа, без float-шума."""
     rounded = round(value, 1)
     return 0.0 if abs(rounded) < 0.05 else rounded
 
 
 def _share_out(parts: list[float], total: float) -> list[float]:
-    """Round the parts to one decimal so that they add up to the total exactly (largest remainder)."""
+    """Округляем слагаемые до одного знака, чтобы в сумме они точно давали итог (метод наибольших остатков)."""
     weight = sum(parts)
     if weight <= 0:
         return [0.0 for _ in parts]
@@ -187,7 +187,7 @@ def _urgency(expires_at: datetime, now: datetime) -> float:
 
 
 def _grace(expires_at: datetime | None, now: datetime) -> tuple[float, float | None, int | None]:
-    """Return grace progress, elapsed days and whole days left for a waiting service."""
+    """Возвращает прогресс льготного периода, прошедшие дни и целые оставшиеся дни для ожидающей услуги."""
     if expires_at is None:
         return 0.0, None, None
     elapsed_days = max(0.0, (now - expires_at).total_seconds() / 86400)
@@ -237,7 +237,7 @@ def _account_level(score: float | None, model: dict[str, Any]) -> str | None:
 
 
 def _allocate_balance(due_services: list[dict[str, Any]], available_balance: int) -> dict[str, int]:
-    """Spread a shared account balance over due services in the order they are paid."""
+    """Распределяет общий баланс аккаунта по подлежащим оплате услугам в порядке их оплаты."""
     remaining = available_balance
     allocation: dict[str, int] = {}
     for service in due_services:
@@ -342,7 +342,7 @@ def _service_action(
     elif manual > 0:
         action = {"code": "manual_reminder", "text": f"Напомнить продлить услугу вручную ({_due_text(seconds_left)})."}
     elif due and shortfall > 0:
-        # Outside the 7-day action window the index is zero, but the shortfall is still real money.
+        # Вне 7-дневного окна действий индекс равен нулю, но нехватка денег всё ещё реальна.
         action = {
             "code": "forecast_only",
             "text": f"Срок продления вне 7-дневного окна ({_due_text(seconds_left)}), но на продление не хватает {euro(shortfall)}: запланировать пополнение заранее.",
@@ -372,8 +372,8 @@ def _evaluate_service(
     expires_at = as_utc(service["expires_at"])
     is_waiting = service["status"] == "prolong_wait"
 
-    # A terminal status is already a strong, explicit churn signal. It must be
-    # visible to marketing even though it is not a future renewal event.
+    # Терминальный статус — уже сильный явный сигнал оттока. Он должен быть
+    # виден маркетингу, даже если это не будущее событие продления.
     if service["status"] in TERMINAL_SERVICE_STATUSES:
         terminal_score = 100.0 if service["status"] == "deleted" else 90.0
         title = "Услуга удалена" if service["status"] == "deleted" else "Услуга заблокирована"
@@ -498,8 +498,8 @@ def _evaluate_service(
         grace_remaining=grace_remaining,
     )
     level = _risk_level(score, model)
-    # One sample for every money figure: there is some risk and the decision is still ahead. A service
-    # waiting past its 5-day grace should already be deleted: that is a data problem, so its money is not counted.
+    # По одной выборке на каждую денежную цифру: риск есть, решение ещё впереди. Услуга,
+    # пересидевшая 5-дневный льготный период, должна быть уже удалена: это проблема данных, её деньги не считаем.
     beyond_grace = is_waiting and grace_remaining == 0
     exposed = score is not None and score > 0 and not beyond_grace
     return {
@@ -516,10 +516,10 @@ def _evaluate_service(
         "available_balance_minor": price - shortfall if due else 0,
         "uncovered_revenue_minor": shortfall,
         "exposed": exposed,
-        # Expected loss: price x index / 100. Maximum: the full price of the same services.
+        # Ожидаемые потери: цена x индекс / 100. Максимум: полная цена тех же услуг.
         "revenue_at_risk_minor": round(price * score / 100) if exposed else 0,
         "near_term_loss_minor": price if exposed else 0,
-        # The part of the expected loss that comes from a missing balance.
+        # Часть ожидаемых потерь, вызванная нехваткой баланса.
         "potential_loss_minor": round(shortfall * score / 100) if exposed else 0,
         "monthly_cost_minor": _monthly_cost(price, service.get("payment_term")),
         "grace_remaining_days": grace_remaining,
@@ -527,12 +527,12 @@ def _evaluate_service(
 
 
 def _service_count_adjustment(assessed: list[dict[str, Any]]) -> tuple[int, float]:
-    """Return risky-service count and a breadth factor for large portfolios.
+    """Возвращает число рискованных услуг и коэффициент широты для крупных портфелей.
 
-    Portfolios up to three services use the exact union index. With more services,
-    a single risky service must not make a large portfolio look as dangerous as
-    a portfolio where most services are at risk. The factor stays at 1 when the
-    risky share is high, so a client whose whole portfolio is bad remains high.
+    Портфели до трёх услуг используют точный индекс объединения. При большем числе услуг
+    одна рискованная услуга не должна делать большой портфель столь же опасным на вид,
+    как портфель, где большинство услуг под риском. Коэффициент остаётся равным 1, когда
+    рискованная доля высока: клиент с целиком «плохим» портфелем остаётся наверху.
     """
     risky_count = sum(float(service["risk_score"] or 0) > 0 for service in assessed)
     if len(assessed) <= 3 or risky_count == 0:
@@ -542,7 +542,7 @@ def _service_count_adjustment(assessed: list[dict[str, Any]]) -> tuple[int, floa
 
 
 def _account_index(assessed: list[dict[str, Any]]) -> float:
-    """Chance that at least one service does not renew, adjusted for portfolio breadth."""
+    """Вероятность, что хотя бы одна услуга не продлится, с поправкой на широту портфеля."""
     survive = 1.0
     for service in assessed:
         survive *= 1 - service["risk_score"] / 100
@@ -551,8 +551,8 @@ def _account_index(assessed: list[dict[str, Any]]) -> float:
 
 
 def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None) -> list[dict[str, Any]]:
-    """Reasons of the account. Without a total the factor points are plain sums; with the account
-    index they are scaled to add up to it exactly."""
+    """Причины аккаунта. Без итога баллы факторов — простые суммы; с индексом аккаунта
+    они масштабируются так, чтобы точно сойтись в него."""
     totals: dict[str, dict[str, Any]] = {}
     for service in assessed:
         for reason in service["reasons"]:
@@ -601,11 +601,11 @@ def _historical_fallback_score(
     now: datetime,
     model: dict[str, Any],
 ) -> dict[str, Any] | None:
-    """Infer a conservative service score when the snapshot has history but a stale field.
+    """Выводит консервативную оценку услуги, когда в снапшоте есть история, но поле устарело.
 
-    This is deliberately gated by transaction history. A lone malformed service
-    still remains unscored; a populated customer record gets a useful account
-    assessment instead of losing all signal because one date is stale.
+    Это сознательно ограничено историей транзакций. Одиночная битая услуга
+    по-прежнему остаётся без оценки; наполненная запись клиента получает полезную
+    оценку аккаунта вместо потери всего сигнала из-за одной устаревшей даты.
     """
     if service.get("data_issue") not in {"missing_expiry", "expired_active"}:
         return None
@@ -616,8 +616,8 @@ def _historical_fallback_score(
         return None
     attempts = len(performed) + len(failed)
     failure_rate = (len(failed) / attempts) if attempts else 0.35
-    # Stale/expired records are risky by definition; history adjusts the level
-    # without pretending that the missing field is correct.
+    # Устаревшие/просроченные записи рискованны по определению; история корректирует уровень,
+    # не выдавая отсутствующее поле за корректное.
     score = round(_clip(0.70 + 0.25 * failure_rate) * 100, 1)
     level = _risk_level(score, model)
     reason = {
@@ -668,10 +668,10 @@ def evaluate_customer(
     model = merge_model_settings(model)
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     horizon_end = now + timedelta(days=model["prediction_horizon_days"])
-    # Keep terminal services in a sufficiently rich customer snapshot. A tiny
-    # one-service record with a terminal status remains a data-quality case;
-    # the organizer snapshot has three services plus payment history, where
-    # the terminal status is meaningful churn evidence.
+    # Оставляем терминальные услуги в достаточно богатом снапшоте клиента. Крошечная
+    # запись из одной услуги с терминальным статусом остаётся случаем качества данных;
+    # в снапшоте организатора три услуги плюс история платежей, где
+    # терминальный статус — содержательное свидетельство оттока.
     terminal_scoring_enabled = len(customer["services"]) >= 3
     eligible = [
         service for service in customer["services"]
@@ -687,7 +687,7 @@ def evaluate_customer(
     uncovered_total = max(0, due_revenue - available_balance)
     shortfalls = _allocate_balance(due_services, available_balance)
 
-    # A failed payment without a service id cannot be attributed to one service: it is ignored.
+    # Неуспешный платёж без id услуги нельзя отнести к одной услуге: он игнорируется.
     failed_service_ids = {
         transaction["service_id"]
         for transaction in customer["transactions"]
@@ -706,9 +706,9 @@ def evaluate_customer(
         for service in eligible
     ]
 
-    # When the snapshot contains payment history, use it to recover a useful
-    # conservative score for stale service dates. Without history the service
-    # stays explicitly unscored, preserving the data-quality contract.
+    # Если в снапшоте есть история платежей, используем её, чтобы восстановить полезную
+    # консервативную оценку для устаревших дат услуги. Без истории услуга
+    # остаётся явно неоценённой — контракт качества данных сохраняется.
     if service_results:
         fallback_candidates = [service for service in service_results if service["risk_score"] is None]
         history_available = len(customer.get("transactions", [])) >= 3
@@ -721,12 +721,12 @@ def evaluate_customer(
     assessed = [service for service in service_results if service["risk_score"] is not None]
     unscored = [service for service in service_results if service["risk_score"] is None]
     data_coverage = len(assessed) / len(service_results) if service_results else 0.0
-    # A client with at least 70% of services described still gets a useful score.
-    # Below that threshold the result is explicitly unscored instead of pretending
-    # that the missing services are safe.
+    # Клиент, у которого описано хотя бы 70% услуг, всё ещё получает полезную оценку.
+    # Ниже этого порога результат — явно «без оценки», вместо того чтобы выдавать
+    # отсутствующие услуги за безопасные.
     complete = bool(assessed) and data_coverage >= MIN_SCORABLE_COVERAGE
-    # The account index is the chance that at least one service does not renew. For one service it equals
-    # the service index and, unlike a sum, it never leaves 0-100. The plain sum stays as a reference.
+    # Индекс аккаунта — вероятность, что хотя бы одна услуга не продлится. Для одной услуги он равен
+    # индексу услуги и, в отличие от суммы, никогда не выходит за 0-100. Простая сумма остаётся для справки.
     raw_sum = sum(service["risk_score"] for service in assessed)
     account_sum = round(raw_sum, 1) if complete else None
     account_index = _account_index(assessed) if complete else None
@@ -905,11 +905,11 @@ def outflow_forecast(
     now: datetime,
     horizon_days: int,
 ) -> dict[str, Any]:
-    """Expected non-renewals by the day they are decided. This is index-based, not a calibrated probability.
+    """Ожидаемые непродления по дням, когда они решаются. Это индексная величина, а не калиброванная вероятность.
 
-    A renewal is decided on its expiry day. A service waiting for payment is deleted when its grace ends,
-    so it is placed on that day. One that is already past its grace should be gone: it is counted aside
-    as a data problem instead of being forecast."""
+    Продление решается в день окончания услуги. Ожидающая оплаты услуга удаляется, когда кончается её льготный период,
+    поэтому её ставим на этот день. Та, что льготный период уже пересидела, должна была исчезнуть: её учитываем отдельно
+    как проблему данных, а не в прогнозе."""
     horizon_end = (now + timedelta(days=horizon_days)).date()
     buckets: dict[str, dict[str, Any]] = {}
     waiting_services = 0
@@ -974,7 +974,7 @@ def outflow_forecast(
 
 
 def control_cases(model: dict[str, Any], now: datetime | None = None) -> list[dict[str, Any]]:
-    """The four control accounts from the mentor's answer, scored with the current model."""
+    """Четыре контрольных аккаунта из ответа ментора, оценённые текущей моделью."""
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
 
     def account(balance: int, auto: bool, status: str, expires_at: datetime) -> dict[str, Any]:

@@ -1,7 +1,7 @@
-"""Tabular exports: CSV for Excel, XLSX and XML.
+"""Табличные экспорты: CSV для Excel, XLSX и XML.
 
-Text cells that a spreadsheet would run as a formula are neutralised: CSV gets a
-leading apostrophe, XLSX cells are stored as plain text.
+Текстовые ячейки, которые таблица могла бы исполнить как формулу, нейтрализуются: в CSV
+добавляется ведущий апостроф, ячейки XLSX сохраняются как обычный текст.
 """
 from __future__ import annotations
 

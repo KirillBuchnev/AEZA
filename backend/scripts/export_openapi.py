@@ -1,6 +1,6 @@
-"""Write backend/openapi.json from the running application.
+"""Пишет backend/openapi.json из запущенного приложения.
 
-The file is generated, never edited by hand. Run after changing an endpoint:
+Файл генерируется, вручную не редактируется. Запускать после изменения эндпоинта:
     python backend/scripts/export_openapi.py
 """
 from __future__ import annotations

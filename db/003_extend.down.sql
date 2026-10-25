@@ -1,5 +1,5 @@
--- BEGIN/COMMIT removed for driver-managed transactions: wrap in your own transaction,
--- or run atomically via `psql -1 -f`.
+-- BEGIN/COMMIT удалены: транзакциями управляет драйвер — оберните файл в свою транзакцию,
+-- или выполните атомарно через `psql -1 -f`.
 
 DROP INDEX IF EXISTS public.transactions_service_performed_idx;
 DROP INDEX IF EXISTS public.transactions_performed_idx;

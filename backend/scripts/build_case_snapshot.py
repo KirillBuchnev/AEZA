@@ -1,6 +1,6 @@
-"""Build app/seeds/case_snapshot.json from the case dataset in db/002_seed.sql.
+"""Собирает app/seeds/case_snapshot.json из датасета кейса в db/002_seed.sql.
 
-The seed file is the source of truth. After changing it, run:
+Файл сида — источник истины. После его изменения запустите:
     python backend/scripts/build_case_snapshot.py
 """
 from __future__ import annotations
@@ -41,7 +41,7 @@ def build(text: str) -> dict:
         })
     transactions_by_owner: dict[int, list[dict]] = {}
     for transaction in fixtures["fixture_transactions"]:
-        # An orphan transaction must fail the build, not disappear from the snapshot.
+        # Транзакция-сирота должна валить сборку, а не исчезать из снапшота.
         owner = owner_of[transaction["serviceId"]]
         transactions_by_owner.setdefault(owner, []).append({
             "id": str(transaction["id"]),

@@ -12,7 +12,7 @@ def _boolean(name: str, default: bool = False) -> bool:
 
 
 def normalize_database_url(url: str) -> str:
-    """Accept the common PostgreSQL spellings and map them to the psycopg 3 driver this service ships with."""
+    """Принимаем общепринятые варианты написания параметров PostgreSQL и отображаем их на драйвер psycopg 3, который поставляется с этим сервисом."""
     for prefix in ("postgresql://", "postgres://"):
         if url.startswith(prefix):
             url = "postgresql+psycopg://" + url.removeprefix(prefix)
@@ -22,7 +22,7 @@ def normalize_database_url(url: str) -> str:
 
 
 def _database_url() -> str:
-    """AEZA_DATABASE_URL selects PostgreSQL. Without it the app keeps the SQLite file from AEZA_DATABASE_PATH."""
+    """AEZA_DATABASE_URL включает PostgreSQL. Без неё приложение продолжает использовать файл SQLite из AEZA_DATABASE_PATH."""
     url = os.getenv("AEZA_DATABASE_URL", "").strip()
     if not url:
         return f"sqlite:///{os.getenv('AEZA_DATABASE_PATH', 'data/aeza.db')}"

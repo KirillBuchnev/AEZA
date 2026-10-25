@@ -1,6 +1,6 @@
--- Generated from data.json. Run only on empty fixture tables.
--- BEGIN/COMMIT removed for driver-managed transactions (source.py): wrap in your own transaction,
--- or run atomically via `psql -1 -f`.
+-- Сгенерирован из data.json. Запускать только на пустых fixture-таблицах.
+-- BEGIN/COMMIT удалены (транзакциями управляет source.py): оберните файл в свою транзакцию,
+-- или выполните атомарно через `psql -1 -f`.
 
 LOCK TABLE public.accounts, public.services, public.transactions IN EXCLUSIVE MODE;
 

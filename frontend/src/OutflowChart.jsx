@@ -4,7 +4,7 @@ import { Icon } from "./Icons.jsx";
 const WIDTH = 720;
 const HEIGHT = 260;
 const PAD = { top: 22, right: 12, bottom: 30, left: 44 };
-// By the rules of the case a service waits for payment this many days and is then deleted.
+// По правилам кейса услуга ждёт оплаты столько дней, после чего удаляется.
 const GRACE_DAYS = 5;
 
 function addDays(isoDate, days) {
@@ -33,7 +33,7 @@ const PERIODS = [
   { days: 365, label: "Год" },
 ];
 
-// A count of services is a whole number, so the axis uses whole steps and never repeats a tick.
+// Число услуг — целое, поэтому ось идёт целыми шагами и не повторяет деления.
 function scale(peak) {
   const step =
     [1, 2, 5, 10, 20, 50, 100, 200, 500].find((candidate) => peak / candidate <= 4) ?? 1000;
@@ -83,7 +83,7 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
   const xFor = (index) => PAD.left + index * step;
   const todayIndex = model.dates.indexOf(model.today);
   const todayX = todayIndex >= 0 ? xFor(todayIndex) + step / 2 : null;
-  // Keep about eight date labels on the axis whatever the period is.
+  // Держим на оси около восьми подписей дат при любом периоде.
   const labelStep = Math.max(7, Math.ceil(model.dates.length / 8));
   const factTotal = facts.totals.deleted + facts.totals.removed + facts.totals.blocked;
   const atRiskTotal = forecast.totals.services_at_risk;

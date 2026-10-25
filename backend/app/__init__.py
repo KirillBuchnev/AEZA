@@ -1,1 +1,1 @@
-"""AEZA retention risk API."""
+"""API рисков оттока AEZA."""

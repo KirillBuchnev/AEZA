@@ -1236,7 +1236,7 @@ button.kv-row:hover > span:nth-child(2) {
   text-align: right;
 }
 
-/* Expected loss in bold, the maximum for the same services under it. */
+/* Ожидаемые потери жирным, под ними максимум для тех же услуг. */
 .exposure-value {
   display: flex;
   flex-direction: column;
@@ -1393,7 +1393,7 @@ button.kv-row:hover > span:nth-child(2) {
   white-space: nowrap;
 }
 
-/* Expected loss on top, the maximum for the same services under it. */
+/* Ожидаемые потери сверху, под ними максимум для тех же услуг. */
 .money-pair {
   display: flex;
   flex-direction: column;
@@ -1410,7 +1410,7 @@ button.kv-row:hover > span:nth-child(2) {
   color: var(--text-secondary);
 }
 
-/* Below 1440 px the table fits its card: no fixed minimum width, and the reason column truncates first. */
+/* Ниже 1440 px таблица умещается в свою карточку: без фиксированной минимальной ширины, колонка причин обрезается первой. */
 @media (max-width: 1440px) {
   .ctable {
     min-width: 0;
@@ -2785,7 +2785,7 @@ a.button {
   flex: 1 1 0;
 }
 
-/* Outflow chart: facts are solid, the forecast is hatched, a dashed line marks "today". */
+/* График оттока: факты — сплошные, прогноз — штриховкой, пунктир отмечает «сегодня». */
 .outflow-section { margin: 24px 0 8px; }
 .outflow { display: grid; gap: 14px; }
 .outflow-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -2825,7 +2825,7 @@ a.button {
   .outflow-summary { grid-template-columns: 1fr; }
 }
 
-/* Model page: control cases. */
+/* Страница модели: контрольные кейсы. */
 .control-table { display: grid; gap: 6px; }
 .control-row {
   display: grid;
@@ -2836,7 +2836,7 @@ a.button {
 }
 .control-row b { font-weight: 700; }
 
-/* Customer card: reasons and next step under each service, data-quality list. */
+/* Карточка клиента: причины и следующий шаг под каждой услугой, список качества данных. */
 .service-detail-row > td { padding-top: 0; }
 .service-detail { display: grid; gap: 6px; padding: 4px 0 14px 4px; font-size: 14px; }
 .service-reasons { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
@@ -2844,7 +2844,7 @@ a.button {
 .service-loss, .service-action { margin: 0; }
 .data-issues { margin: 0; padding: 0 20px 18px; display: grid; gap: 8px; font-size: 14px; }
 
-/* Outflow chart: period switch. */
+/* График оттока: переключатель периода. */
 .outflow-periods { display: flex; flex-wrap: wrap; gap: 8px; }
 .outflow-period {
   padding: 6px 14px;

@@ -265,7 +265,7 @@ export default function App() {
     try {
       await api.logout();
     } catch {
-      /* The session may already have expired. */
+      /* Сессия могла уже истечь. */
     }
     setAuthenticated(false);
     setSummary(null);

@@ -1,8 +1,8 @@
-"""Scenario accounts: one situation of the brief per account, shown next to the case dataset.
+"""Сценарные аккаунты: по одной ситуации брифа на аккаунт, показываются рядом с датасетом кейса.
 
-The case dataset has balances far above prices and dates spread over a year, so almost no account
-is at risk and the money estimate stays at zero. These accounts are built relative to the current
-time, so they never go stale. Ids S01-S14 and the scenario.example domain mark them as scenarios.
+В датасете кейса балансы намного выше цен, а даты размазаны по году, поэтому почти ни один аккаунт
+не в зоне риска и денежная оценка остаётся нулевой. Эти аккаунты строятся относительно текущего
+времени, поэтому не устаревают. Id S01-S14 и домен scenario.example помечают их как сценарные.
 """
 from __future__ import annotations
 
@@ -71,23 +71,23 @@ def scenario_customers(now: datetime | None = None) -> list[dict[str, Any]]:
         }
 
     return [
-        # Manual renewal comes tomorrow and the money is there: the client has to remember it.
+        # Ручное продление завтра, деньги на месте: клиент должен сам о нём вспомнить.
         account("S01", "manual-soon", 5000, 30000,
                 [service("S01", 1, "Виртуальный сервер", 900, auto=False, expires=at(hours=20))],
                 [prolong("S01", 1, "S01-1", 900, at(days=-30))]),
-        # Autorenewal is on, but the balance covers only a fifth of the price.
+        # Автопродление включено, но баланс покрывает лишь пятую часть цены.
         account("S02", "short-balance", 300, 20000,
                 [service("S02", 1, "Виртуальный сервер Pro", 1500, auto=True, expires=at(days=2))],
                 [prolong("S02", 1, "S02-1", 1500, at(days=-28))]),
-        # Control case a: waiting for payment and no money.
+        # Контрольный кейс a: ожидание оплаты и денег нет.
         account("S03", "wait-no-funds", 0, 15000,
                 [service("S03", 1, "Выделенный сервер Mini", 6000, auto=True, status="prolong_wait", expires=at(days=-1))],
                 [prolong("S03", 1, "S03-1", 6000, at(days=-31))]),
-        # Control case d: the same status with money on the balance is a failed charge, not a loss.
+        # Контрольный кейс d: тот же статус при деньгах на балансе — неуспешное списание, а не потеря.
         account("S04", "wait-has-funds", 10000, 24000,
                 [service("S04", 1, "Облачный сервер", 1200, auto=True, status="prolong_wait", expires=at(days=-1))],
                 [prolong("S04", 1, "S04-1", 1200, at(days=-31))]),
-        # Three servers, the balance pays the first two and falls short on the manual third one.
+        # Три сервера: баланс оплачивает первые два, а на третье, ручное, его не хватает.
         account("S05", "big-account", 12000, 250000,
                 [
                     service("S05", 1, "Выделенный сервер EPYC", 9000, auto=True, expires=at(days=1)),
@@ -99,53 +99,53 @@ def scenario_customers(now: datetime | None = None) -> list[dict[str, Any]]:
                     prolong("S05", 2, "S05-2", 2500, at(days=-28)),
                     prolong("S05", 3, "S05-3", 2500, at(days=-27)),
                 ]),
-        # A large annual contract renewed by hand in five days: low risk, high value.
+        # Крупный годовой контракт с ручным продлением через пять дней: низкий риск, высокая ценность.
         account("S06", "big-annual", 90000, 400000,
                 [service("S06", 1, "Выделенный сервер Xeon", 72000, auto=False, term="year", expires=at(days=5))],
                 [prolong("S06", 1, "S06-1", 72000, at(days=-360))]),
-        # Bonus balance can be spent (bonusState on): it pays the renewal.
+        # Бонусный баланс можно тратить (bonusState включён): он оплачивает продление.
         account("S07", "bonus-open", 200, 5000,
                 [service("S07", 1, "Облачный сервер", 1200, auto=True, expires=at(days=1))],
                 [prolong("S07", 1, "S07-1", 1200, at(days=-29))],
                 bonus=3000, bonus_enabled=True),
-        # The same bonus balance, but spending is off: the shortfall is real.
+        # Тот же бонусный баланс, но тратить нельзя: нехватка реальна.
         account("S08", "bonus-locked", 200, 5000,
                 [service("S08", 1, "Облачный сервер", 1200, auto=True, expires=at(days=1))],
                 [prolong("S08", 1, "S08-1", 1200, at(days=-29))],
                 bonus=3000, bonus_enabled=False),
-        # Hourly billing: the next charge is cents, the monthly cost is not.
+        # Почасовая тарификация: следующее списание — центы, месячная стоимость — нет.
         account("S09", "hourly-low", 4, 3000,
                 [service("S09", 1, "Виртуальный сервер (почасовой)", 12, auto=True, term="hour", expires=at(hours=0.4))],
                 [prolong("S09", 1, "S09-1", 12, at(hours=-1))]),
-        # Money is there now, but the last renewal attempt failed two days ago.
+        # Деньги сейчас есть, но последняя попытка продления два дня назад провалилась.
         account("S10", "failed-payment", 8000, 18000,
                 [service("S10", 1, "Облачный сервер", 1500, auto=True, expires=at(days=3))],
                 [
                     prolong("S10", 1, "S10-1", 1500, at(days=-33)),
                     prolong("S10", 2, "S10-1", 1500, at(days=-2), performed=False),
                 ]),
-        # The green baseline: autorenewal on, a solid balance, nothing due soon.
+        # Зелёная база: автопродление включено, солидный баланс, близких платежей нет.
         account("S11", "healthy", 20000, 90000,
                 [
                     service("S11", 1, "Виртуальный сервер", 1500, auto=True, expires=at(days=20)),
                     service("S11", 2, "Облачный диск", 800, auto=True, term="quarter_year", expires=at(days=45)),
                 ],
                 [prolong("S11", 1, "S11-1", 1500, at(days=-10)), prolong("S11", 2, "S11-2", 800, at(days=-45))]),
-        # Partial churn: one service was deleted ten days ago, another one lives on.
+        # Частичный отток: одна услуга удалена десять дней назад, другая продолжает жить.
         account("S12", "partial-churn", 3000, 40000,
                 [
                     service("S12", 1, "Облачный сервер", 2000, auto=True, status="deleted", expires=at(days=-10)),
                     service("S12", 2, "Облачный диск", 800, auto=True, expires=at(days=15)),
                 ],
                 [prolong("S12", 1, "S12-2", 800, at(days=-15))]),
-        # Full churn: nothing left to renew, so there is nothing to score.
+        # Полный отток: продлевать нечего, значит и оценивать нечего.
         account("S13", "churned", 500, 22000,
                 [
                     service("S13", 1, "Выделенный сервер", 3000, auto=False, status="deleted", expires=at(days=-25)),
                     service("S13", 2, "Облачный сервер", 1200, auto=True, status="blocked", expires=at(days=-12)),
                 ],
                 [prolong("S13", 1, "S13-1", 3000, at(days=-55))]),
-        # Missing data: no expiry date, so the risk is not calculated and the card says why.
+        # Недостающие данные: нет даты окончания, риск не считается, и карточка объясняет почему.
         account("S14", "no-expiry", 5000, 12000,
                 [service("S14", 1, "Виртуальный сервер", 900, auto=True, expires=None)],
                 [prolong("S14", 1, "S14-1", 900, at(days=-20))]),

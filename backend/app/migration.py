@@ -1,10 +1,10 @@
-"""Copy an AEZA SQLite file into PostgreSQL, once, after switching the runtime to PostgreSQL.
+"""Копирует файл SQLite из AEZA в PostgreSQL — однократно, после переключения рантайма на PostgreSQL.
 
     docker compose exec api python -m app.migration /data/aeza.db
 
-The target is AEZA_DATABASE_URL unless --target is given. The source snapshot replaces the
-snapshot of the target; accounts, sessions, login throttling and the journal are merged by
-primary key, so running the command again does not duplicate rows. The source is opened read-only.
+Цель — AEZA_DATABASE_URL, если не задан --target. Снапшот источника заменяет снапшот цели;
+аккаунты, сессии, троттлинг входа и журнал сливаются по первичному ключу, поэтому повторный
+запуск команды не дублирует строки. Источник открывается только на чтение.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from .config import normalize_database_url
 from .database import Database
 
 
-# Parents first: services and transactions reference customers, OIDC identities reference users.
+# Сначала родители: услуги и транзакции ссылаются на клиентов, OIDC-идентичности — на пользователей.
 TABLES: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
     ("app_state", ("key",), ("key", "value")),
     ("users", ("username",), (
@@ -50,12 +50,12 @@ TABLES: tuple[tuple[str, tuple[str, ...], tuple[str, ...]], ...] = (
     ("oidc_transactions", ("state_hash",), ("state_hash", "nonce", "code_verifier", "expires_at")),
 )
 SNAPSHOT_TABLES = ("transactions", "services", "customers")
-# SQLite keeps flags as 0 and 1; PostgreSQL has BOOLEAN columns for them.
+# SQLite хранит флаги как 0 и 1; в PostgreSQL для них есть колонки BOOLEAN.
 BOOLEAN_COLUMNS = {("customers", "bonus_spend_enabled"), ("services", "auto_prolong")}
 
 
 def migrate_sqlite(source_path: str, target_url: str) -> dict[str, int]:
-    """Copy every AEZA table from the SQLite file into PostgreSQL and return the row counts."""
+    """Копирует все таблицы AEZA из файла SQLite в PostgreSQL и возвращает количество строк."""
     target_url = normalize_database_url(target_url)
     if not target_url.startswith("postgresql+psycopg://"):
         raise ValueError("The migration target must be a PostgreSQL URL.")
@@ -72,7 +72,7 @@ def migrate_sqlite(source_path: str, target_url: str) -> dict[str, int]:
             for table, primary_key, columns in TABLES:
                 selected, rows = _read(source, table, columns)
                 counts[table] = _write(connection, table, primary_key, selected, rows)
-            # Copied journal ids are explicit, so the PostgreSQL sequence must continue after them.
+            # Скопированные id журнала заданы явно, поэтому последовательность PostgreSQL должна продолжиться после них.
             connection.execute(text(
                 "SELECT setval(pg_get_serial_sequence('snapshot_events', 'id'), "
                 "COALESCE((SELECT MAX(id) FROM snapshot_events), 1), "
@@ -89,7 +89,7 @@ def _read(
     table: str,
     columns: tuple[str, ...],
 ) -> tuple[tuple[str, ...], list[dict[str, Any]]]:
-    # Older files may lack a column (users.middle_name): copy what exists and leave the rest NULL.
+    # В старых файлах колонки может не быть (users.middle_name): копируем что есть, остальное оставляем NULL.
     available = {row["name"] for row in source.execute(f"PRAGMA table_info({table})")}
     selected = tuple(column for column in columns if column in available)
     if not selected:

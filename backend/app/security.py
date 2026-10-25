@@ -8,7 +8,7 @@ SCRYPT_N = 2**15
 SCRYPT_R = 8
 SCRYPT_P = 1
 SCRYPT_DKLEN = 32
-SCRYPT_MAXMEM = 64 * 1024 * 1024  # N=2**15, r=8 needs 32 MiB plus overhead; the default limit is exactly 32 MiB
+SCRYPT_MAXMEM = 64 * 1024 * 1024  # N=2**15, r=8 требует 32 МиБ плюс накладные расходы; лимит по умолчанию — ровно 32 МиБ
 
 USERNAME_PATTERN = re.compile(r"[A-Za-z0-9._@-]{3,64}")
 PASSWORD_MIN_LENGTH = 10

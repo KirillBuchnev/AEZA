@@ -11,7 +11,7 @@ from sqlalchemy.engine import Connection, Engine, make_url
 from .risk import DEFAULT_MODEL_SETTINGS, MODEL_VERSION, as_utc, demo_snapshot, merge_model_settings
 
 
-# One schema bootstrap at a time, also when several API processes start together.
+# Схему разворачивает за раз только один процесс, даже когда несколько процессов API стартуют одновременно.
 SCHEMA_LOCK_KEY = 745_101
 
 SET_STATE = text(
@@ -102,8 +102,8 @@ def _scalar(connection: Connection, sql: str, params: dict[str, Any] | None = No
 
 
 def _schema_statements(dialect: str) -> list[str]:
-    """Idempotent DDL. Money is BIGINT and flags are BOOLEAN on both databases. Dates from a
-    snapshot stay ISO text: the robust snapshot accepts messy rows and reports them as data issues."""
+    """Идемпотентный DDL. Деньги — BIGINT, флаги — BOOLEAN в обеих СУБД. Даты из снапшота остаются текстом в ISO:
+    устойчивый к мусору снапшот принимает грязные строки и сообщает о них как о проблемах данных."""
     journal_id = "INTEGER PRIMARY KEY AUTOINCREMENT" if dialect == "sqlite" else "BIGSERIAL PRIMARY KEY"
     return [
         """CREATE TABLE IF NOT EXISTS app_state (
@@ -206,7 +206,7 @@ class Database:
 
     @contextmanager
     def connection(self) -> Iterator[Connection]:
-        """One transaction: committed on success, rolled back on any exception."""
+        """Одна транзакция: фиксация при успехе, откат при любом исключении."""
         with self.engine.begin() as connection:
             yield connection
 
@@ -231,7 +231,7 @@ class Database:
             else:
                 stored_settings = json.loads(settings)
                 if stored_settings.get("version", 1) < MODEL_VERSION:
-                    # Keep the custom weights and thresholds of the previous version.
+                    # Сохраняем пользовательские веса и пороги предыдущей версии.
                     migrated = merge_model_settings(stored_settings)
                     connection.execute(SET_STATE, {
                         "key": "model_settings",
@@ -250,12 +250,12 @@ class Database:
                 connection.execute(SET_STATE, {"key": "source_kind", "value": source_name})
                 connection.execute(SET_STATE, {"key": "source_updated_at", "value": _now()})
             elif source_kind == "demo":
-                # Demo dates are relative to the current day. Refresh only the
-                # synthetic source; an uploaded snapshot remains untouched.
+                # Даты демо привязаны к текущему дню. Обновляем только
+                # синтетический источник; загруженный снапшот остаётся нетронутым.
                 self._replace_snapshot(connection, demo_snapshot())
                 connection.execute(SET_STATE, {"key": "source_updated_at", "value": _now()})
             elif source_kind == "showcase" and seed_name == "showcase" and seed_customers is not None:
-                # Scenario dates are relative to the current time: rebuild them on every start.
+                # Даты сценариев привязаны к текущему времени: пересобираем их при каждом старте.
                 self._replace_snapshot(connection, seed_customers)
                 connection.execute(SET_STATE, {"key": "source_updated_at", "value": _now()})
             if admin_profile is not None:
@@ -292,7 +292,7 @@ class Database:
 
     @staticmethod
     def _migrate_users(connection: Connection) -> None:
-        # Databases created before the middle name existed get the column in place.
+        # Базы, созданные до появления отчества, получают колонку прямо на месте.
         columns = {column["name"] for column in inspect(connection).get_columns("users")}
         if "middle_name" not in columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN middle_name TEXT"))
@@ -392,7 +392,7 @@ class Database:
             )
 
     def replace_password(self, username: str, password_hash: str, keep_token_hash: str | None = None) -> None:
-        """Set the password and revoke sessions in one transaction."""
+        """Меняет пароль и отзывает сессии в одной транзакции."""
         with self.connection() as connection:
             connection.execute(
                 text("UPDATE users SET password_hash = :password_hash WHERE username = :username"),
@@ -430,10 +430,10 @@ class Database:
 
     @staticmethod
     def _touch_source(connection: Connection, *, source_kind: str = "edited") -> dict[str, str]:
-        """Advance the source revision after an in-panel correction.
+        """Сдвигает ревизию источника после правки из панели.
 
-        Keeping a new snapshot id makes the live recalculation observable to every
-        client and prevents a correction from being mistaken for stale data.
+        Новый id снапшота делает пересчёт на живых данных наблюдаемым для каждого
+        клиента и не позволяет принять правку за устаревшие данные.
         """
         observed_at = _now()
         snapshot_id = str(uuid.uuid4())
@@ -507,7 +507,7 @@ class Database:
         with self.connection() as connection:
             previous_kind = _scalar(connection, "SELECT value FROM app_state WHERE key = 'source_kind'")
             events: list[dict[str, Any]] = []
-            # The demo source is not a real history: the first uploaded snapshot starts the journal.
+            # Демо-источник — не настоящая история: журнал запускает первый загруженный снапшот.
             if previous_kind in {"uploaded", "edited"}:
                 events = self._transition_events(connection, customers, observed_at, snapshot_id)
             self._replace_snapshot(connection, customers)
@@ -525,7 +525,7 @@ class Database:
         observed_at: str,
         snapshot_id: str,
     ) -> list[dict[str, Any]]:
-        """Compare the stored services with the incoming snapshot and record facts that happened."""
+        """Сравнивает сохранённые услуги со входящим снапшотом и фиксирует произошедшие события."""
         previous = {
             row["id"]: row
             for row in _rows(connection, "SELECT id, customer_id, status, expires_at, price_minor FROM services")
@@ -693,7 +693,7 @@ class Database:
                     "amount_minor": transaction["amount_minor"],
                     "created_at": transaction["created_at"],
                 })
-        # Parents before children: customers, then their services and transactions.
+        # Сначала родители, потом дети: клиенты, затем их услуги и транзакции.
         if customer_rows:
             connection.execute(INSERT_CUSTOMER, customer_rows)
         if service_rows:
@@ -776,7 +776,7 @@ class Database:
         max_attempts: int = 5,
         window_seconds: int = 900,
     ) -> int:
-        """Count an attempt atomically and return a lockout's remaining seconds."""
+        """Атомарно учитывает попытку и возвращает оставшиеся секунды блокировки."""
         now = datetime.now(timezone.utc)
         now_iso = now.isoformat()
         cutoff = (now - timedelta(seconds=window_seconds)).isoformat()
@@ -813,7 +813,7 @@ class Database:
 
     def _lock_client(self, connection: Connection, client_key: str) -> None:
         if self.dialect == "sqlite":
-            # SQLite has no row locks: BEGIN IMMEDIATE takes the write lock before the count is read.
+            # В SQLite нет блокировок строк: BEGIN IMMEDIATE берёт блокировку записи до чтения счётчика.
             connection.exec_driver_sql("BEGIN IMMEDIATE")
         else:
             connection.execute(

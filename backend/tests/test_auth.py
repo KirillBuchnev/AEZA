@@ -66,7 +66,7 @@ def test_bootstrap_admin_logs_in_and_secrets_are_hashed(open_app, database_url, 
     assert admin["password_hash"].startswith("scrypt$")
     assert admin["codeword_hash"].startswith("scrypt$")
     if database_url.startswith("sqlite"):
-        # A file can be searched for plaintext; PostgreSQL data lives outside the test process.
+        # Файл можно искать на открытый текст; данные PostgreSQL живут вне процесса тестов.
         database_file = (tmp_path / "aeza.db").read_bytes()
         assert ADMIN_PASSWORD.encode() not in database_file
         assert ADMIN_CODEWORD.encode() not in database_file

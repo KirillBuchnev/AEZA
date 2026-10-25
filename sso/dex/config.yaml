@@ -1,5 +1,5 @@
-# Local identity provider for the optional SSO login (docker-compose.sso.yml).
-# Demo account: analyst@aeza.example / AezaSso-2026. Not for production.
+# Локальный identity-провайдер для необязательного входа через SSO (docker-compose.sso.yml).
+# Демо-аккаунт: analyst@aeza.example / AezaSso-2026. Не для продакшена.
 issuer: http://localhost:5173/dex
 storage:
   type: memory
