@@ -214,6 +214,40 @@ def test_customer_detail_argues_reasons_and_pins_the_snapshot(open_app):
         assert detail["calculation"]["normalizer"] == 110
 
 
+def test_customer_and_service_can_be_corrected_in_panel(open_app):
+    with open_app() as (client, _):
+        sign_in(client)
+        put_snapshot(client, customer("edit-me", [service("svc", expires_in_days=2, price=1_000, auto=False)], balance=0))
+
+        updated = client.patch(
+            f"{CUSTOMERS}/edit-me",
+            json={
+                "email": "corrected@example.com",
+                "balance_minor": 2_000,
+                "bonus_balance_minor": 500,
+                "bonus_spend_enabled": True,
+            },
+        )
+        assert updated.status_code == 200
+        body = updated.json()
+        assert body["email"] == "corrected@example.com"
+        assert body["balance_minor"] == 2_000
+        assert body["ltv"]["current_mrr_minor"] == 1_000
+        assert body["calculation"]["data_coverage"] == 1.0
+
+        service_update = client.patch(
+            f"{CUSTOMERS}/edit-me/services/svc",
+            json={"price_minor": 2_000, "auto_prolong": True, "status": "active"},
+        )
+        assert service_update.status_code == 200
+        service_body = service_update.json()
+        assert service_body["services"][0]["price_minor"] == 2_000
+        assert service_body["calculation"]["ltv"]["current_mrr_minor"] == 2_000
+
+        assert client.patch(f"{CUSTOMERS}/edit-me", json={}).status_code == 422
+        assert client.patch(f"{CUSTOMERS}/edit-me/services/missing", json={"price_minor": 10}).status_code == 404
+
+
 def test_upgrade_keeps_custom_weights_and_thresholds(open_app, database_url):
     database = Database(database_url)
     database.initialize(admin_profile=None)

@@ -6,6 +6,7 @@ import { CardHead, Empty, SkeletonRows } from "./Shared.jsx";
 import {
   dateLabel,
   money,
+  moneyToMinor,
   paymentTermText,
   plural,
   serviceStatusText,
@@ -13,6 +14,146 @@ import {
 import mascotSurprised from "./assets/mascot-surprised.webp";
 
 const points = (value) => (Math.round(value * 10) / 10).toString().replace(".", ",");
+
+const moneyInput = (minor) => ((minor || 0) / 100).toFixed(2);
+const dateTimeInput = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  const pad = (part) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+function CustomerEditor({ customer, onClose, onSaved, onToast }) {
+  const [draft, setDraft] = useState({
+    email: customer.email,
+    balance: moneyInput(customer.balance_minor),
+    bonus: moneyInput(customer.bonus_balance_minor),
+    withdraw: moneyInput(customer.withdraw_balance_minor),
+    replenished: moneyInput(customer.total_replenished_minor),
+    bonusSpendEnabled: customer.bonus_spend_enabled,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save(event) {
+    event.preventDefault();
+    setError("");
+    const fields = ["balance", "bonus", "withdraw", "replenished"];
+    const values = Object.fromEntries(fields.map((field) => [field, moneyToMinor(draft[field])]));
+    if (Object.values(values).some((value) => value == null) || !draft.email.trim().includes("@")) {
+      setError("Проверьте email и суммы: используйте евро, например 125,50.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await api.updateCustomer(customer.id, {
+        email: draft.email.trim(),
+        balance_minor: values.balance,
+        bonus_balance_minor: values.bonus,
+        withdraw_balance_minor: values.withdraw,
+        total_replenished_minor: values.replenished,
+        bonus_spend_enabled: draft.bonusSpendEnabled,
+      });
+      onSaved(updated);
+      onToast({ kind: "success", message: "Данные клиента сохранены, расчёт обновлён." });
+      onClose();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="card edit-panel" aria-label="Редактирование клиента">
+      <CardHead
+        icon="info"
+        title="Исправить данные клиента"
+        description="Изменения сохраняются в текущем источнике и сразу участвуют в расчёте риска и LTV."
+      />
+      <form className="edit-form" onSubmit={save}>
+        <div className="fields">
+          <label className="field"><span>Email</span><input value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} /></label>
+          <label className="field"><span>Основной баланс, €</span><input inputMode="decimal" value={draft.balance} onChange={(event) => setDraft({ ...draft, balance: event.target.value })} /></label>
+          <label className="field"><span>Бонусы, €</span><input inputMode="decimal" value={draft.bonus} onChange={(event) => setDraft({ ...draft, bonus: event.target.value })} /></label>
+        </div>
+        <div className="fields">
+          <label className="field"><span>Реферальный резерв, €</span><input inputMode="decimal" value={draft.withdraw} onChange={(event) => setDraft({ ...draft, withdraw: event.target.value })} /></label>
+          <label className="field"><span>Пополнено всего, €</span><input inputMode="decimal" value={draft.replenished} onChange={(event) => setDraft({ ...draft, replenished: event.target.value })} /></label>
+          <label className="edit-check"><input type="checkbox" checked={draft.bonusSpendEnabled} onChange={(event) => setDraft({ ...draft, bonusSpendEnabled: event.target.checked })} /> Бонусы можно тратить</label>
+        </div>
+        {error && <span className="inline-error" role="alert">{error}</span>}
+        <div className="edit-actions">
+          <button type="button" className="button button-secondary" onClick={onClose}>Отмена</button>
+          <button type="submit" className="button button-primary" disabled={saving}>{saving ? "Сохраняем…" : "Сохранить данные"}</button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function ServiceEditor({ customerId, service, onClose, onSaved, onToast }) {
+  const [draft, setDraft] = useState({
+    name: service.name,
+    price: moneyInput(service.price_minor),
+    autoProlong: service.auto_prolong,
+    paymentTerm: service.payment_term || "month",
+    status: service.status,
+    expiresAt: dateTimeInput(service.expires_at),
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save(event) {
+    event.preventDefault();
+    const price = moneyToMinor(draft.price);
+    if (!draft.name.trim() || price == null) {
+      setError("Укажите название услуги и корректную цену.");
+      return;
+    }
+    setError("");
+    setSaving(true);
+    try {
+      const updated = await api.updateService(customerId, service.id, {
+        name: draft.name.trim(),
+        price_minor: price,
+        auto_prolong: draft.autoProlong,
+        payment_term: draft.paymentTerm || null,
+        status: draft.status,
+        expires_at: draft.expiresAt ? new Date(draft.expiresAt).toISOString() : null,
+      });
+      onSaved(updated);
+      onToast({ kind: "success", message: "Данные услуги сохранены, расчёт обновлён." });
+      onClose();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="service-editor">
+      <form className="edit-form" onSubmit={save}>
+        <div className="fields">
+          <label className="field"><span>Название</span><input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+          <label className="field"><span>Цена, €</span><input inputMode="decimal" value={draft.price} onChange={(event) => setDraft({ ...draft, price: event.target.value })} /></label>
+          <label className="field"><span>Срок оплаты</span><select value={draft.paymentTerm} onChange={(event) => setDraft({ ...draft, paymentTerm: event.target.value })}><option value="hour">Почасово</option><option value="week">Еженедельно</option><option value="month">Ежемесячно</option><option value="quarter_year">Раз в квартал</option><option value="half_year">Раз в полгода</option><option value="year">Раз в год</option></select></label>
+        </div>
+        <div className="fields">
+          <label className="field"><span>Статус</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value })}><option value="active">Активна</option><option value="suspended">Выключена</option><option value="prolong_wait">Ждёт оплаты</option><option value="deleted">Удалена</option><option value="blocked">Заблокирована</option></select></label>
+          <label className="field"><span>Дата окончания</span><input type="datetime-local" value={draft.expiresAt} onChange={(event) => setDraft({ ...draft, expiresAt: event.target.value })} /></label>
+          <label className="edit-check"><input type="checkbox" checked={draft.autoProlong} onChange={(event) => setDraft({ ...draft, autoProlong: event.target.checked })} /> Автопродление включено</label>
+        </div>
+        {error && <span className="inline-error" role="alert">{error}</span>}
+        <div className="edit-actions">
+          <button type="button" className="button button-secondary" onClick={onClose}>Отмена</button>
+          <button type="submit" className="button button-primary" disabled={saving}>{saving ? "Сохраняем…" : "Сохранить услугу"}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 // Waiting past the grace period: the service should already be deleted, so no money is counted for it.
 const isStaleWait = (service) =>
@@ -69,6 +210,8 @@ export function CustomerPage({ id, version, onToast }) {
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [editingCustomer, setEditingCustomer] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -185,8 +328,20 @@ export function CustomerPage({ id, version, onToast }) {
           >
             Написать клиенту
           </a>
+          <button className="button button-secondary" onClick={() => setEditingCustomer((value) => !value)}>
+            {editingCustomer ? "Закрыть редактор" : "Изменить данные"}
+          </button>
         </div>
       </div>
+
+      {editingCustomer && (
+        <CustomerEditor
+          customer={customer}
+          onClose={() => setEditingCustomer(false)}
+          onSaved={setCustomer}
+          onToast={onToast}
+        />
+      )}
 
       <section className="strip" aria-label="Деньги клиента">
         <div>
@@ -218,6 +373,24 @@ export function CustomerPage({ id, version, onToast }) {
           <b className="number">{money(customer.due_revenue_minor)}</b>
           <small>стоимость услуг в горизонте</small>
         </div>
+      </section>
+
+      <section className="card ltv-card" aria-label="LTV клиента">
+        <CardHead
+          icon="wallet"
+          title="LTV клиента"
+          description="Оценка будущей выручки на основе текущих услуг, платежей и риска."
+        />
+        <div className="ltv-grid">
+          <div><span>Текущий MRR</span><b>{money(customer.ltv?.current_mrr_minor)}</b></div>
+          <div><span>Ожидаемый срок</span><b>{customer.ltv?.expected_lifetime_months || 0} мес.</b></div>
+          <div><span>LTV</span><b>{money(customer.ltv?.gross_ltv_minor)}</b></div>
+          <div><span>Под риском</span><b>{money(customer.ltv?.at_risk_ltv_minor)}</b></div>
+        </div>
+        <p className="small muted">
+          Уверенность {Math.round((customer.ltv?.confidence || 0) * 100)}% · успешных платежей: {customer.ltv?.payment_success_rate == null ? "нет истории" : `${Math.round(customer.ltv.payment_success_rate * 100)}%`}.
+          Это объяснимая оценка, а не бухгалтерская прибыль.
+        </p>
       </section>
 
       {customer.action_plan && (
@@ -287,6 +460,11 @@ export function CustomerPage({ id, version, onToast }) {
                   = {points(customer.risk_score)}
                 </span>
               </div>
+              {customer.unscored_services_count > 0 && customer.data_coverage >= 0.7 && (
+                <p className="small muted">
+                  Оценка построена по {Math.round(customer.data_coverage * 100)}% услуг. Ещё {customer.unscored_services_count} усл. требуют проверки данных.
+                </p>
+              )}
               {indexed.length > 1 && (
                 <p className="small muted">
                   Оценки по услугам: {indexed.slice(0, 6).map((service) => points(service.risk_score)).join(", ")}
@@ -370,6 +548,7 @@ export function CustomerPage({ id, version, onToast }) {
                   <th>Истекает</th>
                   <th>Автопродление</th>
                   {showServiceRisk && <th className="num">Риск услуги</th>}
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -402,10 +581,25 @@ export function CustomerPage({ id, version, onToast }) {
                           : points(service.risk_score)}
                       </td>
                     )}
+                    <td>
+                      <button className="link" onClick={() => setEditingServiceId(editingServiceId === service.id ? null : service.id)}>
+                        {editingServiceId === service.id ? "Закрыть" : "Изменить"}
+                      </button>
+                    </td>
                   </tr>
                   <tr className="service-detail-row">
-                    <td colSpan={showServiceRisk ? 7 : 6}>
-                      <ServiceDetail service={service} />
+                    <td colSpan={showServiceRisk ? 8 : 7}>
+                      {editingServiceId === service.id ? (
+                        <ServiceEditor
+                          customerId={customer.id}
+                          service={service}
+                          onClose={() => setEditingServiceId(null)}
+                          onSaved={setCustomer}
+                          onToast={onToast}
+                        />
+                      ) : (
+                        <ServiceDetail service={service} />
+                      )}
                     </td>
                   </tr>
                   </Fragment>

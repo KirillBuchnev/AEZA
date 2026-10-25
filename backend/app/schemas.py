@@ -126,6 +126,32 @@ class SnapshotUpload(BaseModel):
     customers: list[CustomerSnapshot] = Field(max_length=5_000)
 
 
+class CustomerPatch(BaseModel):
+    """Fields an operator may correct without replacing the whole source snapshot."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    email: str | None = Field(default=None, min_length=3, max_length=254)
+    balance_minor: int | None = Field(default=None, ge=0, le=MAX_MONEY_MINOR)
+    withdraw_balance_minor: int | None = Field(default=None, ge=0, le=MAX_MONEY_MINOR)
+    bonus_balance_minor: int | None = Field(default=None, ge=0, le=MAX_MONEY_MINOR)
+    bonus_spend_enabled: bool | None = None
+    total_replenished_minor: int | None = Field(default=None, ge=0, le=MAX_MONEY_MINOR)
+
+
+class ServicePatch(BaseModel):
+    """Editable service fields used by the data-quality correction workflow."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    price_minor: int | None = Field(default=None, ge=0, le=MAX_MONEY_MINOR)
+    auto_prolong: bool | None = None
+    payment_term: str | None = Field(default=None, max_length=120)
+    status: str | None = Field(default=None, min_length=1, max_length=40)
+    expires_at: datetime | None = None
+
+
 class LoginRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -211,6 +237,20 @@ class ActionPlan(BaseModel):
     evidence: dict[str, Any] = Field(default_factory=dict)
 
 
+class LtvSummary(BaseModel):
+    """Explainable LTV proxy; it is deliberately named a proxy until outcomes are available."""
+
+    current_mrr_minor: int = 0
+    historical_revenue_minor: int = 0
+    historical_months: float = 0.0
+    expected_lifetime_months: float = 0.0
+    gross_ltv_minor: int = 0
+    at_risk_ltv_minor: int = 0
+    payment_success_rate: float | None = None
+    confidence: float = 0.0
+    method: str = "risk-adjusted recurring revenue proxy"
+
+
 class RiskReason(BaseModel):
     code: str
     title: str
@@ -249,10 +289,13 @@ class CustomerListItem(BaseModel):
     real_revenue_at_risk_minor: int = 0
     real_near_term_loss_minor: int = 0
     action_plan: ActionPlan
+    loyalty_score: float | None = None
+    ltv: LtvSummary = Field(default_factory=LtvSummary)
     max_service_score: float | None
     high_count: int
     unscored_services_count: int
     data_issues_count: int
+    data_coverage: float = 0.0
 
 
 class CustomerListResponse(BaseModel):
@@ -310,6 +353,7 @@ class CustomerCalculation(BaseModel):
     available_balance_minor: int
     uncovered_revenue_minor: int
     risk_score_index: float | None
+    data_coverage: float = 0.0
     account_risk_sum: float | None
     max_service_score: float | None
     high_count: int
@@ -319,6 +363,8 @@ class CustomerCalculation(BaseModel):
     monthly_cost_minor: int
     real_revenue_at_risk_minor: int = 0
     real_near_term_loss_minor: int = 0
+    loyalty_score: float | None = None
+    ltv: LtvSummary = Field(default_factory=LtvSummary)
     cashflow: dict[str, Any] = Field(default_factory=dict)
     real_monetisation_alpha: float = 1.0
 
@@ -423,6 +469,9 @@ class AnalyticsSummary(BaseModel):
     snapshot_id: str | None
     calculation_version: str
     calculated_at: datetime
+    ltv_total_minor: int = 0
+    ltv_at_risk_minor: int = 0
+    ltv_by_level_minor: dict[str, int] = Field(default_factory=dict)
 
 
 class SnapshotImportResponse(BaseModel):

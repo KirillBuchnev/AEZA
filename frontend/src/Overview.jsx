@@ -279,6 +279,21 @@ export function Overview({
         </section>
       </div>
 
+      <section className="card ltv-card" aria-label="Ценность базы">
+        <CardHead
+          icon="wallet"
+          title="Ценность базы (LTV)">
+          <span className="small muted">Оценка по текущим услугам, платежам и риску</span>
+        </CardHead>
+        <div className="ltv-grid">
+          <div><span>Оценка LTV базы</span><b>{money(summary?.ltv_total_minor)}</b></div>
+          <div><span>LTV под риском</span><b>{money(summary?.ltv_at_risk_minor)}</b></div>
+          <div><span>Текущий MRR</span><b>{money(summary?.monthly_cost_minor)}</b></div>
+          <div><span>Клиентов с оценкой</span><b>{summary?.assessed_total ?? 0}</b></div>
+        </div>
+        <p className="small muted">LTV — объяснимая оценка для приоритизации маркетинга. Она не заменяет прибыль и не включает маржу, возвраты или CAC.</p>
+      </section>
+
       <section className="table-card">
         <div className="table-card-head">
           <CardHead

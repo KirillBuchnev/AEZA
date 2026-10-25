@@ -58,6 +58,83 @@ def real_monetisation_alpha(customer: dict[str, Any]) -> float:
     return BONUS_HUNTER_ALPHA if is_bonus_hunter(customer) else 1.0
 
 
+def ltv_estimate(
+    customer: dict[str, Any],
+    services: list[dict[str, Any]],
+    risk_score: float | None,
+    now: datetime,
+) -> dict[str, Any]:
+    """Calculate an explainable, risk-adjusted LTV proxy from the snapshot.
+
+    The snapshot has no margin, refunds, acquisition cost or labelled lifetime,
+    so a true finance-grade LTV is impossible. We blend current recurring value
+    with observed successful payments, use the risk index only as a churn proxy,
+    and expose the inputs and confidence instead of hiding them in one number.
+    """
+    now = _as_utc(now) or datetime.now(timezone.utc)
+    active = [
+        service for service in services
+        if service.get("status") in {"active", "suspended", "prolong_wait"}
+    ]
+    current_mrr = sum(
+        round(_money(service.get("price_minor")) * monthly_multiplier(service.get("payment_term")))
+        for service in active
+    )
+    performed = [
+        transaction for transaction in customer.get("transactions", [])
+        if transaction.get("status") == "performed" and _money(transaction.get("amount_minor")) > 0
+    ]
+    failed = [
+        transaction for transaction in customer.get("transactions", [])
+        if transaction.get("type") == "prolong" and transaction.get("status") == "not_performed"
+    ]
+    historical_revenue = sum(_money(transaction.get("amount_minor")) for transaction in performed)
+    dates = [
+        _as_utc(transaction.get("created_at"))
+        for transaction in performed
+        if _as_utc(transaction.get("created_at")) is not None
+    ]
+    first_payment = min(dates) if dates else None
+    historical_months = max(1.0, min(60.0, ((now - first_payment).total_seconds() / 2_592_000))) if first_payment else 0.0
+    historical_mrr = round(historical_revenue / historical_months) if historical_revenue and historical_months else 0
+    if current_mrr and historical_mrr:
+        blended_mrr = round(0.7 * current_mrr + 0.3 * historical_mrr)
+    else:
+        blended_mrr = current_mrr or historical_mrr
+
+    attempts = len(performed) + len(failed)
+    success_rate = round(len(performed) / attempts, 3) if attempts else None
+    churn_proxy = max(0.05, min(0.95, (float(risk_score) / 100) if risk_score is not None else 0.35))
+    expected_lifetime = max(1.0, min(24.0, 1.0 / churn_proxy))
+    # Repeated failed renewals shorten the expected lifetime, but never erase all value.
+    if success_rate is not None:
+        expected_lifetime *= 0.5 + 0.5 * success_rate
+    expected_lifetime = round(max(1.0, min(24.0, expected_lifetime)), 1)
+    gross_ltv = round(blended_mrr * expected_lifetime)
+    at_risk_ltv = round(gross_ltv * churn_proxy)
+    confidence = 0.35
+    if active:
+        confidence += 0.2
+    if risk_score is not None:
+        confidence += 0.2
+    if len(performed) >= 3:
+        confidence += 0.15
+    if success_rate is not None:
+        confidence += 0.1
+    confidence = round(min(0.95, confidence), 2)
+    return {
+        "current_mrr_minor": current_mrr,
+        "historical_revenue_minor": historical_revenue,
+        "historical_months": round(historical_months, 1),
+        "expected_lifetime_months": expected_lifetime,
+        "gross_ltv_minor": gross_ltv,
+        "at_risk_ltv_minor": at_risk_ltv,
+        "payment_success_rate": success_rate,
+        "confidence": confidence,
+        "method": "Оценка: текущий MRR + успешные платежи, срок скорректирован индексом риска",
+    }
+
+
 def cashflow_waterfall(
     customer: dict[str, Any],
     services: list[dict[str, Any]],

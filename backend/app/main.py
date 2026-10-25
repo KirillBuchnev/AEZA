@@ -26,6 +26,7 @@ from .schemas import (
     AuthMethodsResponse,
     CustomerDetail,
     CustomerListResponse,
+    CustomerPatch,
     LoginRequest,
     LoginResponse,
     ModelSettingsPatch,
@@ -37,6 +38,7 @@ from .schemas import (
     RegisterRequest,
     SnapshotImportResponse,
     SnapshotUpload,
+    ServicePatch,
     UserResponse,
     VerifyCodewordRequest,
 )
@@ -305,10 +307,13 @@ def _customer_list_item(customer: dict[str, Any]) -> dict[str, Any]:
         "real_revenue_at_risk_minor": customer.get("real_revenue_at_risk_minor", customer["revenue_at_risk_minor"]),
         "real_near_term_loss_minor": customer.get("real_near_term_loss_minor", customer["near_term_loss_minor"]),
         "action_plan": customer["action_plan"],
+        "loyalty_score": customer.get("loyalty_score"),
+        "ltv": customer.get("ltv", {}),
         "max_service_score": customer["max_service_score"],
         "high_count": customer["high_count"],
         "unscored_services_count": customer["unscored_services_count"],
         "data_issues_count": len(customer["data_quality"]),
+        "data_coverage": customer.get("data_coverage", 0.0),
     }
 
 
@@ -316,12 +321,14 @@ def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[
     counts = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     loss_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     expected_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
+    ltv_by_level = {"high": 0, "medium": 0, "low": 0, "unscored": 0}
     reason_counts = {factor["code"]: 0 for factor in FACTORS}
     for customer in customers:
         level = customer["risk_level"] or "unscored"
         counts[level] += 1
         loss_by_level[level] += customer["potential_loss_minor"]
         expected_by_level[level] += customer["revenue_at_risk_minor"]
+        ltv_by_level[level] += customer.get("ltv", {}).get("gross_ltv_minor", 0)
         for code in {reason["code"] for reason in customer["reasons"]} & set(reason_counts):
             reason_counts[code] += 1
     # The largest contributors to the expected loss: one big service must not vanish inside the total.
@@ -352,6 +359,9 @@ def _summary(customers: list[dict[str, Any]], model: dict[str, Any], meta: dict[
         "revenue_at_risk_minor": sum(customer["revenue_at_risk_minor"] for customer in customers),
         "near_term_loss_minor": sum(customer["near_term_loss_minor"] for customer in customers),
         "monthly_cost_minor": sum(customer["monthly_cost_minor"] for customer in customers),
+        "ltv_total_minor": sum(customer.get("ltv", {}).get("gross_ltv_minor", 0) for customer in customers),
+        "ltv_at_risk_minor": sum(customer.get("ltv", {}).get("at_risk_ltv_minor", 0) for customer in customers),
+        "ltv_by_level_minor": ltv_by_level,
         "currency": "EUR",
         "prediction_horizon_days": model["prediction_horizon_days"],
         "source_kind": meta["source_kind"],
@@ -790,11 +800,7 @@ def list_customers(
     }
 
 
-@app.get("/api/v1/customers/{customer_id}", tags=["customers"], summary="Подробности риска клиента", response_model=CustomerDetail)
-def get_customer(
-    customer_id: str,
-    _: str = Depends(require_session),
-) -> dict[str, Any]:
+def _customer_detail_payload(customer_id: str) -> dict[str, Any]:
     customers, _model, meta = _score_all()
     for customer in customers:
         if customer["id"] != customer_id:
@@ -814,6 +820,62 @@ def get_customer(
             "real_monetisation_alpha": customer.get("real_monetisation_alpha", 1.0),
         }
     raise HTTPException(status_code=404, detail="Клиент не найден.")
+
+
+@app.get("/api/v1/customers/{customer_id}", tags=["customers"], summary="Подробности риска клиента", response_model=CustomerDetail)
+def get_customer(
+    customer_id: str,
+    _: str = Depends(require_session),
+) -> dict[str, Any]:
+    return _customer_detail_payload(customer_id)
+
+
+@app.patch("/api/v1/customers/{customer_id}", tags=["customers"], summary="Исправить данные клиента", response_model=CustomerDetail)
+async def patch_customer(
+    customer_id: str,
+    patch: CustomerPatch,
+    _: str = Depends(require_session),
+) -> dict[str, Any]:
+    changes = patch.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(status_code=422, detail="Укажите хотя бы одно поле клиента.")
+    if "email" in changes:
+        email = changes["email"]
+        if email is None or "@" not in email:
+            raise HTTPException(status_code=422, detail="Укажите корректный email клиента.")
+        changes["email"] = email.strip()
+    try:
+        stored = database.update_customer(customer_id, changes)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Клиент не найден.")
+    changed_at = stored["observed_at"]
+    await events.publish({"type": "customer_changed", "customer_id": customer_id, "changed_at": changed_at})
+    return _customer_detail_payload(customer_id)
+
+
+@app.patch("/api/v1/customers/{customer_id}/services/{service_id}", tags=["customers"], summary="Исправить данные услуги", response_model=CustomerDetail)
+async def patch_service(
+    customer_id: str,
+    service_id: str,
+    patch: ServicePatch,
+    _: str = Depends(require_session),
+) -> dict[str, Any]:
+    changes = patch.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(status_code=422, detail="Укажите хотя бы одно поле услуги.")
+    if "name" in changes and not changes["name"].strip():
+        raise HTTPException(status_code=422, detail="Название услуги не может быть пустым.")
+    if "status" in changes and changes["status"] not in {"active", "suspended", "prolong_wait", "deleted", "blocked"}:
+        raise HTTPException(status_code=422, detail="Неизвестный статус услуги.")
+    if "expires_at" in changes and changes["expires_at"] is not None:
+        changes["expires_at"] = changes["expires_at"].isoformat()
+    try:
+        stored = database.update_service(customer_id, service_id, changes)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Услуга не найдена у этого клиента.")
+    changed_at = stored["observed_at"]
+    await events.publish({"type": "service_changed", "customer_id": customer_id, "service_id": service_id, "changed_at": changed_at})
+    return _customer_detail_payload(customer_id)
 
 
 @app.get("/api/v1/analytics/summary", tags=["analytics"], summary="Сводка риска и денежной оценки", response_model=AnalyticsSummary)
@@ -1006,7 +1068,7 @@ EXPORT_FIELDS = {
     "customers": ["id", "email", "balance_minor", "withdraw_balance_minor", "bonus_balance_minor", "bonus_spend_enabled", "total_replenished_minor"],
     "services": ["id", "customer_id", "name", "price_minor", "auto_prolong", "payment_term", "status", "expires_at"],
     "transactions": ["id", "customer_id", "service_id", "status", "type", "amount_minor", "created_at"],
-    "risk": ["id", "email", "risk_score", "risk_level", "potential_loss_minor", "revenue_at_risk_minor", "near_term_loss_minor", "monthly_cost_minor", "unscored_services_count", "data_issues_count", "recommended_action_code", "recommended_action_text"],
+    "risk": ["id", "email", "risk_score", "loyalty_score", "risk_level", "potential_loss_minor", "revenue_at_risk_minor", "near_term_loss_minor", "monthly_cost_minor", "gross_ltv_minor", "at_risk_ltv_minor", "unscored_services_count", "data_issues_count", "recommended_action_code", "recommended_action_text"],
     "outflow": ["observed_at", "snapshot_id", "customer_id", "service_id", "event_type", "from_status", "to_status", "price_minor"],
 }
 
@@ -1019,11 +1081,14 @@ def _export_rows(entity: str) -> list[dict[str, Any]]:
                 "id": customer["id"],
                 "email": customer["email"],
                 "risk_score": customer["risk_score"],
+                "loyalty_score": customer.get("loyalty_score"),
                 "risk_level": customer["risk_level"],
                 "potential_loss_minor": customer["potential_loss_minor"],
                 "revenue_at_risk_minor": customer["revenue_at_risk_minor"],
                 "near_term_loss_minor": customer["near_term_loss_minor"],
                 "monthly_cost_minor": customer["monthly_cost_minor"],
+                "gross_ltv_minor": customer.get("ltv", {}).get("gross_ltv_minor", 0),
+                "at_risk_ltv_minor": customer.get("ltv", {}).get("at_risk_ltv_minor", 0),
                 "unscored_services_count": customer["unscored_services_count"],
                 "data_issues_count": len(customer["data_quality"]),
                 "recommended_action_code": customer["recommended_action"]["code"],
@@ -1100,6 +1165,12 @@ def prometheus_metrics(request: Request) -> PlainTextResponse:
         "# HELP aeza_monthly_cost_eur Monthly cost of eligible services.",
         "# TYPE aeza_monthly_cost_eur gauge",
         f"aeza_monthly_cost_eur {summary['monthly_cost_minor'] / 100:.2f}",
+        "# HELP aeza_ltv_eur Risk-adjusted lifetime value proxy based on recurring revenue and payment history.",
+        "# TYPE aeza_ltv_eur gauge",
+        f"aeza_ltv_eur {summary['ltv_total_minor'] / 100:.2f}",
+        "# HELP aeza_ltv_at_risk_eur Portion of the LTV proxy exposed to the current churn index.",
+        "# TYPE aeza_ltv_at_risk_eur gauge",
+        f"aeza_ltv_at_risk_eur {summary['ltv_at_risk_minor'] / 100:.2f}",
         "# HELP aeza_services_at_risk Services with a medium or high index.",
         "# TYPE aeza_services_at_risk gauge",
         f"aeza_services_at_risk {services_at_risk}",

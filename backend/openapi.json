@@ -94,6 +94,23 @@
             "title": "Exposed Services",
             "type": "integer"
           },
+          "ltv_at_risk_minor": {
+            "default": 0,
+            "title": "Ltv At Risk Minor",
+            "type": "integer"
+          },
+          "ltv_by_level_minor": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Ltv By Level Minor",
+            "type": "object"
+          },
+          "ltv_total_minor": {
+            "default": 0,
+            "title": "Ltv Total Minor",
+            "type": "integer"
+          },
           "monthly_cost_minor": {
             "title": "Monthly Cost Minor",
             "type": "integer"
@@ -297,6 +314,11 @@
             "title": "Cashflow",
             "type": "object"
           },
+          "data_coverage": {
+            "default": 0.0,
+            "title": "Data Coverage",
+            "type": "number"
+          },
           "due_revenue_minor": {
             "title": "Due Revenue Minor",
             "type": "integer"
@@ -308,6 +330,20 @@
           "horizon_days": {
             "title": "Horizon Days",
             "type": "integer"
+          },
+          "loyalty_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Score"
+          },
+          "ltv": {
+            "$ref": "#/components/schemas/LtvSummary"
           },
           "max_service_score": {
             "anyOf": [
@@ -446,6 +482,11 @@
             "title": "Cashflow",
             "type": "object"
           },
+          "data_coverage": {
+            "default": 0.0,
+            "title": "Data Coverage",
+            "type": "number"
+          },
           "data_issues_count": {
             "title": "Data Issues Count",
             "type": "integer"
@@ -472,6 +513,20 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "loyalty_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Score"
+          },
+          "ltv": {
+            "$ref": "#/components/schemas/LtvSummary"
           },
           "max_service_score": {
             "anyOf": [
@@ -663,6 +718,11 @@
             "title": "Bonus Spend Enabled",
             "type": "boolean"
           },
+          "data_coverage": {
+            "default": 0.0,
+            "title": "Data Coverage",
+            "type": "number"
+          },
           "data_issues_count": {
             "title": "Data Issues Count",
             "type": "integer"
@@ -682,6 +742,20 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "loyalty_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Loyalty Score"
+          },
+          "ltv": {
+            "$ref": "#/components/schemas/LtvSummary"
           },
           "max_service_score": {
             "anyOf": [
@@ -864,6 +938,90 @@
           "as_of"
         ],
         "title": "CustomerListResponse",
+        "type": "object"
+      },
+      "CustomerPatch": {
+        "additionalProperties": false,
+        "description": "Fields an operator may correct without replacing the whole source snapshot.",
+        "properties": {
+          "balance_minor": {
+            "anyOf": [
+              {
+                "maximum": 9000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Minor"
+          },
+          "bonus_balance_minor": {
+            "anyOf": [
+              {
+                "maximum": 9000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bonus Balance Minor"
+          },
+          "bonus_spend_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bonus Spend Enabled"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "total_replenished_minor": {
+            "anyOf": [
+              {
+                "maximum": 9000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Replenished Minor"
+          },
+          "withdraw_balance_minor": {
+            "anyOf": [
+              {
+                "maximum": 9000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withdraw Balance Minor"
+          }
+        },
+        "title": "CustomerPatch",
         "type": "object"
       },
       "CustomerSnapshot": {
@@ -1105,6 +1263,64 @@
           "expires_at"
         ],
         "title": "LoginResponse",
+        "type": "object"
+      },
+      "LtvSummary": {
+        "description": "Explainable LTV proxy; it is deliberately named a proxy until outcomes are available.",
+        "properties": {
+          "at_risk_ltv_minor": {
+            "default": 0,
+            "title": "At Risk Ltv Minor",
+            "type": "integer"
+          },
+          "confidence": {
+            "default": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "current_mrr_minor": {
+            "default": 0,
+            "title": "Current Mrr Minor",
+            "type": "integer"
+          },
+          "expected_lifetime_months": {
+            "default": 0.0,
+            "title": "Expected Lifetime Months",
+            "type": "number"
+          },
+          "gross_ltv_minor": {
+            "default": 0,
+            "title": "Gross Ltv Minor",
+            "type": "integer"
+          },
+          "historical_months": {
+            "default": 0.0,
+            "title": "Historical Months",
+            "type": "number"
+          },
+          "historical_revenue_minor": {
+            "default": 0,
+            "title": "Historical Revenue Minor",
+            "type": "integer"
+          },
+          "method": {
+            "default": "risk-adjusted recurring revenue proxy",
+            "title": "Method",
+            "type": "string"
+          },
+          "payment_success_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Success Rate"
+          }
+        },
+        "title": "LtvSummary",
         "type": "object"
       },
       "ModelSettingsPatch": {
@@ -1869,6 +2085,88 @@
           "grace_remaining_days"
         ],
         "title": "ServiceDetail",
+        "type": "object"
+      },
+      "ServicePatch": {
+        "additionalProperties": false,
+        "description": "Editable service fields used by the data-quality correction workflow.",
+        "properties": {
+          "auto_prolong": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Prolong"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "payment_term": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Term"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "maximum": 9000000000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "ServicePatch",
         "type": "object"
       },
       "ServiceSnapshot": {
@@ -2959,6 +3257,127 @@
           }
         ],
         "summary": "Подробности риска клиента",
+        "tags": [
+          "customers"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_customer_api_v1_customers__customer_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Исправить данные клиента",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/v1/customers/{customer_id}/services/{service_id}": {
+      "patch": {
+        "operationId": "patch_service_api_v1_customers__customer_id__services__service_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "customer_id",
+            "required": true,
+            "schema": {
+              "title": "Customer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "service_id",
+            "required": true,
+            "schema": {
+              "title": "Service Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServicePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Исправить данные услуги",
         "tags": [
           "customers"
         ]

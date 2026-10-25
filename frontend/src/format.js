@@ -10,6 +10,13 @@ export const moneyShort = (minor = 0) =>
     Math.round((minor || 0) / 100),
   );
 
+export const moneyToMinor = (value) => {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized || !/^\d+(\.\d{0,2})?$/.test(normalized)) return null;
+  const [whole, fraction = ""] = normalized.split(".");
+  return Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+};
+
 export const dateLabel = (value) =>
   value
     ? new Intl.DateTimeFormat("ru-RU", {

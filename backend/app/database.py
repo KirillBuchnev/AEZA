@@ -428,6 +428,66 @@ class Database:
             )
         return {row["key"]: row["value"] for row in rows}
 
+    @staticmethod
+    def _touch_source(connection: Connection, *, source_kind: str = "edited") -> dict[str, str]:
+        """Advance the source revision after an in-panel correction.
+
+        Keeping a new snapshot id makes the live recalculation observable to every
+        client and prevents a correction from being mistaken for stale data.
+        """
+        observed_at = _now()
+        snapshot_id = str(uuid.uuid4())
+        connection.execute(SET_STATE, {"key": "source_kind", "value": source_kind})
+        connection.execute(SET_STATE, {"key": "source_updated_at", "value": observed_at})
+        connection.execute(SET_STATE, {"key": "snapshot_id", "value": snapshot_id})
+        return {"snapshot_id": snapshot_id, "observed_at": observed_at}
+
+    def update_customer(self, customer_id: str, changes: dict[str, Any]) -> dict[str, str]:
+        allowed = {
+            "email",
+            "balance_minor",
+            "withdraw_balance_minor",
+            "bonus_balance_minor",
+            "bonus_spend_enabled",
+            "total_replenished_minor",
+        }
+        fields = {key: value for key, value in changes.items() if key in allowed}
+        if not fields:
+            raise ValueError("Не указано ни одного поля клиента.")
+        assignments = ", ".join(f"{key} = :{key}" for key in fields)
+        with self.connection() as connection:
+            existing = _scalar(connection, "SELECT id FROM customers WHERE id = :id", {"id": customer_id})
+            if existing is None:
+                raise KeyError(customer_id)
+            connection.execute(
+                text(f"UPDATE customers SET {assignments} WHERE id = :customer_id"),
+                {**fields, "customer_id": customer_id},
+            )
+            return self._touch_source(connection)
+
+    def update_service(self, customer_id: str, service_id: str, changes: dict[str, Any]) -> dict[str, str]:
+        allowed = {"name", "price_minor", "auto_prolong", "payment_term", "status", "expires_at"}
+        fields = {key: value for key, value in changes.items() if key in allowed}
+        if not fields:
+            raise ValueError("Не указано ни одного поля услуги.")
+        assignments = ", ".join(f"{key} = :{key}" for key in fields)
+        with self.connection() as connection:
+            existing = _scalar(
+                connection,
+                "SELECT id FROM services WHERE id = :service_id AND customer_id = :customer_id",
+                {"service_id": service_id, "customer_id": customer_id},
+            )
+            if existing is None:
+                raise KeyError(service_id)
+            connection.execute(
+                text(
+                    f"UPDATE services SET {assignments} "
+                    "WHERE id = :service_id AND customer_id = :customer_id"
+                ),
+                {**fields, "service_id": service_id, "customer_id": customer_id},
+            )
+            return self._touch_source(connection)
+
     def snapshot_meta(self) -> dict[str, str | None]:
         with self.connection() as connection:
             rows = _rows(
@@ -448,7 +508,7 @@ class Database:
             previous_kind = _scalar(connection, "SELECT value FROM app_state WHERE key = 'source_kind'")
             events: list[dict[str, Any]] = []
             # The demo source is not a real history: the first uploaded snapshot starts the journal.
-            if previous_kind == "uploaded":
+            if previous_kind in {"uploaded", "edited"}:
                 events = self._transition_events(connection, customers, observed_at, snapshot_id)
             self._replace_snapshot(connection, customers)
             if events:

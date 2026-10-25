@@ -188,7 +188,22 @@ class AccountAggregationTest(unittest.TestCase):
         result = evaluated(*services, balance=0)
         self.assertEqual(len(result["services"]), 200)
         self.assertEqual(result["services"][1]["risk_score"], 0.0)
-        self.assertIsNone(result["risk_level"])
+        self.assertEqual(result["risk_level"], "low")
+        self.assertGreaterEqual(result["calculation"]["data_coverage"], 0.70)
+
+    def test_seventy_percent_data_coverage_returns_a_partial_score(self) -> None:
+        services = [
+            service(service_id=f"valid-{index}", expires_in_days=1 if index == 0 else 40, auto_prolong=index == 0)
+            for index in range(7)
+        ] + [
+            service(service_id=f"missing-{index}", expires_in_days=None)
+            for index in range(3)
+        ]
+        result = evaluated(*services, balance=0)
+        self.assertEqual(result["calculation"]["data_coverage"], 0.7)
+        self.assertIsNotNone(result["risk_score"])
+        self.assertIsNotNone(result["risk_level"])
+        self.assertEqual(result["unscored_services_count"], 3)
 
     def test_failed_payment_does_not_change_the_index_but_is_in_the_action(self) -> None:
         failed = {

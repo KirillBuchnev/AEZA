@@ -361,8 +361,10 @@ grace_progress   = прошло_дней_ожидания / 5, только дл
 | `POST` | `/auth/password/reset` | новый пароль по токену сброса |
 | `POST` | `/auth/password/change` | смена пароля в сессии |
 | `GET` | `/customers` | очередь клиентов: поиск, фильтры, сортировка, страницы |
-| `GET` | `/customers/{id}` | услуги, причины с аргументами, действия, качество данных, расчёт |
-| `GET` | `/analytics/summary` | уровни, пара «ожидаемо / максимум» и нехватка средств, причины, топ по ожидаемой потере, ожидаемая потеря по уровням |
+| `GET` | `/customers/{id}` | услуги, причины с аргументами, действия, качество данных, расчёт, loyalty-score и LTV |
+| `PATCH` | `/customers/{id}` | исправление email, балансов и разрешения бонусов с мгновенным пересчётом |
+| `PATCH` | `/customers/{id}/services/{service_id}` | исправление цены, статуса, даты окончания, тарифа и автопродления |
+| `GET` | `/analytics/summary` | уровни, пара «ожидаемо / максимум» и нехватка средств, причины, топ по ожидаемой потере, LTV базы |
 | `GET` | `/analytics/outflow?days=30` | факты, прогноз и число услуг в риске |
 | `GET` | `/model/settings` | веса, пороги, признаки, контрольные случаи, версия расчёта |
 | `PATCH` | `/model/settings` | изменение весов и порогов с пересчётом |
@@ -374,6 +376,14 @@ grace_progress   = прошло_дней_ожидания / 5, только дл
 Сортировка клиентов: `sort_by=risk_score|potential_loss|revenue_at_risk|near_term_loss|monthly_cost|total_replenished|due_revenue|balance|high_count|max_service_score|service_count|email|id`, `order=asc|desc`. По умолчанию `sort_by=revenue_at_risk`, `order=desc`. Клиенты без оценки всегда в конце списка. Фильтры: `risk_level=high|medium|low|unscored`, `reason=autoprolong_disabled|insufficient_balance|renewal_urgency|prolong_wait`, `data_status=all|clean|issues`, поиск `q` по ID и email.
 
 Выгрузки не содержат служебных таблиц: сессий, пользователей, попыток входа, хешей и настроек. В CSV и XLSX текст, который Excel может принять за формулу, сохраняется как текст.
+
+### LTV и неполные данные
+
+LTV считается как объяснимая оценка: текущий MRR по активным услугам смешивается с фактически успешными платежами, затем срок жизни корректируется индексом риска и долей успешных продлений. Панель показывает текущий MRR, ожидаемый срок, общий LTV, LTV под риском, историю платежей и уверенность. Это proxy для приоритизации маркетинга: без маржи, возвратов, CAC и исторической метки продления он не является бухгалтерской прибылью.
+
+Если заполнено не меньше 70% услуг клиента, система считает частичный score по известным услугам и явно показывает покрытие. При покрытии ниже 70% результат помечается «Недостаточно данных», чтобы не выдавать ложную оценку. Для богатых снимков с историей платежей stale-даты дополнительно оцениваются консервативно по истории, а `deleted`/`blocked` считаются явными сигналами оттока; предупреждение о проверке источника остаётся в `data_quality`.
+
+Встроенный `backend/app/seeds/case_snapshot.json` проверяется регрессионным тестом: минимум 70% клиентов должны получать числовой score. На текущем снимке все 10 клиентов получают оценку, а проблемные поля остаются видимыми предупреждениями вместо общего «Недостаточно данных».
 
 ## Аутентификация
 
@@ -439,7 +449,7 @@ scrape_configs:
       credentials: ${AEZA_METRICS_TOKEN}
 ```
 
-Метрики: `aeza_customers_total{risk_level="high|medium|low|unscored"}`, `aeza_revenue_at_risk_eur` (ожидаемо), `aeza_near_term_loss_eur` (максимум по той же выборке), `aeza_potential_loss_eur` (часть ожидаемого, объяснённая нехваткой средств), `aeza_monthly_cost_eur`, `aeza_services_at_risk`, `aeza_expected_non_renewals`, `aeza_customers_assessed_total`.
+Метрики: `aeza_customers_total{risk_level="high|medium|low|unscored"}`, `aeza_revenue_at_risk_eur` (ожидаемо), `aeza_near_term_loss_eur` (максимум по той же выборке), `aeza_potential_loss_eur` (часть ожидаемого, объяснённая нехваткой средств), `aeza_monthly_cost_eur`, `aeza_ltv_eur`, `aeza_ltv_at_risk_eur`, `aeza_services_at_risk`, `aeza_expected_non_renewals`, `aeza_customers_assessed_total`.
 
 - Журнал приложения: `docker compose logs -f api`.
 - Резервная копия: `docker compose exec -T postgres pg_dump -U aeza aeza > aeza.sql` (в базе снимок, журнал переходов, настройки и пользователи).

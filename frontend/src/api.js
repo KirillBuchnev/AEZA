@@ -70,6 +70,19 @@ export const api = {
     return request(`/api/v1/customers?${search}`);
   },
   customer: (id) => request(`/api/v1/customers/${encodeURIComponent(id)}`),
+  updateCustomer: (id, changes) =>
+    request(`/api/v1/customers/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
+    }),
+  updateService: (customerId, serviceId, changes) =>
+    request(
+      `/api/v1/customers/${encodeURIComponent(customerId)}/services/${encodeURIComponent(serviceId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(changes),
+      },
+    ),
   settings: () => request("/api/v1/model/settings"),
   saveSettings: (settings) =>
     request("/api/v1/model/settings", {

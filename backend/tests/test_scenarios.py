@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.risk import DEFAULT_MODEL_SETTINGS, evaluate_customer
+from app.schemas import SnapshotUpload
 from app.scenarios import scenario_customers
 
 CASE_JSON = Path(__file__).resolve().parents[1] / "app" / "seeds" / "case_snapshot.json"
@@ -107,6 +108,18 @@ def test_scenario_dates_follow_the_current_time():
     later = scenario_customers(datetime(2026, 11, 24, 12, tzinfo=timezone.utc))
     assert first[0]["services"][0]["expires_at"] != later[0]["services"][0]["expires_at"]
     assert {customer["id"] for customer in first} == set(EXPECTED)
+
+
+def test_case_snapshot_has_useful_scores_for_at_least_seventy_percent_of_customers():
+    payload = json.loads(CASE_JSON.read_text(encoding="utf-8"))
+    customers = SnapshotUpload.model_validate(payload).customers
+    evaluated_case = [
+        evaluate_customer(customer.model_dump(), DEFAULT_MODEL_SETTINGS, NOW)
+        for customer in customers
+    ]
+    scored = [customer for customer in evaluated_case if customer["risk_score"] is not None]
+    assert len(scored) >= int(len(evaluated_case) * 0.70 + 0.999)
+    assert all(customer["data_coverage"] >= 0.70 for customer in scored)
 
 
 def test_showcase_seed_keeps_the_case_accounts_and_adds_the_scenarios(open_app):

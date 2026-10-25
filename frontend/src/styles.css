@@ -498,9 +498,106 @@ p {
   line-height: 1.5;
 }
 
+.edit-panel {
+  border-color: var(--brand-blue);
+  background: color-mix(in srgb, var(--brand-blue) 5%, var(--bg-surface));
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-form select,
+.edit-form input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-m);
+  background: var(--bg-surface);
+}
+
+.edit-form select:focus,
+.edit-form input:not([type="checkbox"]):focus {
+  border-color: var(--contrast-strong);
+  outline: 0;
+}
+
+.edit-check {
+  display: flex;
+  align-items: center;
+  align-self: end;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.edit-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--contrast-strong);
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.service-editor {
+  padding: 16px 24px;
+  background: var(--bg-muted);
+}
+
+.ltv-card {
+  gap: 14px;
+}
+
+.ltv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ltv-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-m);
+  background: var(--bg-muted);
+}
+
+.ltv-grid span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ltv-grid b {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
 @media (max-width: 700px) {
   .action-message {
     flex-direction: column;
+  }
+
+  .ltv-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fields {
+    flex-direction: column;
+  }
+
+  .edit-check {
+    align-self: flex-start;
   }
 }
 
@@ -1571,6 +1668,16 @@ button.kv-row:hover > span:nth-child(2) {
 .fields {
   display: flex;
   gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .edit-form .fields {
+    flex-direction: column;
+  }
+
+  .edit-form .edit-check {
+    align-self: flex-start;
+  }
 }
 
 .field {

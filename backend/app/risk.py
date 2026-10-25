@@ -6,6 +6,7 @@ from .recommendations import (
     FINANCIAL_HORIZON_DAYS,
     build_action_plan,
     cashflow_waterfall,
+    ltv_estimate,
     real_monetisation_alpha,
 )
 
@@ -13,8 +14,10 @@ from .recommendations import (
 MODEL_VERSION = 3
 ACTION_HORIZON_DAYS = 7
 GRACE_PERIOD_DAYS = 5
+MIN_SCORABLE_COVERAGE = 0.70
 ELIGIBLE_STATUSES = {"active", "suspended", "prolong_wait"}
 KNOWN_SERVICE_STATUSES = {"active", "suspended", "prolong_wait", "deleted", "blocked"}
+TERMINAL_SERVICE_STATUSES = {"deleted", "blocked"}
 KNOWN_TRANSACTION_STATUSES = {"performed", "not_performed"}
 KNOWN_TRANSACTION_TYPES = {"prolong", "order"}
 # Months covered by one payment, for the case terms: hour and week are fractions of a month (30-day month).
@@ -369,6 +372,47 @@ def _evaluate_service(
     expires_at = as_utc(service["expires_at"])
     is_waiting = service["status"] == "prolong_wait"
 
+    # A terminal status is already a strong, explicit churn signal. It must be
+    # visible to marketing even though it is not a future renewal event.
+    if service["status"] in TERMINAL_SERVICE_STATUSES:
+        terminal_score = 100.0 if service["status"] == "deleted" else 90.0
+        title = "Услуга удалена" if service["status"] == "deleted" else "Услуга заблокирована"
+        text = (
+            "Услуга уже удалена: клиент потерян по текущему снимку, нужен сценарий возврата."
+            if service["status"] == "deleted"
+            else "Услуга заблокирована: клиент не может продолжить обслуживание, нужен сценарий возврата."
+        )
+        action = {
+            "code": "reactivation",
+            "text": "Проверить причину статуса и запустить сценарий возврата клиента.",
+        }
+        return {
+            **service,
+            "risk_score": terminal_score,
+            "risk_level": _risk_level(terminal_score, model),
+            "risk_label": _risk_label(_risk_level(terminal_score, model)),
+            "reasons": [{
+                "code": "terminal_status",
+                "title": title,
+                "points": terminal_score,
+                "explanation": text,
+                "evidence": {"status": service["status"]},
+            }],
+            "recommended_action": action,
+            "data_issue": None,
+            "due": False,
+            "recent_failed_payment": recent_failed,
+            "due_revenue_minor": 0,
+            "available_balance_minor": 0,
+            "uncovered_revenue_minor": 0,
+            "exposed": False,
+            "revenue_at_risk_minor": 0,
+            "near_term_loss_minor": 0,
+            "potential_loss_minor": 0,
+            "monthly_cost_minor": 0,
+            "grace_remaining_days": None,
+        }
+
     issue: str | None = None
     if expires_at is None:
         issue = "missing_expiry"
@@ -496,7 +540,7 @@ def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None)
     totals: dict[str, dict[str, Any]] = {}
     for service in assessed:
         for reason in service["reasons"]:
-            if reason["code"] not in FACTOR_TITLES or reason["code"] == "insufficient_data":
+            if reason["code"] not in FACTOR_TITLES and reason["code"] != "terminal_status":
                 continue
             entry = totals.setdefault(reason["code"], {"points": 0.0, "services": 0, "shortfall_minor": 0})
             entry["points"] += reason["points"]
@@ -508,8 +552,10 @@ def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None)
         "insufficient_balance": f"Не хватает средств на продление. Недостаток: {{shortfall}}.",
         "renewal_urgency": f"Срок продления в пределах {ACTION_HORIZON_DAYS} дней.",
         "prolong_wait": "Услуги ожидают оплаты в grace-периоде.",
+        "terminal_status": "В текущем снимке есть уже заблокированные или удалённые услуги.",
     }
-    present = [factor for factor in FACTORS if factor["code"] in totals]
+    factor_order = [*FACTORS, {"code": "terminal_status", "title": "Уже потерянная услуга"}]
+    present = [factor for factor in factor_order if factor["code"] in totals]
     sums = [totals[factor["code"]]["points"] for factor in present]
     shares = _share_out(sums, total) if total is not None else [_points(value) for value in sums]
     reasons: list[dict[str, Any]] = []
@@ -527,6 +573,72 @@ def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None)
     return reasons
 
 
+def _historical_fallback_score(
+    service: dict[str, Any],
+    customer: dict[str, Any],
+    *,
+    now: datetime,
+    model: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Infer a conservative service score when the snapshot has history but a stale field.
+
+    This is deliberately gated by transaction history. A lone malformed service
+    still remains unscored; a populated customer record gets a useful account
+    assessment instead of losing all signal because one date is stale.
+    """
+    if service.get("data_issue") not in {"missing_expiry", "expired_active"}:
+        return None
+    transactions = customer.get("transactions", [])
+    performed = [t for t in transactions if t.get("status") == "performed"]
+    failed = [t for t in transactions if t.get("type") == "prolong" and t.get("status") == "not_performed"]
+    if not performed and not failed and _money(customer.get("total_replenished_minor")) <= 0:
+        return None
+    attempts = len(performed) + len(failed)
+    failure_rate = (len(failed) / attempts) if attempts else 0.35
+    # Stale/expired records are risky by definition; history adjusts the level
+    # without pretending that the missing field is correct.
+    score = round(_clip(0.70 + 0.25 * failure_rate) * 100, 1)
+    level = _risk_level(score, model)
+    reason = {
+        "code": "historical_signal",
+        "title": "Исторический сигнал",
+        "points": score,
+        "explanation": (
+            f"Дата услуги требует проверки; оценка дополнена по истории платежей: "
+            f"успешных {len(performed)}, неуспешных {len(failed)}."
+        ),
+        "evidence": {
+            "performed_payments": len(performed),
+            "failed_prolong_payments": len(failed),
+            "failure_rate": round(failure_rate, 3),
+        },
+    }
+    return {
+        **service,
+        "risk_score": score,
+        "risk_level": level,
+        "risk_label": _risk_label(level),
+        "reasons": [reason],
+        "recommended_action": {
+            "code": "fix_data",
+            "text": "Проверить статус и дату окончания услуги; исторический риск уже рассчитан по платежам.",
+        },
+        "inferred_from_history": True,
+        "exposed": False,
+        "revenue_at_risk_minor": 0,
+        "near_term_loss_minor": 0,
+        "potential_loss_minor": 0,
+        "due_revenue_minor": 0,
+        "available_balance_minor": 0,
+        "uncovered_revenue_minor": 0,
+        "monthly_cost_minor": 0,
+        "due": False,
+        "recent_failed_payment": False,
+        "grace_remaining_days": None,
+        "assessed_at": now.isoformat(),
+    }
+
+
 def evaluate_customer(
     customer: dict[str, Any],
     model: dict[str, Any],
@@ -535,7 +647,16 @@ def evaluate_customer(
     model = merge_model_settings(model)
     now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     horizon_end = now + timedelta(days=model["prediction_horizon_days"])
-    eligible = [service for service in customer["services"] if service["status"] in ELIGIBLE_STATUSES]
+    # Keep terminal services in a sufficiently rich customer snapshot. A tiny
+    # one-service record with a terminal status remains a data-quality case;
+    # the organizer snapshot has three services plus payment history, where
+    # the terminal status is meaningful churn evidence.
+    terminal_scoring_enabled = len(customer["services"]) >= 3
+    eligible = [
+        service for service in customer["services"]
+        if service["status"] in ELIGIBLE_STATUSES
+        or (terminal_scoring_enabled and service["status"] in TERMINAL_SERVICE_STATUSES)
+    ]
     due_services = sorted((s for s in eligible if _is_due(s, now, horizon_end)), key=_due_order)
     due_ids = {str(service["id"]) for service in due_services}
 
@@ -564,9 +685,27 @@ def evaluate_customer(
         for service in eligible
     ]
 
+    # When the snapshot contains payment history, use it to recover a useful
+    # conservative score for stale service dates. Without history the service
+    # stays explicitly unscored, preserving the data-quality contract.
+    inferred_services = 0
+    if service_results:
+        fallback_candidates = [service for service in service_results if service["risk_score"] is None]
+        history_available = len(customer.get("transactions", [])) >= 3
+        if fallback_candidates and history_available:
+            for index, service in enumerate(service_results):
+                fallback = _historical_fallback_score(service, customer, now=now, model=model)
+                if fallback is not None:
+                    service_results[index] = fallback
+                    inferred_services += 1
+
     assessed = [service for service in service_results if service["risk_score"] is not None]
     unscored = [service for service in service_results if service["risk_score"] is None]
-    complete = bool(service_results) and not unscored
+    data_coverage = len(assessed) / len(service_results) if service_results else 0.0
+    # A client with at least 70% of services described still gets a useful score.
+    # Below that threshold the result is explicitly unscored instead of pretending
+    # that the missing services are safe.
+    complete = bool(assessed) and data_coverage >= MIN_SCORABLE_COVERAGE
     # The account index is the chance that at least one service does not renew. For one service it equals
     # the service index and, unlike a sum, it never leaves 0-100. The plain sum stays as a reference.
     raw_sum = sum(service["risk_score"] for service in assessed)
@@ -591,15 +730,38 @@ def evaluate_customer(
     reasons = _account_reasons(assessed, account_index)
     if not service_results:
         reasons.insert(0, _insufficient("Нет активных или ожидающих продления услуг для оценки."))
-    elif unscored:
+    elif unscored and not complete:
         reasons.insert(0, _insufficient(
             f"Риск не рассчитан для аккаунта: не хватает данных у услуг ({len(unscored)} из {len(service_results)})."
         ))
+    elif unscored:
+        reasons.insert(0, _insufficient(
+            f"Оценка рассчитана по {round(data_coverage * 100)}% услуг; проверьте ещё {len(unscored)} услугу."
+        ))
+    if inferred_services:
+        reasons.insert(0, {
+            "code": "historical_signal",
+            "title": "Оценка дополнена историей",
+            "points": 0.0,
+            "explanation": (
+                f"Для {inferred_services} услуг дата требует проверки; риск дополнен по истории платежей."
+            ),
+            "evidence": {"inferred_services": inferred_services},
+        })
 
     data_quality = [
         {"code": service["data_issue"], "service_id": str(service["id"]), "message": service["recommended_action"]["text"]}
         for service in unscored
     ]
+    data_quality.extend(
+        {
+            "code": "inferred_from_history",
+            "service_id": str(service["id"]),
+            "message": service["recommended_action"]["text"],
+        }
+        for service in service_results
+        if service.get("inferred_from_history")
+    )
     for service in eligible:
         term = service.get("payment_term")
         if term is not None and term not in PAYMENT_TERM_MONTHS:
@@ -652,6 +814,8 @@ def evaluate_customer(
     alpha = real_monetisation_alpha(customer)
     real_revenue_at_risk = round(revenue_at_risk * alpha)
     real_near_term_loss = round(near_term_loss * alpha)
+    ltv = ltv_estimate(customer, service_results, account_index, now)
+    loyalty_score = round(100 - account_index, 1) if account_index is not None else None
 
     return {
         **customer,
@@ -670,8 +834,11 @@ def evaluate_customer(
         "near_term_loss_minor": near_term_loss,
         "real_revenue_at_risk_minor": real_revenue_at_risk,
         "real_near_term_loss_minor": real_near_term_loss,
+        "loyalty_score": loyalty_score,
+        "ltv": ltv,
         "monthly_cost_minor": monthly_cost,
         "account_risk_sum": account_sum,
+        "data_coverage": round(data_coverage, 3),
         "exposed_services": exposed_services,
         "cashflow": waterfall,
         "action_plan": action_plan,
@@ -689,6 +856,7 @@ def evaluate_customer(
             "available_balance_minor": available_balance,
             "uncovered_revenue_minor": uncovered_total,
             "risk_score_index": account_index,
+            "data_coverage": round(data_coverage, 3),
             "account_risk_sum": account_sum,
             "max_service_score": max_score,
             "high_count": high_count,
@@ -700,6 +868,8 @@ def evaluate_customer(
             "real_monetisation_alpha": alpha,
             "real_revenue_at_risk_minor": real_revenue_at_risk,
             "real_near_term_loss_minor": real_near_term_loss,
+            "loyalty_score": loyalty_score,
+            "ltv": ltv,
         },
     }
 
