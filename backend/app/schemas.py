@@ -365,6 +365,9 @@ class CustomerListItem(BaseModel):
     unscored_services_count: int
     data_issues_count: int
     data_coverage: float = 0.0
+    risky_service_count: int = 0
+    service_risk_share: float = 0.0
+    service_count_adjustment: float = 1.0
 
 
 class CustomerListResponse(BaseModel):
@@ -436,6 +439,9 @@ class CustomerCalculation(BaseModel):
     ltv: LtvSummary = Field(default_factory=LtvSummary)
     cashflow: dict[str, Any] = Field(default_factory=dict)
     real_monetisation_alpha: float = 1.0
+    risky_service_count: int = 0
+    service_risk_share: float = 0.0
+    service_count_adjustment: float = 1.0
 
 
 class CustomerDetail(CustomerListItem):

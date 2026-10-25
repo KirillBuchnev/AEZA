@@ -473,6 +473,13 @@ export function CustomerPage({ id, version, onToast }) {
                   что не продлится хотя бы одна услуга, поэтому не превышает 100.
                 </p>
               )}
+              {customer.service_count > 3 && customer.risky_service_count > 0 && (
+                <p className="small muted">
+                  В портфеле {customer.service_count} услуг, риск есть у {customer.risky_service_count}
+                  ({Math.round((customer.service_risk_share || 0) * 100)}%). Поправка масштаба портфеля:{" "}
+                  {points(customer.service_count_adjustment ?? 1)}×.
+                </p>
+              )}
             </div>
           ) : (
             <p className="muted">Признаков риска нет, клиент в порядке.</p>

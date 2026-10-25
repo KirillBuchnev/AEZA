@@ -526,12 +526,28 @@ def _evaluate_service(
     }
 
 
+def _service_count_adjustment(assessed: list[dict[str, Any]]) -> tuple[int, float]:
+    """Return risky-service count and a breadth factor for large portfolios.
+
+    Portfolios up to three services use the exact union index. With more services,
+    a single risky service must not make a large portfolio look as dangerous as
+    a portfolio where most services are at risk. The factor stays at 1 when the
+    risky share is high, so a client whose whole portfolio is bad remains high.
+    """
+    risky_count = sum(float(service["risk_score"] or 0) > 0 for service in assessed)
+    if len(assessed) <= 3 or risky_count == 0:
+        return risky_count, 1.0
+    risky_share = risky_count / len(assessed)
+    return risky_count, round(0.75 + 0.25 * risky_share, 3)
+
+
 def _account_index(assessed: list[dict[str, Any]]) -> float:
-    """Chance, as an index, that at least one service does not renew: 1 - product of (1 - index / 100)."""
+    """Chance that at least one service does not renew, adjusted for portfolio breadth."""
     survive = 1.0
     for service in assessed:
         survive *= 1 - service["risk_score"] / 100
-    return round((1 - survive) * 100, 1)
+    _, breadth_factor = _service_count_adjustment(assessed)
+    return round((1 - survive) * 100 * breadth_factor, 1)
 
 
 def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None) -> list[dict[str, Any]]:
@@ -711,6 +727,8 @@ def evaluate_customer(
     raw_sum = sum(service["risk_score"] for service in assessed)
     account_sum = round(raw_sum, 1) if complete else None
     account_index = _account_index(assessed) if complete else None
+    risky_service_count, service_count_adjustment = _service_count_adjustment(assessed)
+    service_risk_share = round(risky_service_count / len(assessed), 3) if assessed else 0.0
     level = _account_level(account_index, model)
     divisor = model_divisor(model)
     max_score = max((service["risk_score"] for service in assessed), default=None)
@@ -845,6 +863,9 @@ def evaluate_customer(
         "real_monetisation_alpha": alpha,
         "max_service_score": max_score,
         "high_count": high_count,
+        "risky_service_count": risky_service_count,
+        "service_risk_share": service_risk_share,
+        "service_count_adjustment": service_count_adjustment,
         "unscored_services_count": len(unscored),
         "service_count": len(service_results),
         "assessed_at": now.isoformat(),
@@ -860,6 +881,9 @@ def evaluate_customer(
             "account_risk_sum": account_sum,
             "max_service_score": max_score,
             "high_count": high_count,
+            "risky_service_count": risky_service_count,
+            "service_risk_share": service_risk_share,
+            "service_count_adjustment": service_count_adjustment,
             "revenue_at_risk_minor": revenue_at_risk,
             "near_term_loss_minor": near_term_loss,
             "potential_loss_minor": potential_loss,

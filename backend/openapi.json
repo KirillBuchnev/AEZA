@@ -402,6 +402,21 @@
             ],
             "title": "Risk Score Index"
           },
+          "risky_service_count": {
+            "default": 0,
+            "title": "Risky Service Count",
+            "type": "integer"
+          },
+          "service_count_adjustment": {
+            "default": 1.0,
+            "title": "Service Count Adjustment",
+            "type": "number"
+          },
+          "service_risk_share": {
+            "default": 0.0,
+            "title": "Service Risk Share",
+            "type": "number"
+          },
           "uncovered_revenue_minor": {
             "title": "Uncovered Revenue Minor",
             "type": "integer"
@@ -606,9 +621,24 @@
             ],
             "title": "Risk Score"
           },
+          "risky_service_count": {
+            "default": 0,
+            "title": "Risky Service Count",
+            "type": "integer"
+          },
           "service_count": {
             "title": "Service Count",
             "type": "integer"
+          },
+          "service_count_adjustment": {
+            "default": 1.0,
+            "title": "Service Count Adjustment",
+            "type": "number"
+          },
+          "service_risk_share": {
+            "default": 0.0,
+            "title": "Service Risk Share",
+            "type": "number"
           },
           "services": {
             "items": {
@@ -830,9 +860,24 @@
             ],
             "title": "Risk Score"
           },
+          "risky_service_count": {
+            "default": 0,
+            "title": "Risky Service Count",
+            "type": "integer"
+          },
           "service_count": {
             "title": "Service Count",
             "type": "integer"
+          },
+          "service_count_adjustment": {
+            "default": 1.0,
+            "title": "Service Count Adjustment",
+            "type": "number"
+          },
+          "service_risk_share": {
+            "default": 0.0,
+            "title": "Service Risk Share",
+            "type": "number"
           },
           "total_replenished_minor": {
             "title": "Total Replenished Minor",

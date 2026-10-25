@@ -134,6 +134,34 @@ class AccountAggregationTest(unittest.TestCase):
         self.assertLessEqual(result["risk_score"], 100.0)
         self.assertGreater(result["risk_score"], 99.0)
 
+    def test_large_portfolio_does_not_overstate_one_risky_service(self) -> None:
+        services = [
+            service(service_id="risky", expires_in_days=3 / 24, auto_prolong=False),
+            *[
+                service(service_id=f"healthy-{index}", expires_in_days=40, auto_prolong=True)
+                for index in range(9)
+            ],
+        ]
+        result = evaluated(*services, balance=100_000)
+        self.assertEqual(result["risky_service_count"], 1)
+        self.assertEqual(result["service_risk_share"], 0.1)
+        self.assertEqual(result["service_count_adjustment"], 0.775)
+        self.assertEqual(result["risk_score"], 44.9)
+
+    def test_breadth_adjustment_applies_after_three_risky_services(self) -> None:
+        services = [
+            service(service_id=f"risky-{index}", expires_in_days=3 / 24, auto_prolong=False)
+            for index in range(4)
+        ] + [
+            service(service_id=f"healthy-{index}", expires_in_days=40, auto_prolong=True)
+            for index in range(6)
+        ]
+        result = evaluated(*services, balance=100_000)
+        self.assertEqual(result["risky_service_count"], 4)
+        self.assertEqual(result["service_risk_share"], 0.4)
+        self.assertEqual(result["service_count_adjustment"], 0.85)
+        self.assertLess(result["risk_score"], 90.0)
+
     def test_account_reasons_add_up_to_the_account_index(self) -> None:
         result = evaluated(
             service(service_id="s-1", expires_in_days=3 / 24, auto_prolong=False),
