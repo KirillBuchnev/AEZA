@@ -122,7 +122,7 @@ export function mainReason(customer) {
       ? `Нужно ${money(customer.due_revenue_minor)}, доступно ${money(available)}`
       : "";
   const more = rest
-    ? `ещё ${rest} ${plural(rest, ["признак", "признака", "признаков"])}`
+    ? `ещё ${rest} ${plural(rest, ["причина", "причины", "причин"])}`
     : "";
   return {
     title: reasons[0].title,
@@ -155,13 +155,13 @@ const columns = [
 function ExpectedLoss({ customer }) {
   if (customer.risk_score == null)
     return (
-      <span className="muted" title="Нет оценки риска, суммы не считаем">
+      <span className="muted" title="Нет оценки риска, сумма не показывается">
         —
       </span>
     );
   if (!customer.revenue_at_risk_minor)
     return (
-      <span className="muted" title="Впереди нет услуг с признаками риска">
+      <span className="muted" title="В ближайших продлениях нет риска">
         —
       </span>
     );

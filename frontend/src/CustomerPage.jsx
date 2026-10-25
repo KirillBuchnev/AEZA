@@ -326,14 +326,14 @@ export function CustomerPage({ id, version, onToast }) {
             </b>
             {!scored && (
               <span className="small muted">
-                Без оценки риска сумму не считаем
+                Нет оценки — сумму не показываем
               </span>
             )}
             {scored && !customer.near_term_loss_minor && (
               <span className="small muted">
                 {staleWaits
                   ? "Ожидание оплаты длится дольше 5 дней. Проверьте статус услуги в источнике."
-                  : "Впереди нет услуг с признаками риска"}
+                  : "В ближайших продлениях нет риска"}
               </span>
             )}
           </div>

@@ -117,7 +117,7 @@ export function OutflowChart({ outflow, days = 30, onDays }) {
           <b>{factTotal}</b>
           <small>
             {estimated
-              ? "по статусам снимка, датой считаем окончание срока"
+              ? "по текущему снимку, датой считаем окончание срока"
               : `удалено ${facts.totals.deleted}, пропало ${facts.totals.removed}, блок ${facts.totals.blocked}`}
           </small>
         </div>

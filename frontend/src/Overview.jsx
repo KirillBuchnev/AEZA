@@ -174,7 +174,7 @@ export function Overview({
           <span className="hero-note">
             ожидаемо за ближайшие 7 дней · по {exposedServices}{" "}
             {plural(exposedServices, ["услуге", "услугам", "услугам"])} с
-            признаками риска
+            риском
           </span>
           <dl className="hero-money">
             <div>
@@ -211,7 +211,7 @@ export function Overview({
                   key={customer.id}
                   className="exposure-row"
                   onClick={() => onSelectCustomer(customer.id)}
-                  title={`Ожидаемо ${money(customer.revenue_at_risk_minor)}, максимум ${money(customer.near_term_loss_minor)}, из ожидаемого не хватает средств на ${money(customer.potential_loss_minor)}`}
+                  title={`Ожидаемо ${money(customer.revenue_at_risk_minor)}, максимум ${money(customer.near_term_loss_minor)}, из ожидаемой суммы не хватает на ${money(customer.potential_loss_minor)}`}
                 >
                   <span>{customer.email}</span>
                   <span className="exposure-track">
@@ -230,7 +230,7 @@ export function Overview({
             </div>
           ) : (
             <Empty title="Потерь не ожидается">
-              Ни у одной услуги в ближайшие 7 дней нет признаков непродления.
+              В ближайшие 7 дней непродлений не ожидается.
             </Empty>
           )}
         </section>
