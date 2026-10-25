@@ -35,8 +35,13 @@ def test_every_required_endpoint_is_in_the_spec():
 
 
 def test_metrics_need_a_session_or_the_token(open_app):
-    with open_app() as (client, _):
+    token = "prometheus-scrape-token-" + "x" * 16
+    with open_app(AEZA_METRICS_TOKEN=token) as (client, _):
         assert client.get(METRICS).status_code == 401
+        assert client.get(METRICS, headers={"Authorization": "Bearer wrong-token"}).status_code == 401
+        scraped = client.get(METRICS, headers={"Authorization": f"Bearer {token}"})
+        assert scraped.status_code == 200
+        assert scraped.text.startswith("# HELP aeza_customers_total")
         sign_in(client)
         assert client.get(METRICS).status_code == 200
 

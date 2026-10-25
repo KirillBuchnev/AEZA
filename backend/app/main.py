@@ -751,7 +751,7 @@ def list_customers(
     _: str = Depends(require_session),
     query: str | None = Query(default=None, alias="q", max_length=120),
     risk_level: Literal["high", "medium", "low", "unscored"] | None = None,
-    reason: Literal["autoprolong_disabled", "insufficient_balance", "renewal_urgency", "prolong_wait"] | None = None,
+    reason: Literal[tuple(factor["code"] for factor in FACTORS)] | None = None,  # type: ignore[valid-type]
     data_status: Literal["all", "clean", "issues"] = "all",
     sort_by: Literal[
         "id", "email", "balance", "total_replenished", "monthly_cost", "due_revenue",
