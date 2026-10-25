@@ -122,6 +122,17 @@ def test_case_snapshot_has_useful_scores_for_at_least_seventy_percent_of_custome
     assert all(customer["data_coverage"] >= 0.70 for customer in scored)
 
 
+def test_reason_points_add_up_to_the_account_score_for_case_and_scenario_customers():
+    payload = json.loads(CASE_JSON.read_text(encoding="utf-8"))
+    case = [customer.model_dump() for customer in SnapshotUpload.model_validate(payload).customers]
+    for customer in [*case, *scenario_customers(NOW)]:
+        result = evaluate_customer(customer, DEFAULT_MODEL_SETTINGS, NOW)
+        if not result["risk_score"]:
+            continue
+        points = sum(reason["points"] for reason in result["reasons"])
+        assert points == pytest.approx(result["risk_score"], abs=0.11), customer["id"]
+
+
 def test_showcase_seed_keeps_the_case_accounts_and_adds_the_scenarios(open_app):
     case = json.loads(CASE_JSON.read_text(encoding="utf-8"))["customers"]
     with open_app(AEZA_SEED="showcase") as (client, _):

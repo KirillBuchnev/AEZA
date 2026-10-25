@@ -556,7 +556,7 @@ def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None)
     totals: dict[str, dict[str, Any]] = {}
     for service in assessed:
         for reason in service["reasons"]:
-            if reason["code"] not in FACTOR_TITLES and reason["code"] != "terminal_status":
+            if reason["code"] not in FACTOR_TITLES and reason["code"] not in {"terminal_status", "historical_signal"}:
                 continue
             entry = totals.setdefault(reason["code"], {"points": 0.0, "services": 0, "shortfall_minor": 0})
             entry["points"] += reason["points"]
@@ -569,8 +569,13 @@ def _account_reasons(assessed: list[dict[str, Any]], total: float | None = None)
         "renewal_urgency": f"Срок продления в пределах {ACTION_HORIZON_DAYS} дней.",
         "prolong_wait": "Услуги ожидают оплаты в grace-периоде.",
         "terminal_status": "В текущем снимке есть уже заблокированные или удалённые услуги.",
+        "historical_signal": "Дата окончания требует проверки, риск оценён по истории платежей.",
     }
-    factor_order = [*FACTORS, {"code": "terminal_status", "title": "Уже потерянная услуга"}]
+    factor_order = [
+        *FACTORS,
+        {"code": "terminal_status", "title": "Уже потерянная услуга"},
+        {"code": "historical_signal", "title": "Оценка по истории платежей"},
+    ]
     present = [factor for factor in factor_order if factor["code"] in totals]
     sums = [totals[factor["code"]]["points"] for factor in present]
     shares = _share_out(sums, total) if total is not None else [_points(value) for value in sums]
@@ -704,7 +709,6 @@ def evaluate_customer(
     # When the snapshot contains payment history, use it to recover a useful
     # conservative score for stale service dates. Without history the service
     # stays explicitly unscored, preserving the data-quality contract.
-    inferred_services = 0
     if service_results:
         fallback_candidates = [service for service in service_results if service["risk_score"] is None]
         history_available = len(customer.get("transactions", [])) >= 3
@@ -713,7 +717,6 @@ def evaluate_customer(
                 fallback = _historical_fallback_score(service, customer, now=now, model=model)
                 if fallback is not None:
                     service_results[index] = fallback
-                    inferred_services += 1
 
     assessed = [service for service in service_results if service["risk_score"] is not None]
     unscored = [service for service in service_results if service["risk_score"] is None]
@@ -756,17 +759,6 @@ def evaluate_customer(
         reasons.insert(0, _insufficient(
             f"Оценка рассчитана по {round(data_coverage * 100)}% услуг; проверьте ещё {len(unscored)} услугу."
         ))
-    if inferred_services:
-        reasons.insert(0, {
-            "code": "historical_signal",
-            "title": "Оценка дополнена историей",
-            "points": 0.0,
-            "explanation": (
-                f"Для {inferred_services} услуг дата требует проверки; риск дополнен по истории платежей."
-            ),
-            "evidence": {"inferred_services": inferred_services},
-        })
-
     data_quality = [
         {"code": service["data_issue"], "service_id": str(service["id"]), "message": service["recommended_action"]["text"]}
         for service in unscored

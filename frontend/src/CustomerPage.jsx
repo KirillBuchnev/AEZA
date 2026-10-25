@@ -315,6 +315,11 @@ export function CustomerPage({ id, version, onToast }) {
           <p className="muted">
             ID {customer.id} · {customer.service_count}{" "}
             {plural(customer.service_count, ["услуга", "услуги", "услуг"])}
+            {customer.loyalty_score != null && (
+              <span title="Обратная шкала риска: 100 минус риск клиента">
+                {" "}· лояльность {100 - Math.round(customer.risk_score)} из 100
+              </span>
+            )}
           </p>
         </div>
         <div className="page-head-actions">
