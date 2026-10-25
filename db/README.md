@@ -22,17 +22,19 @@ PostgreSQL 16. Схема спроектирована по методологи
 ## Применение
 
 ```bash
-psql -d churn -f db/001_schema.up.sql
-psql -d churn -f db/002_seed.sql
-psql -d churn -f db/003_extend.sql
+psql -1 -d churn -f db/001_schema.up.sql
+psql -1 -d churn -f db/002_seed.sql
+psql -1 -d churn -f db/003_extend.sql
 ```
 
-Обратный откат расширения: `psql -d churn -f db/003_extend.down.sql`.
+Обратный откат расширения: `psql -1 -d churn -f db/003_extend.down.sql`.
 
 ## Транзакции
 
-`BEGIN`/`COMMIT` из SQL-файлов удалены по просьбе бэкенда: `source.py` оборачивает сид
-в свою транзакцию (TRUNCATE сид не содержит — очистка выполняется снаружи).
+`BEGIN`/`COMMIT` из SQL-файлов удалены: транзакцией управляет тот, кто запускает файл
+(TRUNCATE сид не содержит, очистка выполняется снаружи). Приложение эти файлы не исполняет:
+схему создаёт `backend/app/database.py`, а данные кейса приходят снимком из
+`backend/scripts/build_case_snapshot.py`.
 При прогоне через psql атомарность восстанавливается флагом `psql -1 -f`
 (весь файл одной транзакцией). `LOCK TABLE` и защита «сид только на пустые
 таблицы» сохранены.
