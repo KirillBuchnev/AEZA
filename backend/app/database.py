@@ -157,6 +157,7 @@ def _schema_statements(dialect: str) -> list[str]:
             password_hash TEXT NOT NULL,
             codeword_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'analyst',
+            active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )""",
         """CREATE TABLE IF NOT EXISTS password_resets (
@@ -273,11 +274,18 @@ class Database:
                                 codeword_hash, role, created_at
                             ) VALUES (
                                 :username, :first_name, :last_name, :password_hash,
-                                :codeword_hash, 'analyst', :created_at
+                                :codeword_hash, 'admin', :created_at
                             )
                             """
                         ),
                         {**admin_profile, "created_at": _now()},
+                    )
+                # Старые базы могут не иметь администратора. Если нет ни одного активного администратора,
+                # восстанавливаем аварийную учётку при старте: панель нельзя закрыть навсегда.
+                if _scalar(connection, "SELECT 1 FROM users WHERE role = 'admin' AND active = :active", {"active": True}) is None:
+                    connection.execute(
+                        text("UPDATE users SET role = 'admin', active = :active WHERE username = :username"),
+                        {"active": True, "username": admin_profile["username"]},
                     )
 
     def _prepare_storage(self) -> None:
@@ -296,13 +304,71 @@ class Database:
         columns = {column["name"] for column in inspect(connection).get_columns("users")}
         if "middle_name" not in columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN middle_name TEXT"))
+        if "active" not in columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE"))
 
     def get_user(self, username: str) -> dict[str, Any] | None:
         with self.connection() as connection:
             return _row(
                 connection,
                 """
-                SELECT username, first_name, last_name, middle_name, password_hash, codeword_hash, role
+                SELECT username, first_name, last_name, middle_name, password_hash, codeword_hash, role, active, created_at
+                FROM users WHERE username = :username
+                """,
+                {"username": username},
+            )
+
+    def admin_user_rows(self) -> list[dict[str, Any]]:
+        with self.connection() as connection:
+            return _rows(
+                connection,
+                """
+                SELECT username, first_name, last_name, middle_name, password_hash, role, active, created_at
+                FROM users ORDER BY username
+                """,
+            )
+
+    def update_user(self, username: str, *, role: str | None = None, active: bool | None = None) -> dict[str, Any]:
+        """Меняет роль или блокирует учётку. Заблокированный или переназначенный пользователь теряет все сессии."""
+        fields: dict[str, Any] = {}
+        if role is not None:
+            fields["role"] = role
+        if active is not None:
+            fields["active"] = active
+        if not fields:
+            raise ValueError("Не указано ни одного поля пользователя.")
+        with self.connection() as connection:
+            current = _row(
+                connection,
+                "SELECT username, role, active FROM users WHERE username = :username",
+                {"username": username},
+            )
+            if current is None:
+                raise KeyError(username)
+            next_role = fields.get("role", current["role"])
+            next_active = fields.get("active", current["active"])
+            loses_admin = current["role"] == "admin" and bool(current["active"]) and not (
+                next_role == "admin" and bool(next_active)
+            )
+            if loses_admin:
+                others = _scalar(
+                    connection,
+                    "SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = :active AND username <> :username",
+                    {"active": True, "username": username},
+                )
+                if not others:
+                    raise ValueError("Нельзя оставить AEZA без активного администратора.")
+            assignments = ", ".join(f"{key} = :{key}" for key in fields)
+            connection.execute(
+                text(f"UPDATE users SET {assignments} WHERE username = :username"),
+                {**fields, "username": username},
+            )
+            if "role" in fields or not next_active:
+                connection.execute(text("DELETE FROM sessions WHERE username = :username"), {"username": username})
+            return _row(
+                connection,
+                """
+                SELECT username, first_name, last_name, middle_name, password_hash, role, active, created_at
                 FROM users WHERE username = :username
                 """,
                 {"username": username},
@@ -320,6 +386,7 @@ class Database:
         password_hash: str,
         codeword_hash: str,
         middle_name: str | None = None,
+        role: str = "analyst",
     ) -> None:
         with self.connection() as connection:
             connection.execute(
@@ -330,7 +397,7 @@ class Database:
                         codeword_hash, role, created_at
                     ) VALUES (
                         :username, :first_name, :last_name, :middle_name, :password_hash,
-                        :codeword_hash, 'analyst', :created_at
+                        :codeword_hash, :role, :created_at
                     )
                     """
                 ),
@@ -341,6 +408,7 @@ class Database:
                     "middle_name": middle_name,
                     "password_hash": password_hash,
                     "codeword_hash": codeword_hash,
+                    "role": role,
                     "created_at": _now(),
                 },
             )
@@ -762,8 +830,12 @@ class Database:
         with self.connection() as connection:
             return _scalar(
                 connection,
-                "SELECT username FROM sessions WHERE token_hash = :token_hash AND expires_at > :now",
-                {"token_hash": token_hash, "now": _now()},
+                """
+                SELECT sessions.username FROM sessions
+                JOIN users ON users.username = sessions.username
+                WHERE sessions.token_hash = :token_hash AND sessions.expires_at > :now AND users.active = :active
+                """,
+                {"token_hash": token_hash, "now": _now(), "active": True},
             )
 
     def delete_session(self, token_hash: str) -> None:

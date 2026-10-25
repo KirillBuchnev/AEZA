@@ -158,6 +158,166 @@
         "title": "ActionStep",
         "type": "object"
       },
+      "AdminUserCreate": {
+        "additionalProperties": false,
+        "description": "Сотрудника заводит администратор, а затем он входит через SSO.",
+        "properties": {
+          "first_name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "First Name",
+            "type": "string"
+          },
+          "last_name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Last Name",
+            "type": "string"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "role": {
+            "default": "analyst",
+            "enum": [
+              "analyst",
+              "admin"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "first_name",
+          "last_name"
+        ],
+        "title": "AdminUserCreate",
+        "type": "object"
+      },
+      "AdminUserItem": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "has_password": {
+            "title": "Has Password",
+            "type": "boolean"
+          },
+          "last_name": {
+            "title": "Last Name",
+            "type": "string"
+          },
+          "middle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Middle Name"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "first_name",
+          "last_name",
+          "full_name",
+          "role",
+          "active",
+          "has_password",
+          "created_at"
+        ],
+        "title": "AdminUserItem",
+        "type": "object"
+      },
+      "AdminUserUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "analyst",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          }
+        },
+        "title": "AdminUserUpdate",
+        "type": "object"
+      },
+      "AdminUsersResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AdminUsersResponse",
+        "type": "object"
+      },
       "AnalyticsSummary": {
         "properties": {
           "assessed_total": {
@@ -315,17 +475,12 @@
             "title": "Password",
             "type": "boolean"
           },
-          "registration": {
-            "title": "Registration",
-            "type": "boolean"
-          },
           "sso": {
             "$ref": "#/components/schemas/SsoMethod"
           }
         },
         "required": [
           "password",
-          "registration",
           "sso"
         ],
         "title": "AuthMethodsResponse",
@@ -1959,69 +2114,6 @@
         "title": "RecommendedAction",
         "type": "object"
       },
-      "RegisterRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "codeword": {
-            "maxLength": 256,
-            "minLength": 1,
-            "title": "Codeword",
-            "type": "string"
-          },
-          "first_name": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "First Name",
-            "type": "string"
-          },
-          "last_name": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Last Name",
-            "type": "string"
-          },
-          "middle_name": {
-            "anyOf": [
-              {
-                "maxLength": 120,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Middle Name"
-          },
-          "password": {
-            "maxLength": 256,
-            "minLength": 1,
-            "title": "Password",
-            "type": "string"
-          },
-          "password_confirm": {
-            "maxLength": 256,
-            "minLength": 1,
-            "title": "Password Confirm",
-            "type": "string"
-          },
-          "username": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Username",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username",
-          "first_name",
-          "last_name",
-          "password",
-          "password_confirm",
-          "codeword"
-        ],
-        "title": "RegisterRequest",
-        "type": "object"
-      },
       "RiskReason": {
         "properties": {
           "code": {
@@ -2645,6 +2737,11 @@
             "title": "Full Name",
             "type": "string"
           },
+          "has_password": {
+            "default": true,
+            "title": "Has Password",
+            "type": "boolean"
+          },
           "last_name": {
             "title": "Last Name",
             "type": "string"
@@ -2786,6 +2883,133 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "admin_list_users_api_v1_admin_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUsersResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Сотрудники AEZA и их роли",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "admin_create_user_api_v1_admin_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Завести сотрудника для входа через SSO",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{username}": {
+      "patch": {
+        "operationId": "admin_update_user_api_v1_admin_users__username__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Сменить роль или заблокировать сотрудника",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/analytics/outflow": {
       "get": {
         "operationId": "analytics_outflow_api_v1_analytics_outflow_get",
@@ -3174,47 +3398,6 @@
           }
         },
         "summary": "Проверить кодовое слово для сброса",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/register": {
-      "post": {
-        "operationId": "register_api_v1_auth_register_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Зарегистрироваться",
         "tags": [
           "auth"
         ]

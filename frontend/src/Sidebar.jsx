@@ -19,6 +19,12 @@ const groups = [
   },
 ];
 
+// Раздел видят только администраторы; API проверяет то же правило.
+const adminGroup = {
+  label: "Администрирование",
+  items: [{ id: "admin", label: "Пользователи" }],
+};
+
 export function Sidebar({
   page,
   setPage,
@@ -30,6 +36,7 @@ export function Sidebar({
   setMobileOpen,
 }) {
   const activePage = page === "customer" ? "customers" : page;
+  const visibleGroups = user?.role === "admin" ? [...groups, adminGroup] : groups;
   return (
     <>
       {mobileOpen && (
@@ -44,7 +51,7 @@ export function Sidebar({
           <Brand inverse />
         </div>
         <nav aria-label="Основная навигация">
-          {groups.map((group, index) => (
+          {visibleGroups.map((group, index) => (
             <div key={group.label}>
               {index > 0 && <div className="nav-gap" />}
               <div className="nav-group">{group.label}</div>
@@ -85,14 +92,16 @@ export function Sidebar({
             <b>{user?.full_name || user?.username || "Аналитик"}</b>
             <small>Маркетинг</small>
           </span>
-          <button
-            className="icon-button"
-            aria-label="Сменить пароль"
-            title="Сменить пароль"
-            onClick={onChangePassword}
-          >
-            <Icon name="info" size={18} />
-          </button>
+          {user?.has_password !== false && (
+            <button
+              className="icon-button"
+              aria-label="Сменить пароль"
+              title="Сменить пароль"
+              onClick={onChangePassword}
+            >
+              <Icon name="info" size={18} />
+            </button>
+          )}
           <button
             className="icon-button"
             aria-label="Выйти"

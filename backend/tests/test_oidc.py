@@ -168,17 +168,18 @@ def test_provisioned_user_signs_in_and_password_login_stays_closed(open_app, idp
 
 
 def test_provisioning_never_links_to_an_existing_local_account(open_app, idp):
+    from app.security import hash_secret, normalize_codeword
+
     with open_app(**OIDC_ENV, AEZA_OIDC_AUTO_PROVISION="true") as (client, main):
         install(main, idp)
-        existing = client.post("/api/v1/auth/register", json={
-            "username": "ivan_p",
-            "first_name": "Local",
-            "last_name": "User",
-            "password": "Quartz-7421",
-            "password_confirm": "Quartz-7421",
-            "codeword": "my-word",
-        })
-        assert existing.status_code == 201
+        # A password account (not an admin-registered SSO one) must never be taken over by SSO.
+        main.database.create_user(
+            "ivan_p",
+            "Local",
+            "User",
+            hash_secret("Quartz-7421"),
+            hash_secret(normalize_codeword("my-word")),
+        )
         client.cookies.clear()
         state = start_login(client, idp)
         response = complete(client, state)

@@ -38,10 +38,16 @@ export const api = {
       body: JSON.stringify({ username, password }),
     }),
   logout: () => request("/api/v1/auth/logout", { method: "POST" }),
-  register: (form) =>
-    request("/api/v1/auth/register", {
+  adminUsers: () => request("/api/v1/admin/users"),
+  adminCreateUser: (form) =>
+    request("/api/v1/admin/users", {
       method: "POST",
       body: JSON.stringify(form),
+    }),
+  adminUpdateUser: (username, changes) =>
+    request(`/api/v1/admin/users/${encodeURIComponent(username)}`, {
+      method: "PATCH",
+      body: JSON.stringify(changes),
     }),
   verifyCodeword: (username, codeword) =>
     request("/api/v1/auth/password/verify-codeword", {
