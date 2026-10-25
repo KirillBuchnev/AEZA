@@ -2,7 +2,7 @@
   "components": {
     "schemas": {
       "ActionPlan": {
-        "description": "Marketer-facing decision: diagnosis, money, deadline and next action.",
+        "description": "Решение для маркетолога: диагноз, деньги, дедлайн и следующее действие.",
         "properties": {
           "archetype": {
             "title": "Archetype",
@@ -1078,7 +1078,7 @@
       },
       "CustomerPatch": {
         "additionalProperties": false,
-        "description": "Fields an operator may correct without replacing the whole source snapshot.",
+        "description": "Поля, которые оператор может исправить, не заменяя весь снапшот источника.",
         "properties": {
           "balance_minor": {
             "anyOf": [
@@ -1402,7 +1402,7 @@
         "type": "object"
       },
       "LtvSummary": {
-        "description": "Explainable LTV proxy; it is deliberately named a proxy until outcomes are available.",
+        "description": "Объяснимый LTV-прокси; сознательно называется прокси, пока нет фактических исходов.",
         "properties": {
           "at_risk_ltv_minor": {
             "default": 0,
@@ -2225,7 +2225,7 @@
       },
       "ServicePatch": {
         "additionalProperties": false,
-        "description": "Editable service fields used by the data-quality correction workflow.",
+        "description": "Редактируемые поля услуги для сценария исправления качества данных.",
         "properties": {
           "auto_prolong": {
             "anyOf": [
