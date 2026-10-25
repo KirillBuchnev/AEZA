@@ -820,7 +820,7 @@ def evaluate_customer(
         "risk_score": account_index,
         "data_quality": data_quality,
     }
-    action_plan = build_action_plan(enriched_for_plan, service_results, waterfall)
+    action_plan = build_action_plan(enriched_for_plan, service_results, waterfall, now)
     alpha = real_monetisation_alpha(customer)
     real_revenue_at_risk = round(revenue_at_risk * alpha)
     real_near_term_loss = round(near_term_loss * alpha)

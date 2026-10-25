@@ -96,3 +96,48 @@ def test_unscored_customer_gets_data_quality_action_instead_of_healthy_verdict()
     waterfall = cashflow_waterfall(customer, [], NOW)
     plan = build_action_plan(customer, [], waterfall)
     assert plan["archetype"] == "data_quality"
+
+
+def test_top_up_plan_names_the_service_amount_and_date_and_gives_steps():
+    customer = {
+        "balance_minor": 0,
+        "bonus_balance_minor": 0,
+        "bonus_spend_enabled": False,
+        "withdraw_balance_minor": 0,
+        "total_replenished_minor": 50_000,
+        "risk_score": 60,
+        "monthly_cost_minor": 1_000,
+        "data_quality": [],
+        "transactions": [],
+    }
+    svc = {**service("Облачный сервер", days=1, price=1_000), "auto_prolong": True}
+    waterfall = cashflow_waterfall(customer, [svc], NOW)
+    plan = build_action_plan(customer, [svc], waterfall, NOW)
+    assert plan["archetype"] == "top_up"
+    assert plan["segment"]["code"] == "regular"
+    assert "«Облачный сервер»" in plan["message_subject"]
+    assert "10,00 €" in plan["message_template"] and "25 окт." in plan["message_template"]
+    assert plan["steps"][0]["when"] == "Сейчас"
+    assert any("Не хватит 10,00 €" in fact for fact in plan["signals"])
+    assert plan["urgency_label"] == "Срочно"
+    assert "—" not in plan["message_template"]
+
+
+def test_customer_who_already_lost_services_gets_a_win_back_plan_not_a_healthy_one():
+    customer = {
+        "balance_minor": 10_000,
+        "bonus_balance_minor": 0,
+        "bonus_spend_enabled": False,
+        "withdraw_balance_minor": 0,
+        "total_replenished_minor": 200_000,
+        "risk_score": 99.9,
+        "monthly_cost_minor": 0,
+        "data_quality": [],
+        "transactions": [],
+    }
+    lost = [{**service(f"s{i}", days=-10, price=500, risk=99.0), "status": "blocked", "revenue_at_risk_minor": 0} for i in range(3)]
+    plan = build_action_plan(customer, lost, cashflow_waterfall(customer, lost, NOW), NOW)
+    assert plan["archetype"] == "win_back"
+    assert plan["segment"]["code"] == "key"
+    assert plan["channel"] == "Личное письмо и звонок менеджера"
+    assert "3 из 3 услуг" in plan["diagnosis"]

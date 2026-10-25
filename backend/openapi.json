@@ -8,6 +8,11 @@
             "title": "Archetype",
             "type": "string"
           },
+          "channel": {
+            "default": "",
+            "title": "Channel",
+            "type": "string"
+          },
           "confidence": {
             "title": "Confidence",
             "type": "number"
@@ -37,6 +42,11 @@
             "title": "Expected Revenue At Risk Minor",
             "type": "integer"
           },
+          "message_subject": {
+            "default": "",
+            "title": "Message Subject",
+            "type": "string"
+          },
           "message_template": {
             "title": "Message Template",
             "type": "string"
@@ -45,12 +55,52 @@
             "title": "Next Best Action",
             "type": "string"
           },
+          "offer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer"
+          },
           "priority": {
             "title": "Priority",
             "type": "number"
           },
+          "segment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionSegment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/ActionStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
+            "type": "string"
+          },
+          "urgency_label": {
+            "default": "",
+            "title": "Urgency Label",
             "type": "string"
           }
         },
@@ -65,6 +115,47 @@
           "confidence"
         ],
         "title": "ActionPlan",
+        "type": "object"
+      },
+      "ActionSegment": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "title",
+          "reason"
+        ],
+        "title": "ActionSegment",
+        "type": "object"
+      },
+      "ActionStep": {
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "when": {
+            "title": "When",
+            "type": "string"
+          }
+        },
+        "required": [
+          "when",
+          "text"
+        ],
+        "title": "ActionStep",
         "type": "object"
       },
       "AnalyticsSummary": {

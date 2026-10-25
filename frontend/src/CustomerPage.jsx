@@ -173,7 +173,7 @@ function ServiceDetail({ service }) {
             <li key={reason.code}>
               <b>{reason.title}</b>
               {reason.points > 0 && <span className="factor-pts"> +{points(reason.points)}</span>}
-              <span> — {reason.explanation}</span>
+              <span>: {reason.explanation}</span>
             </li>
           ))}
         </ul>
@@ -197,6 +197,90 @@ function ServiceDetail({ service }) {
         <b>Действие:</b> {service.recommended_action?.text || "—"}
       </p>
     </div>
+  );
+}
+
+// What the marketer does next: the situation, the facts behind it, steps by time and a ready letter.
+function ActionPlanCard({ plan, onCopy }) {
+  const signals = plan.signals || [];
+  const steps = plan.steps || [];
+  const tags = [plan.urgency_label, plan.segment?.title, plan.channel].filter(Boolean);
+  const details = [
+    `Приоритет ${points(plan.priority)} из 100`,
+    plan.expected_revenue_at_risk_minor > 0 &&
+      `под угрозой ${money(plan.expected_revenue_at_risk_minor)}`,
+  ].filter(Boolean);
+  return (
+    <section className="card action-plan-card" aria-label="План действия">
+      <CardHead
+        icon="info"
+        title={`Что делать: ${plan.title}`}
+        description={details.join(" · ")}
+      />
+      {tags.length > 0 && (
+        <div className="plan-tags">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className={`chip${tag === "Срочно" ? " plan-urgent" : ""}`}
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="plan-diagnosis">{plan.diagnosis}</p>
+      <div className="plan-grid">
+        {signals.length > 0 && (
+          <div>
+            <h3 className="plan-label">На чём основано</h3>
+            <ul className="plan-facts">
+              {signals.map((signal) => (
+                <li key={signal}>{signal}</li>
+              ))}
+            </ul>
+            {plan.segment?.reason && (
+              <p className="small muted">{plan.segment.reason}</p>
+            )}
+          </div>
+        )}
+        <div>
+          <h3 className="plan-label">Шаги</h3>
+          <ol className="plan-steps">
+            {steps.length ? (
+              steps.map((step) => (
+                <li key={step.when + step.text}>
+                  <b>{step.when}</b>
+                  <span>{step.text}</span>
+                </li>
+              ))
+            ) : (
+              <li>
+                <b>Сейчас</b>
+                <span>{plan.next_best_action}</span>
+              </li>
+            )}
+          </ol>
+          {plan.offer && (
+            <div className="plan-offer">
+              <b>Предложение</b>
+              <span>{plan.offer}</span>
+            </div>
+          )}
+        </div>
+      </div>
+      {plan.message_template && (
+        <div className="action-message">
+          <div className="action-message-text">
+            {plan.message_subject && <b>{plan.message_subject}</b>}
+            <span>{plan.message_template}</span>
+          </div>
+          <button className="button button-secondary" onClick={onCopy}>
+            Скопировать письмо
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -282,13 +366,16 @@ export function CustomerPage({ id, version, onToast }) {
   }
 
   async function copyActionMessage() {
-    const message = customer.action_plan?.message_template;
-    if (!message) return;
+    const plan = customer.action_plan;
+    if (!plan?.message_template) return;
+    const message = plan.message_subject
+      ? `Тема: ${plan.message_subject}\n\n${plan.message_template}`
+      : plan.message_template;
     try {
       await navigator.clipboard.writeText(message);
-      onToast({ kind: "success", message: "Шаблон сообщения скопирован" });
+      onToast({ kind: "success", message: "Письмо скопировано" });
     } catch {
-      onToast({ kind: "error", message: "Не удалось скопировать шаблон" });
+      onToast({ kind: "error", message: "Не удалось скопировать письмо" });
     }
   }
 
@@ -392,21 +479,7 @@ export function CustomerPage({ id, version, onToast }) {
       </section>
 
       {customer.action_plan && (
-        <section className="card action-plan-card" aria-label="План действия">
-          <CardHead
-            icon="info"
-            title={`Следующее действие: ${customer.action_plan.title}`}
-            description={`Приоритет ${points(customer.action_plan.priority)} · уверенность ${Math.round(customer.action_plan.confidence * 100)}%`}
-          />
-          <p className="verdict"><b>Диагноз:</b> {customer.action_plan.diagnosis}</p>
-          <p className="verdict"><b>Что сделать:</b> {customer.action_plan.next_best_action}</p>
-          <div className="action-message">
-            <span>{customer.action_plan.message_template}</span>
-            <button className="button button-secondary" onClick={copyActionMessage}>
-              Скопировать текст
-            </button>
-          </div>
-        </section>
+        <ActionPlanCard plan={customer.action_plan} onCopy={copyActionMessage} />
       )}
 
       <div className="row-split">

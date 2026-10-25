@@ -291,6 +291,17 @@ class RecommendedAction(BaseModel):
     text: str
 
 
+class ActionSegment(BaseModel):
+    code: str
+    title: str
+    reason: str
+
+
+class ActionStep(BaseModel):
+    when: str
+    text: str
+
+
 class ActionPlan(BaseModel):
     """Marketer-facing decision: diagnosis, money, deadline and next action."""
 
@@ -304,6 +315,13 @@ class ActionPlan(BaseModel):
     deadline: datetime | None = None
     confidence: float
     evidence: dict[str, Any] = Field(default_factory=dict)
+    message_subject: str = ""
+    urgency_label: str = ""
+    segment: ActionSegment | None = None
+    channel: str = ""
+    offer: str | None = None
+    signals: list[str] = Field(default_factory=list)
+    steps: list[ActionStep] = Field(default_factory=list)
 
 
 class LtvSummary(BaseModel):

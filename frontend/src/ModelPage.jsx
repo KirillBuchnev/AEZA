@@ -5,13 +5,10 @@ import { CardHead, PageHead } from "./Shared.jsx";
 import { featureCodes, money, riskText, timeLabel } from "./format.js";
 
 const featureHints = {
-  prolong_wait: "status = prolong_wait: услуга уже ждёт оплаты после expiresAt",
-  autoprolong_disabled:
-    "autoprolong = false, а продление попадает в горизонт прогноза",
-  insufficient_balance:
-    "Доступного баланса меньше, чем стоимость продлений в горизонте",
-  renewal_urgency:
-    "Срок продления в ближайшие 7 дней; вклад растёт к сроку",
+  prolong_wait: "Срок прошёл, услуга ждёт оплаты 5 дней до удаления",
+  autoprolong_disabled: "Автопродление выключено, срок в ближайшие 7 дней",
+  insufficient_balance: "На балансе меньше, чем стоят ближайшие продления",
+  renewal_urgency: "Срок в ближайшие 7 дней, вклад растёт к сроку",
 };
 
 // Levels of the account index, which is 0..100 like the service index. The service levels
